@@ -81,6 +81,8 @@ def update_index_lines(index: List[str], renames: Dict[str, str], deletes: Set[s
     return updated, change_flag
 
 def read_index(index_path: str) -> List[str]:
+    if not os.path.exists(index_path):
+        return []
     with open(index_path, "r", encoding="utf-8") as handle:
         return handle.readlines()
 
