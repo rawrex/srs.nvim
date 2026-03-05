@@ -105,7 +105,7 @@ def stage_index(repo_root: str, index_path: str) -> None:
     util.run_git(["add", "--", rel_index_path], cwd=repo_root)
 
 def apply_diff_and_stage(repo_root: str, index_path: str, diff_text: str) -> None:
-    if changed := apply_diff(index_path, diff_text)
+    if changed := apply_diff(index_path, diff_text):
         stage_index(repo_root, index_path)
 
 def handle_pre_commit(repo_root: str, index_path: str) -> None:
@@ -152,7 +152,6 @@ def main() -> int:
     elif event == "post-rewrite":
         handle_post_rewrite(repo_root, index_path)
     return 0
-
 
 if __name__ == "__main__":
     raise SystemExit(main())
