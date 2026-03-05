@@ -85,6 +85,7 @@ def read_index(index_path: str) -> List[str]:
         return handle.readlines()
 
 def write_index(index_path: str, lines: List[str]) -> None:
+    os.makedirs(os.path.dirname(index_path), exist_ok=True)
     tmp_path = index_path + ".tmp"
     with open(tmp_path, "w", encoding="utf-8") as handle:
         handle.writelines(lines)
