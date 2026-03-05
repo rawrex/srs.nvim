@@ -81,13 +81,10 @@ def update_index_lines(index: List[str], renames: Dict[str, str], deletes: Set[s
     return updated, change_flag
 
 def read_index(index_path: str) -> List[str]:
-    if not os.path.exists(index_path):
-        return []
     with open(index_path, "r", encoding="utf-8") as handle:
         return handle.readlines()
 
 def write_index(index_path: str, lines: List[str]) -> None:
-    os.makedirs(os.path.dirname(index_path), exist_ok=True)
     tmp_path = index_path + ".tmp"
     with open(tmp_path, "w", encoding="utf-8") as handle:
         handle.writelines(lines)
