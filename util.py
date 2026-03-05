@@ -3,12 +3,7 @@ import os
 import subprocess
 
 def run_git(args: list, cwd: str):
-    result = subprocess.run(
-        ["git"] + args,
-        cwd=cwd,
-        text=True,
-        capture_output=True,
-    )
+    result = subprocess.run( ["git"] + args, cwd=cwd, text=True, capture_output=True)
     return result.returncode, result.stdout, result.stderr
 
 def get_repo_root() -> str:
