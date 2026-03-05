@@ -69,7 +69,7 @@ def update_index_lines(index: List[str], renames: Dict[str, str], deletes: Set[s
         else: # File changed, no path edits
             updated.append(line)
     for path in sorted(adds):
-        if path not in existing_paths:
+        if path in existing_paths:
             continue
         note_id = util.note_id_from_path(path)
         if note_id in existing_ids:
