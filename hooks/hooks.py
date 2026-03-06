@@ -1,19 +1,39 @@
 #!/usr/bin/env python3
 import os
 import re
+import time
 import util
 import sys
 from typing import Dict, List, Set, Tuple
+
+
+def generate_note_id(path: str, existing_ids: Set[str]) -> str:
+    created_at_ns = str(time.time_ns())
+    filename = os.path.basename(path)
+    safe_filename = re.sub(r"[^A-Za-z0-9._-]", "_", filename).strip("._")
+    if not safe_filename:
+        safe_filename = "item"
+    candidate = f"{created_at_ns}_{safe_filename}"
+    suffix = 1
+    while candidate in existing_ids:
+        suffix += 1
+        candidate = f"{created_at_ns}_{safe_filename}_{suffix}"
+    return candidate
+
 
 def is_rev_exists(repo_root: str, rev: str) -> bool:
     code, _out, _err = util.run_git(["rev-parse", "--verify", rev], cwd=repo_root)
     return code == 0
 
+
 def diff_name_status(repo_root: str, old: str, new: str) -> str:
-    code, out, _err = util.run_git( ["diff", "--name-status", "-M", "-C", old, new], cwd=repo_root)
+    code, out, _err = util.run_git(
+        ["diff", "--name-status", "-M", "-C", old, new], cwd=repo_root
+    )
     if code == 0:
         return out
     return ""
+
 
 def diff_name_status_cached(repo_root: str) -> str:
     args = ["diff", "--cached", "--name-status", "-M", "-C"]
@@ -23,6 +43,7 @@ def diff_name_status_cached(repo_root: str) -> str:
     if code != 0:
         return ""
     return out
+
 
 def parse_diff(text: str) -> Tuple[Dict[str, str], Set[str], Set[str]]:
     renames: Dict[str, str] = {}
@@ -44,7 +65,10 @@ def parse_diff(text: str) -> Tuple[Dict[str, str], Set[str], Set[str]]:
             adds.add(util.normalize_path(parts[1]))
     return renames, deletes, adds
 
-def update_index_lines(index: List[str], renames: Dict[str, str], deletes: Set[str], adds: Set[str]) -> Tuple[List[str], bool]:
+
+def update_index_lines(
+    index: List[str], renames: Dict[str, str], deletes: Set[str], adds: Set[str]
+) -> Tuple[List[str], bool]:
     change_flag = False
     updated: List[str] = []
     row_re = re.compile(r"^'([^']*)','([^']*)'\s*$")
@@ -66,29 +90,30 @@ def update_index_lines(index: List[str], renames: Dict[str, str], deletes: Set[s
             new_path = renames[path]
             updated.append(f"'{note_id}','{new_path}'\n")
             existing_paths.add(new_path)
-        else: # File changed, no path edits
+        else:  # File changed, no path edits
             updated.append(line)
     for path in sorted(adds):
         if path in existing_paths:
             continue
-        note_id = util.note_id_from_path(path)
-        if note_id in existing_ids:
-            continue
+        note_id = generate_note_id(path, existing_ids)
         change_flag = True
         updated.append(f"'{note_id}','{path}'\n")
         existing_paths.add(path)
         existing_ids.add(note_id)
     return updated, change_flag
 
+
 def read_index(index_path: str) -> List[str]:
     with open(index_path, "r", encoding="utf-8") as handle:
         return handle.readlines()
+
 
 def write_index(index_path: str, lines: List[str]) -> None:
     tmp_path = index_path + ".tmp"
     with open(tmp_path, "w", encoding="utf-8") as handle:
         handle.writelines(lines)
     os.replace(tmp_path, index_path)
+
 
 def apply_diff(index_path: str, diff_text: str) -> bool:
     renames, deletes, adds = parse_diff(diff_text)
@@ -100,21 +125,26 @@ def apply_diff(index_path: str, diff_text: str) -> bool:
         write_index(index_path, updated)
     return changed
 
+
 def stage_index(repo_root: str, index_path: str) -> None:
     rel_index_path = os.path.relpath(index_path, repo_root)
     util.run_git(["add", "--", rel_index_path], cwd=repo_root)
+
 
 def apply_diff_and_stage(repo_root: str, index_path: str, diff_text: str) -> None:
     if changed := apply_diff(index_path, diff_text):
         stage_index(repo_root, index_path)
 
+
 def handle_pre_commit(repo_root: str, index_path: str) -> None:
     diff_text = diff_name_status_cached(repo_root)
     apply_diff_and_stage(repo_root, index_path, diff_text)
 
+
 def handle_pre_merge_commit(repo_root: str, index_path: str) -> None:
     diff_text = diff_name_status_cached(repo_root)
     apply_diff_and_stage(repo_root, index_path, diff_text)
+
 
 def handle_post_checkout(repo_root: str, index_path: str, args: List[str]) -> None:
     if len(args) < 2:
@@ -122,6 +152,7 @@ def handle_post_checkout(repo_root: str, index_path: str, args: List[str]) -> No
     old_ref, new_ref = args[0], args[1]
     diff_text = diff_name_status(repo_root, old_ref, new_ref)
     apply_diff(index_path, diff_text)
+
 
 def handle_post_rewrite(repo_root: str, index_path: str) -> None:
     if data := sys.stdin.read().strip().splitlines():
@@ -132,6 +163,7 @@ def handle_post_rewrite(repo_root: str, index_path: str) -> None:
             old_ref, new_ref = parts[0], parts[1]
             diff_text = diff_name_status(repo_root, old_ref, new_ref)
             apply_diff(index_path, diff_text)
+
 
 def main() -> int:
     if len(sys.argv) < 2:
@@ -152,6 +184,7 @@ def main() -> int:
     elif event == "post-rewrite":
         handle_post_rewrite(repo_root, index_path)
     return 0
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

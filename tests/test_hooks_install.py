@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-INSTALL_SCRIPT = REPO_ROOT / "install.py"
+INSTALL_SCRIPT = REPO_ROOT / "hooks" / "install.py"
 HOOKS = ["pre-commit", "pre-merge-commit", "post-checkout", "post-rewrite"]
 
 
@@ -16,11 +16,11 @@ def run_command(args, cwd):
     result = subprocess.run(args, cwd=cwd, text=True, capture_output=True)
     if result.returncode != 0:
         raise AssertionError(
-                f"command failed: {' '.join(args)}\n"
-                f"cwd: {cwd}\n"
-                f"stdout:\n{result.stdout}\n"
-                f"stderr:\n{result.stderr}"
-                )
+            f"command failed: {' '.join(args)}\n"
+            f"cwd: {cwd}\n"
+            f"stdout:\n{result.stdout}\n"
+            f"stderr:\n{result.stderr}"
+        )
     return result
 
 
@@ -46,7 +46,9 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             repo_dir = Path(tmp_dir)
 
             run_command(["git", "init"], cwd=repo_dir)
-            run_command(["git", "config", "user.email", "test@example.com"], cwd=repo_dir)
+            run_command(
+                ["git", "config", "user.email", "test@example.com"], cwd=repo_dir
+            )
             run_command(["git", "config", "user.name", "Test User"], cwd=repo_dir)
 
             srs_dir = repo_dir / ".srs"
@@ -60,18 +62,24 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             for hook_name in HOOKS:
                 hook_path = hooks_dir / hook_name
                 self.assertTrue(hook_path.exists(), f"missing hook: {hook_path}")
-                self.assertTrue( os.access(hook_path, os.X_OK), f"hook not executable: {hook_path}")
+                self.assertTrue(
+                    os.access(hook_path, os.X_OK), f"hook not executable: {hook_path}"
+                )
 
             note_path = repo_dir / "note.md"
             note_path.write_text("new note\n", encoding="utf-8")
 
             run_command(["git", "add", "note.md"], cwd=repo_dir)
             run_command(["git", "commit", "-m", "add note"], cwd=repo_dir)
-            self.assertEqual(read_index_rows(index_path), [("note", "/note.md")])
+            rows = read_index_rows(index_path)
+            self.assertEqual(len(rows), 1)
+            created_id, created_path = rows[0]
+            self.assertEqual(created_path, "/note.md")
+            self.assertRegex(created_id, r"^\d+_note\.md(?:_\d+)?$")
 
             run_command(["git", "mv", "note.md", "renamed.md"], cwd=repo_dir)
             run_command(["git", "commit", "-m", "rename note"], cwd=repo_dir)
-            self.assertEqual(read_index_rows(index_path), [("note", "/renamed.md")])
+            self.assertEqual(read_index_rows(index_path), [(created_id, "/renamed.md")])
 
             run_command(["git", "rm", "renamed.md"], cwd=repo_dir)
             run_command(["git", "commit", "-m", "remove note"], cwd=repo_dir)
