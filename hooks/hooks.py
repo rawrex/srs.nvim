@@ -1,24 +1,26 @@
 #!/usr/bin/env python3
+import hashlib
 import os
 import re
-import time
-import util
 import sys
+import time
 from typing import Dict, List, Set, Tuple
+
+import util
 
 
 def generate_note_id(path: str, existing_ids: Set[str]) -> str:
     created_at_ns = str(time.time_ns())
     filename = os.path.basename(path)
-    safe_filename = re.sub(r"[^A-Za-z0-9._-]", "_", filename).strip("._")
-    if not safe_filename:
-        safe_filename = "item"
-    candidate = f"{created_at_ns}_{safe_filename}"
-    suffix = 1
-    while candidate in existing_ids:
+    if not filename:
+        filename = "item"
+    suffix = 0
+    while True:
+        payload = f"{created_at_ns}:{filename}:{suffix}".encode("utf-8")
+        candidate = hashlib.blake2s(payload, digest_size=12).hexdigest()
+        if candidate not in existing_ids:
+            return candidate
         suffix += 1
-        candidate = f"{created_at_ns}_{safe_filename}_{suffix}"
-    return candidate
 
 
 def is_rev_exists(repo_root: str, rev: str) -> bool:

@@ -75,7 +75,7 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             self.assertEqual(len(rows), 1)
             created_id, created_path = rows[0]
             self.assertEqual(created_path, "/note.md")
-            self.assertRegex(created_id, r"^\d+_note\.md(?:_\d+)?$")
+            self.assertRegex(created_id, r"^[0-9a-f]{24}$")
 
             run_command(["git", "mv", "note.md", "renamed.md"], cwd=repo_dir)
             run_command(["git", "commit", "-m", "rename note"], cwd=repo_dir)
