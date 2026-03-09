@@ -3,6 +3,7 @@ import os
 import re
 import util
 from typing import Dict, List, Set, Tuple
+from fsrs import Card
 
 class Index:
     def __init__(self, path: str) -> None:
@@ -40,7 +41,7 @@ class Index:
         change_flag = False
         updated: List[str] = []
         existing_paths: Set[str] = set()
-        existing_ids: Set[str] = set()
+        existing_ids: Set[int] = set()
         for line in lines:
             match = self.row_re.match(line.rstrip("\n"))
             if not match:
@@ -48,7 +49,7 @@ class Index:
                 continue
             note_id, path = match.groups()
             existing_paths.add(path)
-            existing_ids.add(note_id)
+            existing_ids.add(int(note_id))
             if path in deletes:
                 change_flag = True
                 continue
@@ -62,9 +63,12 @@ class Index:
         for new_path in sorted(adds):
             if new_path in existing_paths:
                 continue
-            note_id = util.generate_note_id(new_path, existing_ids)
             change_flag = True
-            updated.append(f"'{note_id}','{new_path}'\n")
-            existing_paths.add(new_path)
-            existing_ids.add(note_id)
+            self._add_new(new_path, updated, existing_ids, existing_paths)
         return updated, change_flag
+
+    def _add_new(self, new_path: str, updated: List[str], existing_ids: Set[int], existing_paths: Set[str]) -> None:
+        new_card = Card()
+        existing_paths.add(new_path)
+        existing_ids.add(new_card.card_id)
+        updated.append(f"'{new_card.card_id}','{new_path}'\n")
