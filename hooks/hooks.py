@@ -71,29 +71,53 @@ class Index:
         return updated, change_flag
 
 
+class Handler:
+    def __init__(self, repository_root: str) -> None:
+        self.repository_root = repository_root
 
-def is_rev_exists(repo_root: str, rev: str) -> bool:
-    code, _out, _err = util.run_git(["rev-parse", "--verify", rev], cwd=repo_root)
-    return code == 0
+    def is_rev_exists(self, rev: str) -> bool:
+        code, _out, _err = util.run_git(["rev-parse", "--verify", rev], cwd=self.repository_root)
+        return code == 0
 
-
-def diff_name_status(repo_root: str, old: str, new: str) -> str:
-    code, out, _err = util.run_git(
-        ["diff", "--name-status", "-M", "-C", old, new], cwd=repo_root
-    )
-    if code == 0:
-        return out
-    return ""
-
-
-def diff_name_status_cached(repo_root: str) -> str:
-    args = ["diff", "--cached", "--name-status", "-M", "-C"]
-    if not is_rev_exists(repo_root, "HEAD"):
-        args.append("--root")
-    code, out, _err = util.run_git(args, cwd=repo_root)
-    if code != 0:
+    def diff_name_status(self, old: str, new: str) -> str:
+        code, out, _err = util.run_git( ["diff", "--name-status", "-M", "-C", old, new], cwd=self.repository_root)
+        if code == 0:
+            return out
         return ""
-    return out
+
+    def diff_name_status_cached(self) -> str:
+        args = ["diff", "--cached", "--name-status", "-M", "-C"]
+        if not self.is_rev_exists("HEAD"):
+            args.append("--root")
+        code, out, _err = util.run_git(args, cwd=self.repository_root)
+        if code != 0:
+            return ""
+        return out
+
+    def handle_pre_commit(self, index: Index) -> None:
+        diff_text = self.diff_name_status_cached()
+        index.apply_diff_and_stage(self.repository_root, diff_text)
+
+    def handle_pre_merge_commit(self, index: Index) -> None:
+        diff_text = self.diff_name_status_cached()
+        index.apply_diff_and_stage(self.repository_root, diff_text)
+
+    def handle_post_checkout(self, index: Index, args: List[str]) -> None:
+        if len(args) < 2:
+            return
+        old_ref, new_ref = args[0], args[1]
+        diff_text = self.diff_name_status(old_ref, new_ref)
+        index.apply_diff(diff_text)
+
+    def handle_post_rewrite(self, index: Index) -> None:
+        if data := sys.stdin.read().strip().splitlines():
+            for line in data:
+                parts = line.split()
+                if len(parts) < 2:
+                    continue
+                old_ref, new_ref = parts[0], parts[1]
+                diff_text = self.diff_name_status(old_ref, new_ref)
+                index.apply_diff(diff_text)
 
 
 def parse_diff(text: str) -> Tuple[Dict[str, str], Set[str], Set[str]]:
@@ -116,40 +140,11 @@ def parse_diff(text: str) -> Tuple[Dict[str, str], Set[str], Set[str]]:
             adds.add(util.normalize_path(parts[1]))
     return renames, deletes, adds
 
-
-def handle_pre_commit(index: Index, repo_root: str) -> None:
-    diff_text = diff_name_status_cached(repo_root)
-    index.apply_diff_and_stage(repo_root, diff_text)
-
-
-def handle_pre_merge_commit(index: Index, repo_root: str) -> None:
-    diff_text = diff_name_status_cached(repo_root)
-    index.apply_diff_and_stage(repo_root, diff_text)
-
-
-def handle_post_checkout(index: Index, repo_root: str, args: List[str]) -> None:
-    if len(args) < 2:
-        return
-    old_ref, new_ref = args[0], args[1]
-    diff_text = diff_name_status(repo_root, old_ref, new_ref)
-    index.apply_diff(diff_text)
-
-
-def handle_post_rewrite(index: Index, repo_root: str) -> None:
-    if data := sys.stdin.read().strip().splitlines():
-        for line in data:
-            parts = line.split()
-            if len(parts) < 2:
-                continue
-            old_ref, new_ref = parts[0], parts[1]
-            diff_text = diff_name_status(repo_root, old_ref, new_ref)
-            index.apply_diff(diff_text)
-
-
 def main() -> int:
     if len(sys.argv) < 2:
         return 1
     event = sys.argv[1]
+
     repo_root = util.get_repo_root()
     if not repo_root:
         return 0
@@ -157,16 +152,18 @@ def main() -> int:
     index_path = os.path.join(repo_root, ".srs", "index.txt")
     if not os.path.exists(index_path):
         return 0
+
     index = Index(index_path)
+    handler = Handler(repo_root)
 
     if event == "pre-commit":
-        handle_pre_commit(index, repo_root)
+        handler.handle_pre_commit(index)
     elif event == "pre-merge-commit":
-        handle_pre_merge_commit(index, repo_root)
+        handler.handle_pre_merge_commit(index)
     elif event == "post-checkout":
-        handle_post_checkout(index, repo_root, sys.argv[2:])
+        handler.handle_post_checkout(index, sys.argv[2:])
     elif event == "post-rewrite":
-        handle_post_rewrite(index, repo_root)
+        handler.handle_post_rewrite(index)
     return 0
 
 

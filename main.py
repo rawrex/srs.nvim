@@ -1,4 +1,4 @@
-from fsrs import Scheduler, Card, Rating, ReviewLog
+from fsrs import Scheduler, Card, Rating
 from datetime import datetime, timezone
 
 if __name__ == '__main__':
