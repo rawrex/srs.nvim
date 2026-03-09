@@ -1,4 +1,5 @@
 import os
+import json
 import re
 import subprocess
 import sys
@@ -76,6 +77,10 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             created_id, created_path = rows[0]
             self.assertEqual(created_path, "/note.md")
             self.assertRegex(created_id, r"^\d+$")
+            card_path = srs_dir / f"{created_id}.json"
+            self.assertTrue(card_path.exists())
+            card_data = json.loads(card_path.read_text(encoding="utf-8"))
+            self.assertEqual(str(card_data["card_id"]), created_id)
 
             run_command(["git", "mv", "note.md", "renamed.md"], cwd=repo_dir)
             run_command(["git", "commit", "-m", "rename note"], cwd=repo_dir)

@@ -2,8 +2,8 @@
 import os
 import re
 import util
-from typing import Dict, List, Set, Tuple
 from fsrs import Card
+from typing import Dict, List, Set, Tuple
 
 class Index:
     def __init__(self, path: str) -> None:
@@ -61,14 +61,18 @@ class Index:
             else:  # File changed, no path edits
                 updated.append(line)
         for new_path in sorted(adds):
-            if new_path in existing_paths:
-                continue
-            change_flag = True
-            self._add_new(new_path, updated, existing_ids, existing_paths)
+            if new_path not in existing_paths:
+                change_flag = True
+                self._add_new(new_path, updated, existing_ids, existing_paths)
         return updated, change_flag
 
     def _add_new(self, new_path: str, updated: List[str], existing_ids: Set[int], existing_paths: Set[str]) -> None:
         new_card = Card()
+        card_path = os.path.join(os.path.dirname(self.path), f"{new_card.card_id}.json")
+        tmp_card_path = card_path + ".tmp"
+        with open(tmp_card_path, "w", encoding="utf-8") as handle:
+            handle.write(new_card.to_json())
+        os.replace(tmp_card_path, card_path)
         existing_paths.add(new_path)
         existing_ids.add(new_card.card_id)
         updated.append(f"'{new_card.card_id}','{new_path}'\n")
