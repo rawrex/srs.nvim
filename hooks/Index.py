@@ -5,6 +5,7 @@ import util
 from fsrs import Card
 from typing import Dict, List, Set, Tuple
 
+
 class Index:
     def __init__(self, path: str) -> None:
         self.path = path
@@ -37,7 +38,7 @@ class Index:
             self._write(updated)
         return changed
 
-    def _update_index_lines(self, lines: List[str], renames: Dict[str, str], deletes: Set[str], adds: Set[str]) -> Tuple[List[str], bool]:
+    def _update_index_lines(self, lines: List[str], renames: Dict[str, str], deletes: Set[str], adds: Set[str],) -> Tuple[List[str], bool]:
         change_flag = False
         updated: List[str] = []
         existing_paths: Set[str] = set()
@@ -52,6 +53,7 @@ class Index:
             existing_ids.add(int(note_id))
             if path in deletes:
                 change_flag = True
+                self._remove_card_file(note_id)
                 continue
             if path in renames:
                 change_flag = True
@@ -65,6 +67,11 @@ class Index:
                 change_flag = True
                 self._add_new(new_path, updated, existing_ids, existing_paths)
         return updated, change_flag
+
+    def _remove_card_file(self, note_id: str) -> None:
+        card_path = os.path.join(os.path.dirname(self.path), f"{note_id}.json")
+        if os.path.exists(card_path):
+            os.remove(card_path)
 
     def _add_new(self, new_path: str, updated: List[str], existing_ids: Set[int], existing_paths: Set[str]) -> None:
         new_card = Card()

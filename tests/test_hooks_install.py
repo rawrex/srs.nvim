@@ -89,6 +89,7 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             run_command(["git", "rm", "renamed.md"], cwd=repo_dir)
             run_command(["git", "commit", "-m", "remove note"], cwd=repo_dir)
             self.assertEqual(read_index_rows(index_path), [])
+            self.assertFalse(card_path.exists())
 
 
 if __name__ == "__main__":
