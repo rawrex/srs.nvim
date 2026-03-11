@@ -2,6 +2,7 @@
 import json
 import os
 import re
+import time
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Tuple
 from fsrs import Card, Rating, Scheduler
@@ -26,16 +27,11 @@ def load_index_rows(index_path: str) -> List[Tuple[str, str]]:
     return rows
 
 
-def load_card(card_path: str) -> Optional[Tuple[Card, Dict[str, object]]]:
-    try:
-        with open(card_path, "r", encoding="utf-8") as handle:
-            raw_text = handle.read()
-        raw_data = json.loads(raw_text)
-        card = Card.from_json(raw_text)
-    except (OSError, json.JSONDecodeError, ValueError):
-        return None
-    if not isinstance(raw_data, dict):
-        return None
+def load_card(card_path: str) -> Tuple[Card, Dict[str, object]]:
+    with open(card_path, "r", encoding="utf-8") as handle:
+        raw_text = handle.read()
+    raw_data = json.loads(raw_text)
+    card = Card.from_json(raw_text)
     return card, raw_data
 
 
@@ -43,12 +39,9 @@ def note_abs_path(repo_root: str, indexed_path: str) -> str:
     return os.path.join(repo_root, indexed_path.lstrip("/"))
 
 
-def read_note_text(path: str) -> Optional[str]:
-    try:
-        with open(path, "r", encoding="utf-8") as handle:
-            return handle.read()
-    except OSError:
-        return None
+def read_note_text(path: str) -> str:
+    with open(path, "r", encoding="utf-8") as handle:
+        return handle.read()
 
 
 def is_due(card: Card, now: datetime) -> bool:
@@ -103,7 +96,7 @@ def main() -> int:
 
     index_path = os.path.join(repo_root, ".srs", "index.txt")
     if not os.path.exists(index_path):
-        print("Missing .srs/index.txt")
+        print("Missing index")
         return 1
 
     scheduler = Scheduler()
@@ -112,13 +105,9 @@ def main() -> int:
 
     for note_id, indexed_path in load_index_rows(index_path):
         card_path = os.path.join(repo_root, ".srs", f"{note_id}.json")
-        if card_item := load_card(card_path):
-            card, raw_data = card_item
-            if not is_due(card, now):
-                continue
+        card, raw_data = load_card(card_path)
+        if is_due(card, now):
             note_path = note_abs_path(repo_root, indexed_path)
-            if not os.path.exists(note_path):
-                continue
             due_items.append((note_id, card_path, card, raw_data, note_path))
 
     if not due_items:
@@ -126,26 +115,24 @@ def main() -> int:
         return 0
 
     print(f"Due cards: {len(due_items)}")
-    for i, (note_id, card_path, card, raw_data, note_path) in enumerate(
-        due_items, start=1
-    ):
+    for i, (note_id, card_path, card, raw_data, note_path) in enumerate(due_items, start=1):
+        # Quesion
         question = os.path.basename(note_path)
         print(f"\n[{i}/{len(due_items)}] {question}")
-        input("Press Enter to reveal answer...")
+        question_started_ns = time.monotonic_ns()
+        input("Enter to show answer")
 
+        # Answer
+        review_duration_ms = max(0, (time.monotonic_ns() - question_started_ns) // 1_000_000)
         note_text = read_note_text(note_path)
-        if note_text is None:
-            print("(Note missing or unreadable, skipped)")
-            continue
-        print("-" * 40)
         print(note_text.rstrip("\n"))
-        print("-" * 40)
 
+        # Rating
         rating = prompt_rating()
-        updated_card, review_log = scheduler.review_card(card, rating)
+
+        updated_card, review_log = scheduler.review_card(card, rating, review_duration=int(review_duration_ms))
         save_card(card_path, updated_card, raw_data, review_log.to_json())
         print("Saved review.")
-
     return 0
 
 
