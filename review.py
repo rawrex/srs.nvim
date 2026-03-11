@@ -4,7 +4,7 @@ import os
 import re
 import time
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 from fsrs import Card, Rating, Scheduler
 import util
 
