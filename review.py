@@ -90,7 +90,7 @@ def save_card(
 
     tmp_path = card_path + ".tmp"
     with open(tmp_path, "w", encoding="utf-8") as handle:
-        json.dump(merged, handle, ensure_ascii=False)
+        json.dump(merged, handle, ensure_ascii=False, indent=4, sort_keys=True)
         handle.write("\n")
     os.replace(tmp_path, card_path)
 
@@ -126,7 +126,9 @@ def main() -> int:
         return 0
 
     print(f"Due cards: {len(due_items)}")
-    for i, (note_id, card_path, card, raw_data, note_path) in enumerate( due_items, start=1):
+    for i, (note_id, card_path, card, raw_data, note_path) in enumerate(
+        due_items, start=1
+    ):
         question = os.path.basename(note_path)
         print(f"\n[{i}/{len(due_items)}] {question}")
         input("Press Enter to reveal answer...")
