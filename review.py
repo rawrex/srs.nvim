@@ -114,8 +114,9 @@ def main() -> int:
         print("No due cards.")
         return 0
 
-    print(f"Due cards: {len(due_items)}")
     for i, (note_id, card_path, card, raw_data, note_path) in enumerate(due_items, start=1):
+        os.system("cls" if os.name == "nt" else "clear")
+
         # Quesion
         question = os.path.basename(note_path)
         print(f"\n[{i}/{len(due_items)}] {question}")
@@ -132,7 +133,7 @@ def main() -> int:
 
         updated_card, review_log = scheduler.review_card(card, rating, review_duration=int(review_duration_ms))
         save_card(card_path, updated_card, raw_data, review_log.to_json())
-        print("Saved review.")
+        print("Saved")
     return 0
 
 
