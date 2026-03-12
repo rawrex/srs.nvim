@@ -6,11 +6,44 @@ import time
 from datetime import datetime, timezone
 from typing import Dict, List, Tuple
 from fsrs import Card, Rating, Scheduler
+from rich.console import Console
+from rich.markdown import Markdown
 import util
 
 
 INDEX_ROW_RE = re.compile(r"^'([^']*)','([^']*)'\s*$")
+CLOZE_RE = re.compile(r"~\{(.*?)\}", re.DOTALL)
 REVIEW_LOGS_KEY = "review_logs"
+MASK_CHAR = "▇"
+
+RATING_BUTTONS = { "n": Rating.Again, "e": Rating.Hard, "i": Rating.Good, "o": Rating.Easy, }
+
+def mask_hidden_text(text: str) -> str:
+    return "".join("\n" if ch == "\n" else (" " if ch.isspace() else MASK_CHAR) for ch in text)
+
+
+def render_note_views(note_text: str) -> Tuple[str, str, List[str]]:
+    question_parts: List[str] = []
+    answer_parts: List[str] = []
+    revealed_parts: List[str] = []
+    last_end = 0
+
+    for match in CLOZE_RE.finditer(note_text):
+        start, end = match.span()
+        hidden = match.group(1)
+        revealed_parts.append(hidden)
+
+        question_parts.append(note_text[last_end:start])
+        question_parts.append(mask_hidden_text(hidden))
+
+        answer_parts.append(note_text[last_end:start])
+        answer_parts.append(hidden)
+
+        last_end = end
+
+    question_parts.append(note_text[last_end:])
+    answer_parts.append(note_text[last_end:])
+    return "".join(question_parts), "".join(answer_parts), revealed_parts
 
 
 def load_index_rows(index_path: str) -> List[Tuple[str, str]]:
@@ -52,17 +85,11 @@ def is_due(card: Card, now: datetime) -> bool:
 
 
 def prompt_rating() -> Rating:
-    choices = {
-        "1": Rating.Again,
-        "2": Rating.Hard,
-        "3": Rating.Good,
-        "4": Rating.Easy,
-    }
     while True:
-        value = input("Rate [1=Again, 2=Hard, 3=Good, 4=Easy]: ").strip()
-        if value in choices:
-            return choices[value]
-        print("Invalid rating. Use 1, 2, 3, or 4.")
+        value = input("Rate [n=Again, e=Hard, i=Good, o=Easy]: ").strip()
+        if value in RATING_BUTTONS:
+            return RATING_BUTTONS[value]
+        print("Invalid rating")
 
 
 def save_card(
@@ -89,14 +116,15 @@ def save_card(
 
 
 def main() -> int:
+    console = Console()
     repo_root = util.get_repo_root()
     if not repo_root:
-        print("Not inside a git repository.")
+        console.print("Not inside a git repository.")
         return 1
 
     index_path = os.path.join(repo_root, ".srs", "index.txt")
     if not os.path.exists(index_path):
-        print("Missing index")
+        console.print("Missing index")
         return 1
 
     scheduler = Scheduler()
@@ -111,29 +139,37 @@ def main() -> int:
             due_items.append((note_id, card_path, card, raw_data, note_path))
 
     if not due_items:
-        print("No due cards.")
+        console.print("No due cards.")
         return 0
 
-    for i, (note_id, card_path, card, raw_data, note_path) in enumerate(due_items, start=1):
+    for i, (note_id, card_path, card, raw_data, note_path) in enumerate( due_items, start=1):
         os.system("cls" if os.name == "nt" else "clear")
 
-        # Quesion
+        # Question
+        note_text = read_note_text(note_path)
+        question_view, answer_view, revealed_parts = render_note_views(note_text)
         question = os.path.basename(note_path)
-        print(f"\n[{i}/{len(due_items)}] {question}")
+        console.print(f"\n[{i}/{len(due_items)}] {question}")
+        console.print(Markdown(question_view.rstrip("\n")))
+        if not revealed_parts:
+            console.print("\n(no cloze segments found)")
         question_started_ns = time.monotonic_ns()
-        input("Enter to show answer")
+        print()
+        input()
 
         # Answer
         review_duration_ms = max(0, (time.monotonic_ns() - question_started_ns) // 1_000_000)
-        note_text = read_note_text(note_path)
-        print(note_text.rstrip("\n"))
+        os.system("cls" if os.name == "nt" else "clear")
+        console.print(f"\n[{i}/{len(due_items)}] {question} — answer")
+        console.print(Markdown(answer_view.rstrip("\n")))
 
         # Rating
+        print()
         rating = prompt_rating()
 
-        updated_card, review_log = scheduler.review_card(card, rating, review_duration=int(review_duration_ms))
+        updated_card, review_log = scheduler.review_card( card, rating, review_duration=int(review_duration_ms))
         save_card(card_path, updated_card, raw_data, review_log.to_json())
-        print("Saved")
+        console.print("Saved")
     return 0
 
 
