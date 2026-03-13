@@ -18,7 +18,7 @@ INDEX_ROW_RE = re.compile(r"^'([^']*)','([^']*)'\s*$")
 CLOZE_RE = re.compile(r"~\{(.*?)\}", re.DOTALL)
 REVIEW_LOGS_KEY = "review_logs"
 MASK_CHAR = "▇"
-LABEL_CHARS = string.ascii_lowercase + string.digits
+LABEL_CHARS = string.ascii_lowercase + string.ascii_uppercase + string.digits + string.punctuation
 
 RATING_BUTTONS: Dict[Rating, str] = {
     Rating.Again: "n",
