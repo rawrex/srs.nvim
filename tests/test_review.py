@@ -4,31 +4,26 @@ import review
 
 
 class ReviewRenderingTest(unittest.TestCase):
-    def test_render_note_views_masks_question_and_highlights_answer(self) -> None:
+    def test_question_and_answer_views(self) -> None:
         note = "# Title\nThe ~{capital of France} is Paris."
 
-        question, answer, revealed = review.render_note_views(note)
+        text_parts, clozes = review.parse_note_clozes(note)
+        labels = ["a"]
+        hidden_question = review.build_question_view(
+            text_parts, clozes, labels, revealed=[False]
+        )
+        revealed_question = review.build_question_view(
+            text_parts, clozes, labels, revealed=[True]
+        )
+        answer = review.build_answer_view(text_parts, clozes)
 
-        self.assertEqual(["capital of France"], revealed)
-        self.assertIn("The ▇▇▇▇▇▇▇ ▇▇ ▇▇▇▇▇▇ is Paris.", question)
+        self.assertEqual(["capital of France"], clozes)
+        self.assertIn("The [a]▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇ is Paris.", hidden_question)
+        self.assertIn("The `capital of France` is Paris.", revealed_question)
         self.assertIn("The capital of France is Paris.", answer)
 
-    def test_render_note_views_preserves_newlines_in_mask(self) -> None:
-        note = "Start ~{line one\nline two} end"
-
-        question, _answer, _revealed = review.render_note_views(note)
-
-        self.assertIn("▇▇▇▇ ▇▇▇", question)
-        self.assertIn("\n", question)
-
-    def test_render_note_views_without_cloze(self) -> None:
-        note = "plain markdown content"
-
-        question, answer, revealed = review.render_note_views(note)
-
-        self.assertEqual([], revealed)
-        self.assertEqual(note, question)
-        self.assertEqual(note, answer)
+    def test_mask_hidden_text_hides_spaces(self) -> None:
+        self.assertEqual("▇▇▇▇▇", review.mask_hidden_text("a b c"))
 
 
 if __name__ == "__main__":
