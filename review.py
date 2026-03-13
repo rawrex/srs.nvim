@@ -2,6 +2,7 @@
 import json
 import os
 import re
+import string
 import sys
 import time
 from datetime import datetime, timezone
@@ -16,6 +17,7 @@ INDEX_ROW_RE = re.compile(r"^'([^']*)','([^']*)'\s*$")
 CLOZE_RE = re.compile(r"~\{(.*?)\}", re.DOTALL)
 REVIEW_LOGS_KEY = "review_logs"
 MASK_CHAR = "▇"
+LABEL_CHARS = string.ascii_lowercase + string.digits
 
 RATING_BUTTONS: Dict[Rating, str] = {
     Rating.Again: "n",
@@ -28,31 +30,63 @@ BUTTON_TO_RATING_BYTE: Dict[str, bytes] = { button: bytes([rating.value]) for ra
 
 
 def mask_hidden_text(text: str) -> str:
-    return "".join( "\n" if ch == "\n" else (" " if ch.isspace() else MASK_CHAR) for ch in text)
+    return "".join("\n" if ch == "\n" else MASK_CHAR for ch in text)
 
 
-def render_note_views(note_text: str) -> Tuple[str, str, List[str]]:
-    question_parts: List[str] = []
-    answer_parts: List[str] = []
-    revealed_parts: List[str] = []
+def parse_note_clozes(note_text: str) -> Tuple[List[str], List[str]]:
+    text_parts: List[str] = []
+    clozes: List[str] = []
     last_end = 0
 
     for match in CLOZE_RE.finditer(note_text):
         start, end = match.span()
         hidden = match.group(1)
-        revealed_parts.append(hidden)
-
-        question_parts.append(note_text[last_end:start])
-        question_parts.append(mask_hidden_text(hidden))
-
-        answer_parts.append(note_text[last_end:start])
-        answer_parts.append(hidden)
+        text_parts.append(note_text[last_end:start])
+        clozes.append(hidden)
 
         last_end = end
 
-    question_parts.append(note_text[last_end:])
-    answer_parts.append(note_text[last_end:])
-    return "".join(question_parts), "".join(answer_parts), revealed_parts
+    text_parts.append(note_text[last_end:])
+    return text_parts, clozes
+
+
+def build_question_view(text_parts: List[str], clozes: List[str], labels: List[str], revealed: List[bool],) -> str:
+    parts: List[str] = [text_parts[0]]
+    for idx, hidden in enumerate(clozes):
+        if revealed[idx]:
+            parts.append(f"`{hidden}`")
+        else:
+            parts.append(f"[{labels[idx]}]{mask_hidden_text(hidden)}")
+        parts.append(text_parts[idx + 1])
+    return "".join(parts)
+
+
+def build_answer_view(text_parts: List[str], clozes: List[str]) -> str:
+    parts: List[str] = [text_parts[0]]
+    for idx, hidden in enumerate(clozes):
+        parts.append(hidden)
+        parts.append(text_parts[idx + 1])
+    return "".join(parts)
+
+
+def prompt_cloze_reveal(console: Console, title: str, note_text: str) -> str:
+    text_parts, clozes = parse_note_clozes(note_text)
+    labels = [LABEL_CHARS[idx] for idx in range(len(clozes))]
+    label_to_index = {label: idx for idx, label in enumerate(labels)}
+    revealed = [False] * len(clozes)
+
+    while True:
+        os.system("cls" if os.name == "nt" else "clear")
+        console.print(title)
+        console.print(Markdown( build_question_view(text_parts, clozes, labels, revealed).rstrip("\n")))
+
+        key = read_single_key().lower()
+        if key in {"\r", "\n"}:
+            return build_answer_view(text_parts, clozes)
+
+        idx = label_to_index.get(key)
+        if idx is not None and not revealed[idx]:
+            revealed[idx] = True
 
 
 def load_index_rows(index_path: str) -> List[Tuple[str, str]]:
@@ -130,7 +164,7 @@ def prompt_rating() -> Rating:
 
         print()
         print(f"Set rating: {rating.name}")
-        time.sleep(0.75)
+        time.sleep(0.5)
         return rating
 
 
@@ -179,32 +213,24 @@ def main() -> int:
         console.print("No due cards.")
         return 0
 
-    for i, (note_id, card_path, card, raw_data, note_path) in enumerate( due_items, start=1):
-        os.system("cls" if os.name == "nt" else "clear")
-
-        # Question
+    for i, (note_id, card_path, card, raw_data, note_path) in enumerate(due_items, start=1):
         note_text = read_note_text(note_path)
-        question_view, answer_view, revealed_parts = render_note_views(note_text)
-        question = os.path.basename(note_path)
-        console.print(f"\n[{i}/{len(due_items)}] {question}")
-        console.print(Markdown(question_view.rstrip("\n")))
-        if not revealed_parts:
-            console.print("\n(no cloze segments found)")
+        note_filename = os.path.basename(note_path)
+        title = f"\n[{i}/{len(due_items)}] {note_filename}"
         question_started_ns = time.monotonic_ns()
-        print()
-        input()
+        answer_view = prompt_cloze_reveal(console, title, note_text)
 
         # Answer
         review_duration_ms = max(0, (time.monotonic_ns() - question_started_ns) // 1_000_000)
         os.system("cls" if os.name == "nt" else "clear")
-        console.print(f"\n[{i}/{len(due_items)}] {question} — answer")
+        console.print(f"\n[{i}/{len(due_items)}] {note_filename} — answer")
         console.print(Markdown(answer_view.rstrip("\n")))
 
         # Rating
         print()
         rating = prompt_rating()
 
-        updated_card, review_log = scheduler.review_card( card, rating, review_duration=int(review_duration_ms))
+        updated_card, review_log = scheduler.review_card(card, rating, review_duration=int(review_duration_ms))
         save_card(card_path, updated_card, raw_data, review_log.to_json())
         console.print("Saved")
     return 0
