@@ -2,6 +2,7 @@
 import json
 import os
 import re
+import signal
 import string
 import sys
 import time
@@ -26,7 +27,9 @@ RATING_BUTTONS: Dict[Rating, str] = {
     Rating.Easy: "o",
 }
 
-BUTTON_TO_RATING_BYTE: Dict[str, bytes] = { button: bytes([rating.value]) for rating, button in RATING_BUTTONS.items() }
+BUTTON_TO_RATING_BYTE: Dict[str, bytes] = {
+    button: bytes([rating.value]) for rating, button in RATING_BUTTONS.items()
+}
 
 
 def mask_hidden_text(text: str) -> str:
@@ -50,7 +53,12 @@ def parse_note_clozes(note_text: str) -> Tuple[List[str], List[str]]:
     return text_parts, clozes
 
 
-def build_question_view(text_parts: List[str], clozes: List[str], labels: List[str], revealed: List[bool],) -> str:
+def build_question_view(
+    text_parts: List[str],
+    clozes: List[str],
+    labels: List[str],
+    revealed: List[bool],
+) -> str:
     parts: List[str] = [text_parts[0]]
     for idx, hidden in enumerate(clozes):
         if revealed[idx]:
@@ -78,9 +86,15 @@ def prompt_cloze_reveal(console: Console, title: str, note_text: str) -> str:
     while True:
         os.system("cls" if os.name == "nt" else "clear")
         console.print(title)
-        console.print(Markdown( build_question_view(text_parts, clozes, labels, revealed).rstrip("\n")))
+        console.print(
+            Markdown(
+                build_question_view(text_parts, clozes, labels, revealed).rstrip("\n")
+            )
+        )
 
         key = read_single_key().lower()
+        if maybe_suspend_for_key(key):
+            continue
         if key in {"\r", "\n"}:
             return build_answer_view(text_parts, clozes)
 
@@ -136,6 +150,8 @@ def read_single_key() -> str:
             if key in {"\x00", "\xe0"}:
                 msvcrt.getwch()
                 continue
+            if key == "\x03":
+                raise KeyboardInterrupt
             return key
 
     import termios
@@ -145,9 +161,20 @@ def read_single_key() -> str:
     old_settings = termios.tcgetattr(fd)
     try:
         tty.setraw(fd)
-        return sys.stdin.read(1)
+        key = sys.stdin.read(1)
+        if key == "\x03":
+            raise KeyboardInterrupt
+        return key
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+
+
+def maybe_suspend_for_key(key: str) -> bool:
+    if key != "\x1a":
+        return False
+    if hasattr(signal, "SIGTSTP"):
+        os.kill(os.getpid(), signal.SIGTSTP)
+    return True
 
 
 def prompt_rating() -> Rating:
@@ -155,6 +182,9 @@ def prompt_rating() -> Rating:
     while True:
         print(prompt, end="", flush=True)
         key = read_single_key().lower()
+        if maybe_suspend_for_key(key):
+            print()
+            continue
         try:
             rating = Rating.from_bytes(BUTTON_TO_RATING_BYTE[key])
         except (KeyError, ValueError):
@@ -168,7 +198,12 @@ def prompt_rating() -> Rating:
         return rating
 
 
-def save_card( card_path: str, updated_card: Card, raw_data: Dict[str, object], review_log_json: str,) -> None:
+def save_card(
+    card_path: str,
+    updated_card: Card,
+    raw_data: Dict[str, object],
+    review_log_json: str,
+) -> None:
     card_data = json.loads(updated_card.to_json())
     merged: Dict[str, object] = dict(raw_data)
     merged.update(card_data)
@@ -188,52 +223,62 @@ def save_card( card_path: str, updated_card: Card, raw_data: Dict[str, object], 
 
 def main() -> int:
     console = Console()
-    repo_root = util.get_repo_root()
-    if not repo_root:
-        console.print("Not inside a git repository.")
-        return 1
+    try:
+        repo_root = util.get_repo_root()
+        if not repo_root:
+            console.print("Not inside a git repository.")
+            return 1
 
-    index_path = os.path.join(repo_root, ".srs", "index.txt")
-    if not os.path.exists(index_path):
-        console.print("Missing index")
-        return 1
+        index_path = os.path.join(repo_root, ".srs", "index.txt")
+        if not os.path.exists(index_path):
+            console.print("Missing index")
+            return 1
 
-    scheduler = Scheduler()
-    now = datetime.now(timezone.utc)
-    due_items: List[Tuple[str, str, Card, Dict[str, object], str]] = []
+        scheduler = Scheduler()
+        now = datetime.now(timezone.utc)
+        due_items: List[Tuple[str, str, Card, Dict[str, object], str]] = []
 
-    for note_id, indexed_path in load_index_rows(index_path):
-        card_path = os.path.join(repo_root, ".srs", f"{note_id}.json")
-        card, raw_data = load_card(card_path)
-        if is_due(card, now):
-            note_path = note_abs_path(repo_root, indexed_path)
-            due_items.append((note_id, card_path, card, raw_data, note_path))
+        for note_id, indexed_path in load_index_rows(index_path):
+            card_path = os.path.join(repo_root, ".srs", f"{note_id}.json")
+            card, raw_data = load_card(card_path)
+            if is_due(card, now):
+                note_path = note_abs_path(repo_root, indexed_path)
+                due_items.append((note_id, card_path, card, raw_data, note_path))
 
-    if not due_items:
-        console.print("No due cards.")
+        if not due_items:
+            console.print("No due cards.")
+            return 0
+
+        for i, (note_id, card_path, card, raw_data, note_path) in enumerate(
+            due_items, start=1
+        ):
+            note_text = read_note_text(note_path)
+            note_filename = os.path.basename(note_path)
+            title = f"\n[{i}/{len(due_items)}] {note_filename}"
+            question_started_ns = time.monotonic_ns()
+            answer_view = prompt_cloze_reveal(console, title, note_text)
+
+            # Answer
+            review_duration_ms = max(
+                0, (time.monotonic_ns() - question_started_ns) // 1_000_000
+            )
+            os.system("cls" if os.name == "nt" else "clear")
+            console.print(f"\n[{i}/{len(due_items)}] {note_filename} — answer")
+            console.print(Markdown(answer_view.rstrip("\n")))
+
+            # Rating
+            print()
+            rating = prompt_rating()
+
+            updated_card, review_log = scheduler.review_card(
+                card, rating, review_duration=int(review_duration_ms)
+            )
+            save_card(card_path, updated_card, raw_data, review_log.to_json())
+            console.print("Saved")
         return 0
-
-    for i, (note_id, card_path, card, raw_data, note_path) in enumerate(due_items, start=1):
-        note_text = read_note_text(note_path)
-        note_filename = os.path.basename(note_path)
-        title = f"\n[{i}/{len(due_items)}] {note_filename}"
-        question_started_ns = time.monotonic_ns()
-        answer_view = prompt_cloze_reveal(console, title, note_text)
-
-        # Answer
-        review_duration_ms = max(0, (time.monotonic_ns() - question_started_ns) // 1_000_000)
-        os.system("cls" if os.name == "nt" else "clear")
-        console.print(f"\n[{i}/{len(due_items)}] {note_filename} — answer")
-        console.print(Markdown(answer_view.rstrip("\n")))
-
-        # Rating
-        print()
-        rating = prompt_rating()
-
-        updated_card, review_log = scheduler.review_card(card, rating, review_duration=int(review_duration_ms))
-        save_card(card_path, updated_card, raw_data, review_log.to_json())
-        console.print("Saved")
-    return 0
+    except KeyboardInterrupt:
+        console.print("\nInterrupted.")
+        return 130
 
 
 if __name__ == "__main__":
