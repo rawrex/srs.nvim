@@ -2,6 +2,7 @@
 import json
 import os
 import re
+import sys
 import time
 from datetime import datetime, timezone
 from typing import Dict, List, Tuple
@@ -16,10 +17,18 @@ CLOZE_RE = re.compile(r"~\{(.*?)\}", re.DOTALL)
 REVIEW_LOGS_KEY = "review_logs"
 MASK_CHAR = "▇"
 
-RATING_BUTTONS = { "n": Rating.Again, "e": Rating.Hard, "i": Rating.Good, "o": Rating.Easy, }
+RATING_BUTTONS: Dict[Rating, str] = {
+    Rating.Again: "n",
+    Rating.Hard: "e",
+    Rating.Good: "i",
+    Rating.Easy: "o",
+}
+
+BUTTON_TO_RATING_BYTE: Dict[str, bytes] = { button: bytes([rating.value]) for rating, button in RATING_BUTTONS.items() }
+
 
 def mask_hidden_text(text: str) -> str:
-    return "".join("\n" if ch == "\n" else (" " if ch.isspace() else MASK_CHAR) for ch in text)
+    return "".join( "\n" if ch == "\n" else (" " if ch.isspace() else MASK_CHAR) for ch in text)
 
 
 def render_note_views(note_text: str) -> Tuple[str, str, List[str]]:
@@ -84,20 +93,48 @@ def is_due(card: Card, now: datetime) -> bool:
     return due <= now
 
 
+def read_single_key() -> str:
+    if os.name == "nt":
+        import msvcrt
+
+        while True:
+            key = msvcrt.getwch()
+            if key in {"\x00", "\xe0"}:
+                msvcrt.getwch()
+                continue
+            return key
+
+    import termios
+    import tty
+
+    fd = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(fd)
+    try:
+        tty.setraw(fd)
+        return sys.stdin.read(1)
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+
+
 def prompt_rating() -> Rating:
+    prompt = "Rate [n=Again, e=Hard, i=Good, o=Easy]: "
     while True:
-        value = input("Rate [n=Again, e=Hard, i=Good, o=Easy]: ").strip()
-        if value in RATING_BUTTONS:
-            return RATING_BUTTONS[value]
-        print("Invalid rating")
+        print(prompt, end="", flush=True)
+        key = read_single_key().lower()
+        try:
+            rating = Rating.from_bytes(BUTTON_TO_RATING_BYTE[key])
+        except (KeyError, ValueError):
+            print()
+            print("Invalid rating")
+            continue
+
+        print()
+        print(f"Set rating: {rating.name}")
+        time.sleep(0.75)
+        return rating
 
 
-def save_card(
-    card_path: str,
-    updated_card: Card,
-    raw_data: Dict[str, object],
-    review_log_json: str,
-) -> None:
+def save_card( card_path: str, updated_card: Card, raw_data: Dict[str, object], review_log_json: str,) -> None:
     card_data = json.loads(updated_card.to_json())
     merged: Dict[str, object] = dict(raw_data)
     merged.update(card_data)
