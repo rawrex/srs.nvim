@@ -38,6 +38,18 @@ class Index:
             self._write(updated)
         return changed
 
+    def read_rows(self) -> List[Tuple[str, str]]:
+        rows: List[Tuple[str, str]] = []
+        for raw_line in self._read():
+            line = raw_line.strip()
+            if not line:
+                continue
+            match = self.row_re.match(line)
+            if not match:
+                continue
+            rows.append((match.group(1), match.group(2)))
+        return rows
+
     def _update_index_lines(self, lines: List[str], renames: Dict[str, str], deletes: Set[str], adds: Set[str],) -> Tuple[List[str], bool]:
         change_flag = False
         updated: List[str] = []
