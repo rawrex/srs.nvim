@@ -4,8 +4,8 @@ from unittest.mock import patch
 from fsrs import Card as FsrsCard
 from rich.markdown import Markdown
 
-from review_card import ReviewCard, RevealMode, mask_hidden_text, parse_note_clozes
-from review_ui import ReviewUI
+from reviewing.card import ReviewCard, RevealMode, mask_hidden_text, parse_note_clozes
+from reviewing.ui import ReviewUI
 
 
 class FakeConsole:
@@ -59,8 +59,8 @@ class ReviewRenderingTest(unittest.TestCase):
         ui = ReviewUI(console=console)  # type: ignore[arg-type]
 
         with (
-            patch("review_ui.os.system", return_value=0),
-            patch("review_ui.read_single_key", side_effect=["A", "\n"]),
+            patch("reviewing.ui.os.system", return_value=0),
+            patch("reviewing.ui.read_single_key", side_effect=["A", "\n"]),
         ):
             ui.prompt_cloze_reveal("title", card)
 

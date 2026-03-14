@@ -8,7 +8,7 @@ from fsrs import Rating
 from rich.console import Console
 from rich.markdown import Markdown
 
-from review_card import ReviewCard
+from .card import ReviewCard
 
 
 RATING_BUTTONS: Dict[Rating, str] = {

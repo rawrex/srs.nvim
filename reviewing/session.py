@@ -5,12 +5,12 @@ from datetime import datetime, timezone
 from typing import Dict, List, Tuple
 
 from fsrs import Card as FsrsCard
-from fsrs import ReviewLog
-from fsrs import Scheduler
+from fsrs import ReviewLog, Scheduler
 
-from Index import Index
-from review_card import RevealMode, ReviewCard
-from review_ui import ReviewUI
+from hooks_runtime.index import Index
+
+from .card import RevealMode, ReviewCard
+from .ui import ReviewUI
 
 
 REVIEW_LOGS_KEY = "review_logs"

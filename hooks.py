@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 import os
 import sys
+
 import util
-from Index import Index
-from Handler import Handler
+from hooks_runtime import Handler, Index
+
 
 def main() -> int:
     if len(sys.argv) < 2:

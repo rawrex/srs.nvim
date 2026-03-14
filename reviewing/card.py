@@ -12,10 +12,7 @@ from fsrs import ReviewLog
 CLOZE_RE = re.compile(r"~\{(.*?)\}", re.DOTALL)
 MASK_CHAR = "▇"
 LABEL_CHARS = (
-    string.ascii_lowercase +
-    string.ascii_uppercase +
-    string.digits +
-    string.punctuation
+    string.ascii_lowercase + string.ascii_uppercase + string.digits + string.punctuation
 )
 
 
@@ -109,7 +106,9 @@ class ReviewCard:
         self.labels = [LABEL_CHARS[idx] for idx in range(len(self.clozes))]
         self.label_to_index = {label: idx for idx, label in enumerate(self.labels)}
         self.whole_revealed = [False] * len(self.clozes)
-        self.incremental_states = [build_incremental_reveal_state(hidden) for hidden in self.clozes ]
+        self.incremental_states = [
+            build_incremental_reveal_state(hidden) for hidden in self.clozes
+        ]
 
     @property
     def note_filename(self) -> str:
@@ -135,7 +134,9 @@ class ReviewCard:
                 if state.fully_revealed:
                     parts.append(f"`{hidden}`")
                 else:
-                    parts.append(f"[{self.labels[idx]}]{self._incremental_hidden_view(hidden, state)}")
+                    parts.append(
+                        f"[{self.labels[idx]}]{self._incremental_hidden_view(hidden, state)}"
+                    )
             elif self.whole_revealed[idx]:
                 parts.append(f"`{hidden}`")
             else:
@@ -150,7 +151,9 @@ class ReviewCard:
             parts.append(self.text_parts[idx + 1])
         return "".join(parts)
 
-    def _incremental_hidden_view(self, hidden: str, state: IncrementalRevealState) -> str:
+    def _incremental_hidden_view(
+        self, hidden: str, state: IncrementalRevealState
+    ) -> str:
         if state.fully_revealed:
             return hidden
         return "".join(

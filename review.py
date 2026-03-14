@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 import util
 
-from review_card import RevealMode
-from review_session import ReviewSession
-from review_ui import ReviewUI
+from reviewing import RevealMode, ReviewSession, ReviewUI
 
 
 REVEAL_MODE_WHOLE = RevealMode.WHOLE

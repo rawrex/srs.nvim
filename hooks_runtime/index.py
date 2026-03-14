@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 import os
 import re
-import util
-from fsrs import Card
 from typing import Dict, List, Set, Tuple
+
+from fsrs import Card
+
+import util
 
 
 class Index:
@@ -33,7 +35,9 @@ class Index:
         renames, deletes, adds = util.parse_diff(diff_text)
         if not renames and not deletes and not adds:
             return False
-        updated, changed = self._update_index_lines(self._read(), renames, deletes, adds)
+        updated, changed = self._update_index_lines(
+            self._read(), renames, deletes, adds
+        )
         if changed:
             self._write(updated)
         return changed
@@ -50,7 +54,13 @@ class Index:
             rows.append((match.group(1), match.group(2)))
         return rows
 
-    def _update_index_lines(self, lines: List[str], renames: Dict[str, str], deletes: Set[str], adds: Set[str],) -> Tuple[List[str], bool]:
+    def _update_index_lines(
+        self,
+        lines: List[str],
+        renames: Dict[str, str],
+        deletes: Set[str],
+        adds: Set[str],
+    ) -> Tuple[List[str], bool]:
         change_flag = False
         updated: List[str] = []
         existing_paths: Set[str] = set()
@@ -72,7 +82,7 @@ class Index:
                 new_path = renames[path]
                 updated.append(f"'{note_id}','{new_path}'\n")
                 existing_paths.add(new_path)
-            else:  # File changed, no path edits
+            else:
                 updated.append(line)
         for new_path in sorted(adds):
             if new_path not in existing_paths:
@@ -85,7 +95,13 @@ class Index:
         if os.path.exists(card_path):
             os.remove(card_path)
 
-    def _add_new(self, new_path: str, updated: List[str], existing_ids: Set[int], existing_paths: Set[str]) -> None:
+    def _add_new(
+        self,
+        new_path: str,
+        updated: List[str],
+        existing_ids: Set[int],
+        existing_paths: Set[str],
+    ) -> None:
         new_card = Card()
         card_path = os.path.join(os.path.dirname(self.path), f"{new_card.card_id}.json")
         tmp_card_path = card_path + ".tmp"
