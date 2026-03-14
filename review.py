@@ -9,6 +9,7 @@ import sys
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from enum import Enum
 from typing import Dict, List, Tuple
 from fsrs import Card, Rating, Scheduler
 from rich.console import Console
@@ -23,9 +24,16 @@ MASK_CHAR = "▇"
 LABEL_CHARS = (
     string.ascii_lowercase + string.ascii_uppercase + string.digits + string.punctuation
 )
-REVEAL_MODE_WHOLE = "whole"
-REVEAL_MODE_INCREMENTAL = "incremental"
-REVEAL_MODE = REVEAL_MODE_INCREMENTAL
+
+
+class RevealMode(str, Enum):
+    WHOLE = "whole"
+    INCREMENTAL = "incremental"
+
+
+REVEAL_MODE_WHOLE = RevealMode.WHOLE
+REVEAL_MODE_INCREMENTAL = RevealMode.INCREMENTAL
+REVEAL_MODE = RevealMode.INCREMENTAL
 
 RATING_BUTTONS: Dict[Rating, str] = {
     Rating.Again: "n",
@@ -122,17 +130,27 @@ def reveal_next_incremental_char(state: IncrementalRevealState) -> None:
         state.next_random_index += 1
         state.revealed_positions.add(idx)
 
-    if state.next_word_first_index >= len( state.word_first_positions) and state.next_random_index >= len(state.random_positions):
+    if state.next_word_first_index >= len(
+        state.word_first_positions
+    ) and state.next_random_index >= len(state.random_positions):
         state.fully_revealed = True
 
 
 def build_incremental_hidden_view(hidden: str, state: IncrementalRevealState) -> str:
     if state.fully_revealed:
         return hidden
-    return "".join( ch if ch == "\n" or idx in state.revealed_positions else MASK_CHAR for idx, ch in enumerate(hidden))
+    return "".join(
+        ch if ch == "\n" or idx in state.revealed_positions else MASK_CHAR
+        for idx, ch in enumerate(hidden)
+    )
 
 
-def build_question_view_incremental( text_parts: List[str], clozes: List[str], labels: List[str], states: List[IncrementalRevealState],) -> str:
+def build_question_view_incremental(
+    text_parts: List[str],
+    clozes: List[str],
+    labels: List[str],
+    states: List[IncrementalRevealState],
+) -> str:
     parts: List[str] = [text_parts[0]]
     for idx, hidden in enumerate(clozes):
         if states[idx].fully_revealed:
@@ -144,7 +162,13 @@ def build_question_view_incremental( text_parts: List[str], clozes: List[str], l
     return "".join(parts)
 
 
-def prompt_cloze_reveal( console: Console, title: str, note_text: str, reveal_mode: str = REVEAL_MODE) -> str:
+def prompt_cloze_reveal(
+    console: Console,
+    title: str,
+    note_text: str,
+    reveal_mode: RevealMode = REVEAL_MODE,
+) -> str:
+    reveal_mode = RevealMode(reveal_mode)
     text_parts, clozes = parse_note_clozes(note_text)
     labels = [LABEL_CHARS[idx] for idx in range(len(clozes))]
     label_to_index = {label: idx for idx, label in enumerate(labels)}
@@ -154,8 +178,10 @@ def prompt_cloze_reveal( console: Console, title: str, note_text: str, reveal_mo
     while True:
         os.system("cls" if os.name == "nt" else "clear")
         console.print(title)
-        if reveal_mode == REVEAL_MODE_INCREMENTAL:
-            question_view = build_question_view_incremental(text_parts, clozes, labels, incremental_states)
+        if reveal_mode == RevealMode.INCREMENTAL:
+            question_view = build_question_view_incremental(
+                text_parts, clozes, labels, incremental_states
+            )
         else:
             question_view = build_question_view(text_parts, clozes, labels, revealed)
         console.print(Markdown(question_view.rstrip("\n")))
@@ -168,7 +194,7 @@ def prompt_cloze_reveal( console: Console, title: str, note_text: str, reveal_mo
 
         idx = label_to_index.get(key)
         if idx is not None:
-            if reveal_mode == REVEAL_MODE_INCREMENTAL:
+            if reveal_mode == RevealMode.INCREMENTAL:
                 reveal_next_incremental_char(incremental_states[idx])
             elif not revealed[idx]:
                 revealed[idx] = True
