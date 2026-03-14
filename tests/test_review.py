@@ -44,7 +44,12 @@ class ReviewRenderingTest(unittest.TestCase):
             patch("review.os.system", return_value=0),
             patch("review.read_single_key", side_effect=["A", "\n"]),
         ):
-            review.prompt_cloze_reveal(console, "title", note)  # type: ignore[arg-type]
+            review.prompt_cloze_reveal(
+                console,
+                "title",
+                note,
+                reveal_mode=review.REVEAL_MODE_WHOLE,
+            )  # type: ignore[arg-type]
 
         markdown_frames = [
             item.markup for item in console.printed if isinstance(item, Markdown)
