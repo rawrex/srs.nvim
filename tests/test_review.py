@@ -1,9 +1,11 @@
 import unittest
-from typing import Any
 from unittest.mock import patch
 
-import review
+from fsrs import Card as FsrsCard
 from rich.markdown import Markdown
+
+from review_card import ReviewCard, RevealMode, mask_hidden_text, parse_note_clozes
+from review_ui import ReviewUI
 
 
 class FakeConsole:
@@ -18,38 +20,49 @@ class ReviewRenderingTest(unittest.TestCase):
     def test_question_and_answer_views(self) -> None:
         note = "# Title\nThe ~{capital of France} is Paris."
 
-        text_parts, clozes = review.parse_note_clozes(note)
-        labels = ["a"]
-        hidden_question = review.build_question_view(
-            text_parts, clozes, labels, revealed=[False]
-        )
-        revealed_question = review.build_question_view(
-            text_parts, clozes, labels, revealed=[True]
-        )
-        answer = review.build_answer_view(text_parts, clozes)
-
+        text_parts, clozes = parse_note_clozes(note)
         self.assertEqual(["capital of France"], clozes)
+
+        card = ReviewCard(
+            note_id="1",
+            note_path="/tmp/note.md",
+            card_path="/tmp/1.json",
+            note_text=note,
+            fsrs_card=FsrsCard(),
+            review_logs=[],
+            reveal_mode=RevealMode.WHOLE,
+        )
+        hidden_question = card.question_view()
         self.assertIn("The [a]▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇ is Paris.", hidden_question)
+
+        card.reveal_for_label("a")
+        revealed_question = card.question_view()
         self.assertIn("The `capital of France` is Paris.", revealed_question)
-        self.assertIn("The capital of France is Paris.", answer)
+        self.assertIn("The capital of France is Paris.", card.answer_view())
+        self.assertEqual(["# Title\nThe ", " is Paris."], text_parts)
 
     def test_mask_hidden_text_hides_spaces(self) -> None:
-        self.assertEqual("▇▇▇▇▇", review.mask_hidden_text("a b c"))
+        self.assertEqual("▇▇▇▇▇", mask_hidden_text("a b c"))
 
     def test_prompt_cloze_reveal_supports_uppercase_label(self) -> None:
         note = " ".join(f"~{{c{i}}}" for i in range(27))
         console = FakeConsole()
+        card = ReviewCard(
+            note_id="1",
+            note_path="/tmp/note.md",
+            card_path="/tmp/1.json",
+            note_text=note,
+            fsrs_card=FsrsCard(),
+            review_logs=[],
+            reveal_mode=RevealMode.WHOLE,
+        )
+        ui = ReviewUI(console=console)  # type: ignore[arg-type]
 
         with (
-            patch("review.os.system", return_value=0),
-            patch("review.read_single_key", side_effect=["A", "\n"]),
+            patch("review_ui.os.system", return_value=0),
+            patch("review_ui.read_single_key", side_effect=["A", "\n"]),
         ):
-            review.prompt_cloze_reveal(
-                console,
-                "title",
-                note,
-                reveal_mode=review.REVEAL_MODE_WHOLE,
-            )  # type: ignore[arg-type]
+            ui.prompt_cloze_reveal("title", card)
 
         markdown_frames = [
             item.markup for item in console.printed if isinstance(item, Markdown)
