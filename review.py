@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 import json
 import os
+import random
 import re
 import signal
 import string
 import sys
 import time
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Dict, List, Tuple
 from fsrs import Card, Rating, Scheduler
@@ -21,6 +23,9 @@ MASK_CHAR = "▇"
 LABEL_CHARS = (
     string.ascii_lowercase + string.ascii_uppercase + string.digits + string.punctuation
 )
+REVEAL_MODE_WHOLE = "whole"
+REVEAL_MODE_INCREMENTAL = "incremental"
+REVEAL_MODE = REVEAL_MODE_INCREMENTAL
 
 RATING_BUTTONS: Dict[Rating, str] = {
     Rating.Again: "n",
@@ -32,6 +37,16 @@ RATING_BUTTONS: Dict[Rating, str] = {
 BUTTON_TO_RATING_BYTE: Dict[str, bytes] = {
     button: bytes([rating.value]) for rating, button in RATING_BUTTONS.items()
 }
+
+
+@dataclass
+class IncrementalRevealState:
+    word_first_positions: List[int]
+    random_positions: List[int]
+    revealed_positions: set[int] = field(default_factory=set)
+    next_word_first_index: int = 0
+    next_random_index: int = 0
+    fully_revealed: bool = False
 
 
 def mask_hidden_text(text: str) -> str:
@@ -79,20 +94,71 @@ def build_answer_view(text_parts: List[str], clozes: List[str]) -> str:
     return "".join(parts)
 
 
-def prompt_cloze_reveal(console: Console, title: str, note_text: str) -> str:
+def build_incremental_reveal_state(hidden: str) -> IncrementalRevealState:
+    word_first_positions = [match.start() for match in re.finditer(r"\S+", hidden)]
+    first_positions = set(word_first_positions)
+    random_positions = [
+        idx
+        for idx, ch in enumerate(hidden)
+        if ch != "\n" and idx not in first_positions
+    ]
+    random.shuffle(random_positions)
+    return IncrementalRevealState(
+        word_first_positions=word_first_positions,
+        random_positions=random_positions,
+    )
+
+
+def reveal_next_incremental_char(state: IncrementalRevealState) -> None:
+    if state.fully_revealed:
+        return
+
+    if state.next_word_first_index < len(state.word_first_positions):
+        idx = state.word_first_positions[state.next_word_first_index]
+        state.next_word_first_index += 1
+        state.revealed_positions.add(idx)
+    elif state.next_random_index < len(state.random_positions):
+        idx = state.random_positions[state.next_random_index]
+        state.next_random_index += 1
+        state.revealed_positions.add(idx)
+
+    if state.next_word_first_index >= len( state.word_first_positions) and state.next_random_index >= len(state.random_positions):
+        state.fully_revealed = True
+
+
+def build_incremental_hidden_view(hidden: str, state: IncrementalRevealState) -> str:
+    if state.fully_revealed:
+        return hidden
+    return "".join( ch if ch == "\n" or idx in state.revealed_positions else MASK_CHAR for idx, ch in enumerate(hidden))
+
+
+def build_question_view_incremental( text_parts: List[str], clozes: List[str], labels: List[str], states: List[IncrementalRevealState],) -> str:
+    parts: List[str] = [text_parts[0]]
+    for idx, hidden in enumerate(clozes):
+        if states[idx].fully_revealed:
+            parts.append(f"`{hidden}`")
+        else:
+            masked = build_incremental_hidden_view(hidden, states[idx])
+            parts.append(f"[{labels[idx]}]{masked}")
+        parts.append(text_parts[idx + 1])
+    return "".join(parts)
+
+
+def prompt_cloze_reveal( console: Console, title: str, note_text: str, reveal_mode: str = REVEAL_MODE) -> str:
     text_parts, clozes = parse_note_clozes(note_text)
     labels = [LABEL_CHARS[idx] for idx in range(len(clozes))]
     label_to_index = {label: idx for idx, label in enumerate(labels)}
     revealed = [False] * len(clozes)
+    incremental_states = [build_incremental_reveal_state(hidden) for hidden in clozes]
 
     while True:
         os.system("cls" if os.name == "nt" else "clear")
         console.print(title)
-        console.print(
-            Markdown(
-                build_question_view(text_parts, clozes, labels, revealed).rstrip("\n")
-            )
-        )
+        if reveal_mode == REVEAL_MODE_INCREMENTAL:
+            question_view = build_question_view_incremental(text_parts, clozes, labels, incremental_states)
+        else:
+            question_view = build_question_view(text_parts, clozes, labels, revealed)
+        console.print(Markdown(question_view.rstrip("\n")))
 
         key = read_single_key()
         if maybe_suspend_for_key(key):
@@ -101,8 +167,11 @@ def prompt_cloze_reveal(console: Console, title: str, note_text: str) -> str:
             return build_answer_view(text_parts, clozes)
 
         idx = label_to_index.get(key)
-        if idx is not None and not revealed[idx]:
-            revealed[idx] = True
+        if idx is not None:
+            if reveal_mode == REVEAL_MODE_INCREMENTAL:
+                reveal_next_incremental_char(incremental_states[idx])
+            elif not revealed[idx]:
+                revealed[idx] = True
 
 
 def load_index_rows(index_path: str) -> List[Tuple[str, str]]:
