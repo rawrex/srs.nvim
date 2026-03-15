@@ -1,7 +1,6 @@
 import os
 import signal
 import sys
-import time
 from typing import Dict
 
 from fsrs import Rating
@@ -62,7 +61,6 @@ class ReviewUI:
 
             print()
             print(f"Set rating: {rating.name}")
-            time.sleep(0.5)
             return rating
 
     def _clear_screen(self) -> None:

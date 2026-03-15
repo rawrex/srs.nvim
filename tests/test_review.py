@@ -103,6 +103,7 @@ class ReviewConfigTest(unittest.TestCase):
         self.assertEqual(DEFAULT_RATING_BUTTONS, config.rating_buttons)
         self.assertEqual("~{", config.cloze_open)
         self.assertEqual("}", config.cloze_close)
+        self.assertEqual(0, config.between_notes_timeout_ms)
 
     def test_load_review_config_reads_custom_values(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
@@ -122,6 +123,7 @@ class ReviewConfigTest(unittest.TestCase):
                             "close": "}}",
                         },
                         "mask_char": "*",
+                        "between_notes_timeout_ms": 250,
                     },
                     handle,
                 )
@@ -136,6 +138,7 @@ class ReviewConfigTest(unittest.TestCase):
         self.assertEqual("{{", config.cloze_open)
         self.assertEqual("}}", config.cloze_close)
         self.assertEqual("*", config.mask_char)
+        self.assertEqual(250, config.between_notes_timeout_ms)
 
 
 if __name__ == "__main__":

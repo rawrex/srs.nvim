@@ -26,6 +26,7 @@ class ReviewConfig:
     cloze_open: str = "~{"
     cloze_close: str = "}"
     mask_char: str = "▇"
+    between_notes_timeout_ms: int = 0
 
 
 def load_review_config(repo_root: str) -> ReviewConfig:
@@ -65,12 +66,18 @@ def load_review_config(repo_root: str) -> ReviewConfig:
     if isinstance(mask_char_raw, str) and len(mask_char_raw) == 1:
         mask_char = mask_char_raw
 
+    between_notes_timeout_ms = defaults.between_notes_timeout_ms
+    timeout_raw = raw.get("between_notes_timeout_ms")
+    if isinstance(timeout_raw, int) and timeout_raw >= 0:
+        between_notes_timeout_ms = timeout_raw
+
     return ReviewConfig(
         reveal_mode=reveal_mode,
         rating_buttons=rating_buttons,
         cloze_open=cloze_open,
         cloze_close=cloze_close,
         mask_char=mask_char,
+        between_notes_timeout_ms=between_notes_timeout_ms,
     )
 
 

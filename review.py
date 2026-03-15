@@ -22,6 +22,7 @@ def main() -> int:
             cloze_open=config.cloze_open,
             cloze_close=config.cloze_close,
             mask_char=config.mask_char,
+            between_notes_timeout_ms=config.between_notes_timeout_ms,
         )
         return session.run()
     except KeyboardInterrupt:

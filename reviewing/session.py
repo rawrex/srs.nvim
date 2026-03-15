@@ -25,6 +25,7 @@ class ReviewSession:
         cloze_open: str,
         cloze_close: str,
         mask_char: str,
+        between_notes_timeout_ms: int,
         scheduler: Scheduler | None = None,
     ) -> None:
         self.repo_root = repo_root
@@ -33,6 +34,7 @@ class ReviewSession:
         self.cloze_open = cloze_open
         self.cloze_close = cloze_close
         self.mask_char = mask_char
+        self.between_notes_timeout_ms = between_notes_timeout_ms
         self.scheduler = scheduler or Scheduler()
         self.index_path = os.path.join(repo_root, ".srs", "index.txt")
 
@@ -71,6 +73,8 @@ class ReviewSession:
             card.review_logs.append(review_log)
             self._save_reviewed_card(card)
             self.ui.print_message("Saved")
+            if idx < total and self.between_notes_timeout_ms > 0:
+                time.sleep(self.between_notes_timeout_ms / 1000)
 
         return 0
 
@@ -117,7 +121,7 @@ class ReviewSession:
         if isinstance(raw_review_logs, list):
             for item in raw_review_logs:
                 if isinstance(item, dict):
-                    review_logs.append(ReviewLog.from_dict(item))  # type: ignore[arg-type]
+                    review_logs.append(ReviewLog.from_dict(item))  # pyright: ignore[reportArgumentType]
         return card, review_logs
 
     def _is_due(self, card: FsrsCard, now: datetime) -> bool:
