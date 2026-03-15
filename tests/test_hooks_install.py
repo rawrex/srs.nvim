@@ -9,7 +9,7 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-INSTALL_SCRIPT = REPO_ROOT /  "install.py"
+INSTALL_SCRIPT = REPO_ROOT / "install.py"
 HOOKS = ["pre-commit", "pre-merge-commit", "post-checkout", "post-rewrite"]
 
 
@@ -52,12 +52,12 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             )
             run_command(["git", "config", "user.name", "Test User"], cwd=repo_dir)
 
-            srs_dir = repo_dir / ".srs"
-            srs_dir.mkdir(parents=True, exist_ok=True)
-            index_path = srs_dir / "index.txt"
-            index_path.write_text("", encoding="utf-8")
-
             run_command([sys.executable, str(INSTALL_SCRIPT)], cwd=repo_dir)
+
+            srs_dir = repo_dir / ".srs"
+            index_path = srs_dir / "index.txt"
+            self.assertTrue(srs_dir.exists(), f"missing srs directory: {srs_dir}")
+            self.assertTrue(index_path.exists(), f"missing index file: {index_path}")
 
             hooks_dir = repo_dir / ".git" / "hooks"
             for hook_name in HOOKS:
