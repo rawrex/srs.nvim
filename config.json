@@ -1,0 +1,15 @@
+{
+    "reveal_mode": "incremental",
+    "rating_buttons": {
+        "Again": "n",
+        "Hard": "e",
+        "Good": "i",
+        "Easy": "o"
+    },
+    "cloze_syntax": {
+        "open": "~{",
+        "close": "}"
+    },
+    "mask_char": "▇",
+    "between_notes_timeout_ms": 0
+}
