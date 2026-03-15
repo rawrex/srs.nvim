@@ -1,26 +1,34 @@
 #!/usr/bin/env python3
 import util
 
-from reviewing import RevealMode, ReviewSession, ReviewUI
-
-
-REVEAL_MODE_WHOLE = RevealMode.WHOLE
-REVEAL_MODE_INCREMENTAL = RevealMode.INCREMENTAL
-REVEAL_MODE = RevealMode.INCREMENTAL
+from reviewing import ReviewSession, ReviewUI
+from reviewing.config import load_review_config
 
 
 def main() -> int:
-    ui = ReviewUI()
+    ui: ReviewUI | None = None
     try:
         repo_root = util.get_repo_root()
         if not repo_root:
-            ui.print_message("Not inside a git repository.")
+            print("Not inside a git repository.")
             return 1
 
-        session = ReviewSession(repo_root=repo_root, ui=ui, reveal_mode=REVEAL_MODE)
+        config = load_review_config(repo_root)
+        ui = ReviewUI(rating_buttons=config.rating_buttons)
+        session = ReviewSession(
+            repo_root=repo_root,
+            ui=ui,
+            reveal_mode=config.reveal_mode,
+            cloze_open=config.cloze_open,
+            cloze_close=config.cloze_close,
+            mask_char=config.mask_char,
+        )
         return session.run()
     except KeyboardInterrupt:
-        ui.print_message("\nInterrupted.")
+        if ui:
+            ui.print_message("\nInterrupted.")
+        else:
+            print("\nInterrupted.")
         return 130
 
 

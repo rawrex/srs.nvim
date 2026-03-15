@@ -11,21 +11,18 @@ from rich.markdown import Markdown
 from .card import ReviewCard
 
 
-RATING_BUTTONS: Dict[Rating, str] = {
-    Rating.Again: "n",
-    Rating.Hard: "e",
-    Rating.Good: "i",
-    Rating.Easy: "o",
-}
-
-BUTTON_TO_RATING_BYTE: Dict[str, bytes] = {
-    button: bytes([rating.value]) for rating, button in RATING_BUTTONS.items()
-}
-
-
 class ReviewUI:
-    def __init__(self, console: Console | None = None) -> None:
+    def __init__(
+        self,
+        rating_buttons: Dict[Rating, str],
+        console: Console | None = None,
+    ) -> None:
         self.console = console or Console()
+        self.rating_buttons = rating_buttons
+        self.button_to_rating_byte: Dict[str, bytes] = {
+            button: bytes([rating.value])
+            for rating, button in self.rating_buttons.items()
+        }
 
     def print_message(self, message: str) -> None:
         self.console.print(message)
@@ -49,15 +46,15 @@ class ReviewUI:
         self.console.print(Markdown(answer_view.rstrip("\n")))
 
     def prompt_rating(self) -> Rating:
-        prompt = "Rate [n=Again, e=Hard, i=Good, o=Easy]: "
+        prompt = self._rating_prompt()
         while True:
             print(prompt, end="", flush=True)
-            key = read_single_key().lower()
+            key = read_single_key()
             if maybe_suspend_for_key(key):
                 print()
                 continue
             try:
-                rating = Rating.from_bytes(BUTTON_TO_RATING_BYTE[key])
+                rating = Rating.from_bytes(self.button_to_rating_byte[key])
             except (KeyError, ValueError):
                 print()
                 print("Invalid rating")
@@ -70,6 +67,15 @@ class ReviewUI:
 
     def _clear_screen(self) -> None:
         os.system("cls" if os.name == "nt" else "clear")
+
+    def _rating_prompt(self) -> str:
+        parts = [
+            f"{self.rating_buttons[Rating.Again]}=Again",
+            f"{self.rating_buttons[Rating.Hard]}=Hard",
+            f"{self.rating_buttons[Rating.Good]}=Good",
+            f"{self.rating_buttons[Rating.Easy]}=Easy",
+        ]
+        return f"Rate [{', '.join(parts)}]: "
 
 
 def read_single_key() -> str:

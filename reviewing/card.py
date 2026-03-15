@@ -9,8 +9,6 @@ from fsrs import Card as FsrsCard
 from fsrs import ReviewLog
 
 
-CLOZE_RE = re.compile(r"~\{(.*?)\}", re.DOTALL)
-MASK_CHAR = "▇"
 LABEL_CHARS = (
     string.ascii_lowercase + string.ascii_uppercase + string.digits + string.punctuation
 )
@@ -31,12 +29,20 @@ class IncrementalRevealState:
     fully_revealed: bool = False
 
 
-def parse_note_clozes(note_text: str) -> Tuple[List[str], List[str]]:
+def parse_note_clozes(
+    note_text: str,
+    cloze_open: str,
+    cloze_close: str,
+) -> Tuple[List[str], List[str]]:
     text_parts: List[str] = []
     clozes: List[str] = []
     last_end = 0
+    cloze_re = re.compile(
+        re.escape(cloze_open) + r"(.*?)" + re.escape(cloze_close),
+        re.DOTALL,
+    )
 
-    for match in CLOZE_RE.finditer(note_text):
+    for match in cloze_re.finditer(note_text):
         start, end = match.span()
         text_parts.append(note_text[last_end:start])
         clozes.append(match.group(1))
@@ -46,8 +52,8 @@ def parse_note_clozes(note_text: str) -> Tuple[List[str], List[str]]:
     return text_parts, clozes
 
 
-def mask_hidden_text(text: str) -> str:
-    return "".join("\n" if ch == "\n" else MASK_CHAR for ch in text)
+def mask_hidden_text(text: str, mask_char: str) -> str:
+    return "".join("\n" if ch == "\n" else mask_char for ch in text)
 
 
 def build_incremental_reveal_state(hidden: str) -> IncrementalRevealState:
@@ -93,6 +99,9 @@ class ReviewCard:
     fsrs_card: FsrsCard
     review_logs: List[ReviewLog]
     reveal_mode: RevealMode
+    cloze_open: str
+    cloze_close: str
+    mask_char: str
     text_parts: List[str] = field(init=False)
     clozes: List[str] = field(init=False)
     labels: List[str] = field(init=False)
@@ -102,7 +111,11 @@ class ReviewCard:
 
     def __post_init__(self) -> None:
         self.reveal_mode = RevealMode(self.reveal_mode)
-        self.text_parts, self.clozes = parse_note_clozes(self.note_text)
+        self.text_parts, self.clozes = parse_note_clozes(
+            self.note_text,
+            cloze_open=self.cloze_open,
+            cloze_close=self.cloze_close,
+        )
         self.labels = [LABEL_CHARS[idx] for idx in range(len(self.clozes))]
         self.label_to_index = {label: idx for idx, label in enumerate(self.labels)}
         self.whole_revealed = [False] * len(self.clozes)
@@ -140,7 +153,9 @@ class ReviewCard:
             elif self.whole_revealed[idx]:
                 parts.append(f"`{hidden}`")
             else:
-                parts.append(f"[{self.labels[idx]}]{mask_hidden_text(hidden)}")
+                parts.append(
+                    f"[{self.labels[idx]}]{mask_hidden_text(hidden, self.mask_char)}"
+                )
             parts.append(self.text_parts[idx + 1])
         return "".join(parts)
 
@@ -157,6 +172,6 @@ class ReviewCard:
         if state.fully_revealed:
             return hidden
         return "".join(
-            ch if ch == "\n" or idx in state.revealed_positions else MASK_CHAR
+            ch if ch == "\n" or idx in state.revealed_positions else self.mask_char
             for idx, ch in enumerate(hidden)
         )

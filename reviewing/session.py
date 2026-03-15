@@ -21,12 +21,18 @@ class ReviewSession:
         self,
         repo_root: str,
         ui: ReviewUI,
-        reveal_mode: RevealMode = RevealMode.INCREMENTAL,
+        reveal_mode: RevealMode,
+        cloze_open: str,
+        cloze_close: str,
+        mask_char: str,
         scheduler: Scheduler | None = None,
     ) -> None:
         self.repo_root = repo_root
         self.ui = ui
         self.reveal_mode = RevealMode(reveal_mode)
+        self.cloze_open = cloze_open
+        self.cloze_close = cloze_close
+        self.mask_char = mask_char
         self.scheduler = scheduler or Scheduler()
         self.index_path = os.path.join(repo_root, ".srs", "index.txt")
 
@@ -87,6 +93,9 @@ class ReviewSession:
                     fsrs_card=fsrs_card,
                     review_logs=review_logs,
                     reveal_mode=self.reveal_mode,
+                    cloze_open=self.cloze_open,
+                    cloze_close=self.cloze_close,
+                    mask_char=self.mask_char,
                 )
             )
         return cards
@@ -108,7 +117,7 @@ class ReviewSession:
         if isinstance(raw_review_logs, list):
             for item in raw_review_logs:
                 if isinstance(item, dict):
-                    review_logs.append(ReviewLog.from_dict(item))
+                    review_logs.append(ReviewLog.from_dict(item))  # type: ignore[arg-type]
         return card, review_logs
 
     def _is_due(self, card: FsrsCard, now: datetime) -> bool:
