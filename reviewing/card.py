@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Tuple
 
-from fsrs import Card as FsrsCard
+from fsrs import Card as SchedulerCard
 from fsrs import ReviewLog
 
 
@@ -91,12 +91,12 @@ def reveal_next_incremental_char(state: IncrementalRevealState) -> None:
 
 
 @dataclass
-class ReviewCard:
+class Card:
     note_id: str
     note_path: str
     card_path: str
     note_text: str
-    fsrs_card: FsrsCard
+    scheduler_card: SchedulerCard
     review_logs: List[ReviewLog]
     reveal_mode: RevealMode
     cloze_open: str

@@ -7,7 +7,7 @@ from fsrs import Rating
 from rich.console import Console
 from rich.markdown import Markdown
 
-from .card import ReviewCard
+from .card import Card
 
 
 class ReviewUI:
@@ -26,7 +26,7 @@ class ReviewUI:
     def print_message(self, message: str) -> None:
         self.console.print(message)
 
-    def prompt_cloze_reveal(self, title: str, card: ReviewCard) -> None:
+    def prompt_cloze_reveal(self, title: str, card: Card) -> None:
         while True:
             self._clear_screen()
             self.console.print(title)

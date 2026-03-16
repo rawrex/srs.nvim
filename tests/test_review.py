@@ -4,12 +4,17 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from fsrs import Card as FsrsCard
 from fsrs import Rating
 from rich.markdown import Markdown
 
 from hooks_runtime.index import split_note_into_cards
-from reviewing.card import ReviewCard, RevealMode, mask_hidden_text, parse_note_clozes
+from reviewing.card import (
+    Card,
+    RevealMode,
+    SchedulerCard,
+    mask_hidden_text,
+    parse_note_clozes,
+)
 from reviewing.config import DEFAULT_RATING_BUTTONS, load_review_config
 from reviewing.ui import ReviewUI
 
@@ -29,12 +34,12 @@ class ReviewRenderingTest(unittest.TestCase):
         text_parts, clozes = parse_note_clozes(note, cloze_open="~{", cloze_close="}")
         self.assertEqual(["capital of France"], clozes)
 
-        card = ReviewCard(
+        card = Card(
             note_id="1",
             note_path="/tmp/note.md",
             card_path="/tmp/1.json",
             note_text=note,
-            fsrs_card=FsrsCard(),
+            scheduler_card=SchedulerCard(),
             review_logs=[],
             reveal_mode=RevealMode.WHOLE,
             cloze_open="~{",
@@ -59,12 +64,12 @@ class ReviewRenderingTest(unittest.TestCase):
     def test_prompt_cloze_reveal_supports_uppercase_label(self) -> None:
         note = " ".join(f"~{{c{i}}}" for i in range(27))
         console = FakeConsole()
-        card = ReviewCard(
+        card = Card(
             note_id="1",
             note_path="/tmp/note.md",
             card_path="/tmp/1.json",
             note_text=note,
-            fsrs_card=FsrsCard(),
+            scheduler_card=SchedulerCard(),
             review_logs=[],
             reveal_mode=RevealMode.WHOLE,
             cloze_open="~{",

@@ -4,12 +4,11 @@ import time
 from datetime import datetime, timezone
 from typing import Dict, List, Tuple
 
-from fsrs import Card as FsrsCard
 from fsrs import ReviewLog, Scheduler
 
 from hooks_runtime.index import Index, split_note_into_cards
 
-from .card import RevealMode, ReviewCard
+from .card import Card, RevealMode, SchedulerCard
 from .ui import ReviewUI
 
 
@@ -65,11 +64,11 @@ class ReviewSession:
             print()
             rating = self.ui.prompt_rating()
             updated_card, review_log = self.scheduler.review_card(
-                card.fsrs_card,
+                card.scheduler_card,
                 rating,
                 review_duration=int(review_duration_ms),
             )
-            card.fsrs_card = updated_card
+            card.scheduler_card = updated_card
             card.review_logs.append(review_log)
             self._save_reviewed_card(card)
             self.ui.print_message("Saved")
@@ -78,15 +77,15 @@ class ReviewSession:
 
         return 0
 
-    def _load_due_cards(self) -> List[ReviewCard]:
+    def _load_due_cards(self) -> List[Card]:
         now = datetime.now(timezone.utc)
-        cards: List[ReviewCard] = []
+        cards: List[Card] = []
         note_blocks_cache: Dict[str, Dict[int, str]] = {}
         index = Index(self.index_path)
         for note_id, indexed_path, start_line in index.read_rows():
             card_path = os.path.join(self.repo_root, ".srs", f"{note_id}.json")
-            fsrs_card, review_logs = self._load_fsrs_card(card_path)
-            if not self._is_due(fsrs_card, now):
+            scheduler_card, review_logs = self._load_scheduler_card(card_path)
+            if not self._is_due(scheduler_card, now):
                 continue
             note_path = self._note_abs_path(indexed_path)
             if note_path not in note_blocks_cache:
@@ -95,12 +94,12 @@ class ReviewSession:
             if note_text is None:
                 continue
             cards.append(
-                ReviewCard(
+                Card(
                     note_id=note_id,
                     note_path=note_path,
                     card_path=card_path,
                     note_text=note_text,
-                    fsrs_card=fsrs_card,
+                    scheduler_card=scheduler_card,
                     review_logs=review_logs,
                     reveal_mode=self.reveal_mode,
                     cloze_open=self.cloze_open,
@@ -121,27 +120,29 @@ class ReviewSession:
             for line_number, block in split_note_into_cards(note_text)
         }
 
-    def _load_fsrs_card(self, card_path: str) -> Tuple[FsrsCard, List[ReviewLog]]:
+    def _load_scheduler_card(
+        self, card_path: str
+    ) -> Tuple[SchedulerCard, List[ReviewLog]]:
         with open(card_path, "r", encoding="utf-8") as handle:
             raw_text = handle.read()
         raw_data = json.loads(raw_text)
-        card = FsrsCard.from_json(raw_text)
+        scheduler_card = SchedulerCard.from_json(raw_text)
         raw_review_logs = raw_data.get(REVIEW_LOGS_KEY)
         review_logs: List[ReviewLog] = []
         if isinstance(raw_review_logs, list):
             for item in raw_review_logs:
                 if isinstance(item, dict):
                     review_logs.append(ReviewLog.from_dict(item))  # pyright: ignore[reportArgumentType]
-        return card, review_logs
+        return scheduler_card, review_logs
 
-    def _is_due(self, card: FsrsCard, now: datetime) -> bool:
+    def _is_due(self, card: SchedulerCard, now: datetime) -> bool:
         due = card.due
         if due.tzinfo is None:
             due = due.replace(tzinfo=timezone.utc)
         return due <= now
 
-    def _save_reviewed_card(self, card: ReviewCard) -> None:
-        merged: Dict[str, object] = json.loads(card.fsrs_card.to_json())
+    def _save_reviewed_card(self, card: Card) -> None:
+        merged: Dict[str, object] = json.loads(card.scheduler_card.to_json())
         merged[REVIEW_LOGS_KEY] = [log.to_dict() for log in card.review_logs]
 
         tmp_path = card.card_path + ".tmp"

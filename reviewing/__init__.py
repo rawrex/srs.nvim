@@ -1,5 +1,5 @@
-from .card import RevealMode, ReviewCard
+from .card import Card, RevealMode
 from .session import ReviewSession
 from .ui import ReviewUI
 
-__all__ = ["RevealMode", "ReviewCard", "ReviewSession", "ReviewUI"]
+__all__ = ["Card", "RevealMode", "ReviewSession", "ReviewUI"]
