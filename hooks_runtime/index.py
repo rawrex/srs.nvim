@@ -85,12 +85,16 @@ class Index:
         existing_paths = set(rows_by_path.keys())
 
         for new_path in sorted(adds):
+            if not self._is_note_path(new_path):
+                continue
             if new_path not in existing_paths:
                 change_flag = True
                 self._add_new(new_path, updated)
 
         rows_by_path = self._rows_by_path(updated)
         for modified_path in sorted(modifies):
+            if not self._is_note_path(modified_path):
+                continue
             if modified_path not in rows_by_path:
                 continue
             existing_start_lines = {
@@ -135,6 +139,14 @@ class Index:
             note_id, path, raw_start_line = match.groups()
             rows_by_path.setdefault(path, []).append((note_id, int(raw_start_line)))
         return rows_by_path
+
+    def _is_note_path(self, indexed_path: str) -> bool:
+        return not (
+            indexed_path.startswith("/.srs/")
+            or indexed_path == "/.srs"
+            or indexed_path.startswith("/.git/")
+            or indexed_path == "/.git"
+        )
 
     def _repo_root(self) -> str:
         return os.path.dirname(os.path.dirname(self.path))

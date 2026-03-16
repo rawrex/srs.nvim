@@ -98,6 +98,15 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             for existing_id in created_ids:
                 self.assertIn(existing_id, [row[0] for row in rows])
 
+            for card_json in sorted((repo_dir / ".srs").glob("*.json")):
+                run_command(
+                    ["git", "add", str(card_json.relative_to(repo_dir))], cwd=repo_dir
+                )
+            run_command(["git", "commit", "-m", "track card data"], cwd=repo_dir)
+            rows = read_index_rows(index_path)
+            self.assertEqual(len(rows), 3)
+            self.assertTrue(all(not path.startswith("/.srs/") for _, path, _ in rows))
+
             run_command(["git", "mv", "note.md", "renamed.md"], cwd=repo_dir)
             run_command(["git", "commit", "-m", "rename note"], cwd=repo_dir)
             rows = read_index_rows(index_path)
