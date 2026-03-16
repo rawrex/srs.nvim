@@ -7,7 +7,7 @@ from typing import Dict, List, Tuple
 from fsrs import Card as FsrsCard
 from fsrs import ReviewLog, Scheduler
 
-from hooks_runtime.index import Index
+from hooks_runtime.index import Index, split_note_into_cards
 
 from .card import RevealMode, ReviewCard
 from .ui import ReviewUI
@@ -81,19 +81,25 @@ class ReviewSession:
     def _load_due_cards(self) -> List[ReviewCard]:
         now = datetime.now(timezone.utc)
         cards: List[ReviewCard] = []
+        note_blocks_cache: Dict[str, Dict[int, str]] = {}
         index = Index(self.index_path)
-        for note_id, indexed_path in index.read_rows():
+        for note_id, indexed_path, start_line in index.read_rows():
             card_path = os.path.join(self.repo_root, ".srs", f"{note_id}.json")
             fsrs_card, review_logs = self._load_fsrs_card(card_path)
             if not self._is_due(fsrs_card, now):
                 continue
             note_path = self._note_abs_path(indexed_path)
+            if note_path not in note_blocks_cache:
+                note_blocks_cache[note_path] = self._read_note_blocks(note_path)
+            note_text = note_blocks_cache[note_path].get(start_line)
+            if note_text is None:
+                continue
             cards.append(
                 ReviewCard(
                     note_id=note_id,
                     note_path=note_path,
                     card_path=card_path,
-                    note_text=self._read_note_text(note_path),
+                    note_text=note_text,
                     fsrs_card=fsrs_card,
                     review_logs=review_logs,
                     reveal_mode=self.reveal_mode,
@@ -107,9 +113,13 @@ class ReviewSession:
     def _note_abs_path(self, indexed_path: str) -> str:
         return os.path.join(self.repo_root, indexed_path.lstrip("/"))
 
-    def _read_note_text(self, path: str) -> str:
+    def _read_note_blocks(self, path: str) -> Dict[int, str]:
         with open(path, "r", encoding="utf-8") as handle:
-            return handle.read()
+            note_text = handle.read()
+        return {
+            line_number: block
+            for line_number, block in split_note_into_cards(note_text)
+        }
 
     def _load_fsrs_card(self, card_path: str) -> Tuple[FsrsCard, List[ReviewLog]]:
         with open(card_path, "r", encoding="utf-8") as handle:
