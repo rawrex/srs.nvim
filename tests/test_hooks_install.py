@@ -88,6 +88,20 @@ class HooksInstallIntegrationTest(unittest.TestCase):
                 card_data = json.loads(card_path.read_text(encoding="utf-8"))
                 self.assertEqual(str(card_data["card_id"]), created_id)
 
+            tracked_files = set(
+                run_command(
+                    ["git", "ls-tree", "-r", "--name-only", "HEAD"], cwd=repo_dir
+                ).stdout.splitlines()
+            )
+            self.assertIn(".srs/index.txt", tracked_files)
+            for created_id in created_ids:
+                self.assertIn(f".srs/{created_id}.json", tracked_files)
+
+            unchanged_card_id = created_ids[0]
+            unchanged_card_path = srs_dir / f"{unchanged_card_id}.json"
+            with unchanged_card_path.open("a", encoding="utf-8") as handle:
+                handle.write("\n")
+
             with note_path.open("a", encoding="utf-8") as handle:
                 handle.write("Last ~{three}\n")
             run_command(["git", "add", "note.md"], cwd=repo_dir)
@@ -98,13 +112,25 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             for existing_id in created_ids:
                 self.assertIn(existing_id, [row[0] for row in rows])
 
-            for card_json in sorted((repo_dir / ".srs").glob("*.json")):
+            prev_blob = run_command(
+                ["git", "rev-parse", f"HEAD^:.srs/{unchanged_card_id}.json"],
+                cwd=repo_dir,
+            ).stdout.strip()
+            head_blob = run_command(
+                ["git", "rev-parse", f"HEAD:.srs/{unchanged_card_id}.json"],
+                cwd=repo_dir,
+            ).stdout.strip()
+            self.assertEqual(prev_blob, head_blob)
+
+            new_ids = {note_id for note_id, _path, _line in rows} - set(created_ids)
+            self.assertEqual(1, len(new_ids))
+            new_id = next(iter(new_ids))
+            tracked_files = set(
                 run_command(
-                    ["git", "add", str(card_json.relative_to(repo_dir))], cwd=repo_dir
-                )
-            run_command(["git", "commit", "-m", "track card data"], cwd=repo_dir)
-            rows = read_index_rows(index_path)
-            self.assertEqual(len(rows), 3)
+                    ["git", "ls-tree", "-r", "--name-only", "HEAD"], cwd=repo_dir
+                ).stdout.splitlines()
+            )
+            self.assertIn(f".srs/{new_id}.json", tracked_files)
             self.assertTrue(all(not path.startswith("/.srs/") for _, path, _ in rows))
 
             run_command(["git", "mv", "note.md", "renamed.md"], cwd=repo_dir)
