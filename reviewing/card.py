@@ -1,7 +1,10 @@
+import json
+import os
 import random
 import re
 import string
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Dict, List, Tuple
 
@@ -12,6 +15,7 @@ from fsrs import ReviewLog
 LABEL_CHARS = (
     string.ascii_lowercase + string.ascii_uppercase + string.digits + string.punctuation
 )
+REVIEW_LOGS_KEY = "review_logs"
 
 
 class RevealMode(str, Enum):
@@ -127,6 +131,52 @@ class Card:
     def note_filename(self) -> str:
         return self.note_path.rsplit("/", 1)[-1]
 
+    @classmethod
+    def from_storage_file(
+        cls,
+        note_id: str,
+        note_path: str,
+        card_path: str,
+        note_text: str,
+        reveal_mode: RevealMode,
+        cloze_open: str,
+        cloze_close: str,
+        mask_char: str,
+    ) -> "Card":
+        with open(card_path, "r", encoding="utf-8") as handle:
+            raw_text = handle.read()
+        scheduler_card, review_logs = parse_storage_json(raw_text)
+        return cls(
+            note_id=note_id,
+            note_path=note_path,
+            card_path=card_path,
+            note_text=note_text,
+            scheduler_card=scheduler_card,
+            review_logs=review_logs,
+            reveal_mode=reveal_mode,
+            cloze_open=cloze_open,
+            cloze_close=cloze_close,
+            mask_char=mask_char,
+        )
+
+    @classmethod
+    def new_storage_dict(cls) -> Dict[str, object]:
+        return storage_dict_for_scheduler_card(SchedulerCard())
+
+    def is_due(self, now: datetime) -> bool:
+        due = self.scheduler_card.due
+        if due.tzinfo is None:
+            due = due.replace(tzinfo=timezone.utc)
+        return due <= now
+
+    def to_storage_dict(self) -> Dict[str, object]:
+        merged = storage_dict_for_scheduler_card(self.scheduler_card)
+        merged[REVIEW_LOGS_KEY] = [log.to_dict() for log in self.review_logs]
+        return merged
+
+    def save_storage_file(self) -> None:
+        write_storage_file(self.card_path, self.to_storage_dict())
+
     def reveal_for_label(self, label: str) -> bool:
         idx = self.label_to_index.get(label)
         if idx is None:
@@ -175,3 +225,27 @@ class Card:
             ch if ch == "\n" or idx in state.revealed_positions else self.mask_char
             for idx, ch in enumerate(hidden)
         )
+
+
+def parse_storage_json(raw_text: str) -> Tuple[SchedulerCard, List[ReviewLog]]:
+    raw_data = json.loads(raw_text)
+    scheduler_card = SchedulerCard.from_json(raw_text)
+    raw_review_logs = raw_data.get(REVIEW_LOGS_KEY)
+    review_logs: List[ReviewLog] = []
+    if isinstance(raw_review_logs, list):
+        for item in raw_review_logs:
+            if isinstance(item, dict):
+                review_logs.append(ReviewLog.from_dict(item))  # pyright: ignore[reportArgumentType]
+    return scheduler_card, review_logs
+
+
+def storage_dict_for_scheduler_card(scheduler_card: SchedulerCard) -> Dict[str, object]:
+    return json.loads(scheduler_card.to_json())
+
+
+def write_storage_file(card_path: str, payload: Dict[str, object]) -> None:
+    tmp_path = card_path + ".tmp"
+    with open(tmp_path, "w", encoding="utf-8") as handle:
+        json.dump(payload, handle, ensure_ascii=False, indent=4, sort_keys=True)
+        handle.write("\n")
+    os.replace(tmp_path, card_path)

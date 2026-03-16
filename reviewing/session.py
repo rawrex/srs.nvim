@@ -1,18 +1,14 @@
-import json
 import os
 import time
 from datetime import datetime, timezone
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
-from fsrs import ReviewLog, Scheduler
+from fsrs import Scheduler
 
 from hooks_runtime.index import Index, split_note_into_cards
 
-from .card import Card, RevealMode, SchedulerCard
+from .card import Card, RevealMode
 from .ui import ReviewUI
-
-
-REVIEW_LOGS_KEY = "review_logs"
 
 
 class ReviewSession:
@@ -83,30 +79,25 @@ class ReviewSession:
         note_blocks_cache: Dict[str, Dict[int, str]] = {}
         index = Index(self.index_path)
         for note_id, indexed_path, start_line in index.read_rows():
-            card_path = os.path.join(self.repo_root, ".srs", f"{note_id}.json")
-            scheduler_card, review_logs = self._load_scheduler_card(card_path)
-            if not self._is_due(scheduler_card, now):
-                continue
             note_path = self._note_abs_path(indexed_path)
             if note_path not in note_blocks_cache:
                 note_blocks_cache[note_path] = self._read_note_blocks(note_path)
             note_text = note_blocks_cache[note_path].get(start_line)
             if note_text is None:
                 continue
-            cards.append(
-                Card(
-                    note_id=note_id,
-                    note_path=note_path,
-                    card_path=card_path,
-                    note_text=note_text,
-                    scheduler_card=scheduler_card,
-                    review_logs=review_logs,
-                    reveal_mode=self.reveal_mode,
-                    cloze_open=self.cloze_open,
-                    cloze_close=self.cloze_close,
-                    mask_char=self.mask_char,
-                )
+            card_path = os.path.join(self.repo_root, ".srs", f"{note_id}.json")
+            card = Card.from_storage_file(
+                note_id=note_id,
+                note_path=note_path,
+                card_path=card_path,
+                note_text=note_text,
+                reveal_mode=self.reveal_mode,
+                cloze_open=self.cloze_open,
+                cloze_close=self.cloze_close,
+                mask_char=self.mask_char,
             )
+            if card.is_due(now):
+                cards.append(card)
         return cards
 
     def _note_abs_path(self, indexed_path: str) -> str:
@@ -120,33 +111,5 @@ class ReviewSession:
             for line_number, block in split_note_into_cards(note_text)
         }
 
-    def _load_scheduler_card(
-        self, card_path: str
-    ) -> Tuple[SchedulerCard, List[ReviewLog]]:
-        with open(card_path, "r", encoding="utf-8") as handle:
-            raw_text = handle.read()
-        raw_data = json.loads(raw_text)
-        scheduler_card = SchedulerCard.from_json(raw_text)
-        raw_review_logs = raw_data.get(REVIEW_LOGS_KEY)
-        review_logs: List[ReviewLog] = []
-        if isinstance(raw_review_logs, list):
-            for item in raw_review_logs:
-                if isinstance(item, dict):
-                    review_logs.append(ReviewLog.from_dict(item))  # pyright: ignore[reportArgumentType]
-        return scheduler_card, review_logs
-
-    def _is_due(self, card: SchedulerCard, now: datetime) -> bool:
-        due = card.due
-        if due.tzinfo is None:
-            due = due.replace(tzinfo=timezone.utc)
-        return due <= now
-
     def _save_reviewed_card(self, card: Card) -> None:
-        merged: Dict[str, object] = json.loads(card.scheduler_card.to_json())
-        merged[REVIEW_LOGS_KEY] = [log.to_dict() for log in card.review_logs]
-
-        tmp_path = card.card_path + ".tmp"
-        with open(tmp_path, "w", encoding="utf-8") as handle:
-            json.dump(merged, handle, ensure_ascii=False, indent=4, sort_keys=True)
-            handle.write("\n")
-        os.replace(tmp_path, card.card_path)
+        card.save_storage_file()

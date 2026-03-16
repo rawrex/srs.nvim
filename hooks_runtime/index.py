@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
-import json
 import os
 import re
 from typing import Dict, List, Set, Tuple
 
-from fsrs import Card
+from reviewing.card import (
+    SchedulerCard,
+    storage_dict_for_scheduler_card,
+    write_storage_file,
+)
 
 import util
 
@@ -121,9 +124,12 @@ class Index:
                 ):
                     continue
                 change_flag = True
-                new_card = Card()
-                card_id = str(new_card.card_id)
-                self._write_card_file(card_id, new_card.to_json())
+                new_scheduler_card = SchedulerCard()
+                card_id = str(new_scheduler_card.card_id)
+                self._write_card_file(
+                    card_id,
+                    storage_dict_for_scheduler_card(new_scheduler_card),
+                )
                 touched_card_paths.add(self._card_path(card_id))
                 updated.append(f"'{card_id}','{modified_path}','{start_line}'\n")
 
@@ -139,9 +145,12 @@ class Index:
     def _add_new(self, new_path: str, updated: List[str]) -> Set[str]:
         touched_card_paths: Set[str] = set()
         for start_line, _block_text in self._load_note_cards(new_path):
-            new_card = Card()
-            card_id = str(new_card.card_id)
-            self._write_card_file(card_id, new_card.to_json())
+            new_scheduler_card = SchedulerCard()
+            card_id = str(new_scheduler_card.card_id)
+            self._write_card_file(
+                card_id,
+                storage_dict_for_scheduler_card(new_scheduler_card),
+            )
             touched_card_paths.add(self._card_path(card_id))
             updated.append(f"'{card_id}','{new_path}','{start_line}'\n")
         return touched_card_paths
@@ -191,13 +200,9 @@ class Index:
             return []
         return split_note_into_cards(note_text)
 
-    def _write_card_file(self, card_id: str, payload: str) -> None:
+    def _write_card_file(self, card_id: str, payload: Dict[str, object]) -> None:
         card_path = self._card_abs_path(card_id)
-        tmp_card_path = card_path + ".tmp"
-        parsed = json.loads(payload)
-        with open(tmp_card_path, "w", encoding="utf-8") as handle:
-            json.dump(parsed, handle, ensure_ascii=False, indent=4, sort_keys=True)
-        os.replace(tmp_card_path, card_path)
+        write_storage_file(card_path, payload)
 
 
 def split_note_into_cards(note_text: str) -> List[Tuple[int, str]]:
