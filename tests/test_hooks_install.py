@@ -28,7 +28,7 @@ def run_command(args, cwd):
 def read_index_rows(index_path: Path):
     if not index_path.exists():
         return []
-    row_re = re.compile(r"^'([^']*)','([^']*)'$")
+    row_re = re.compile(r"^'([^']*)','([^']*)','(\d+)'$")
     rows = []
     for raw_line in index_path.read_text(encoding="utf-8").splitlines():
         line = raw_line.strip()
@@ -37,7 +37,7 @@ def read_index_rows(index_path: Path):
         match = row_re.match(line)
         if not match:
             raise AssertionError(f"unexpected index row format: {line}")
-        rows.append((match.group(1), match.group(2)))
+        rows.append((match.group(1), match.group(2), int(match.group(3))))
     return rows
 
 
@@ -68,28 +68,47 @@ class HooksInstallIntegrationTest(unittest.TestCase):
                 )
 
             note_path = repo_dir / "note.md"
-            note_path.write_text("new note\n", encoding="utf-8")
+            note_path.write_text(
+                "Top ~{one}\n  detail\nNext ~{two}\n",
+                encoding="utf-8",
+            )
 
             run_command(["git", "add", "note.md"], cwd=repo_dir)
             run_command(["git", "commit", "-m", "add note"], cwd=repo_dir)
             rows = read_index_rows(index_path)
-            self.assertEqual(len(rows), 1)
-            created_id, created_path = rows[0]
-            self.assertEqual(created_path, "/note.md")
-            self.assertRegex(created_id, r"^\d+$")
-            card_path = srs_dir / f"{created_id}.json"
-            self.assertTrue(card_path.exists())
-            card_data = json.loads(card_path.read_text(encoding="utf-8"))
-            self.assertEqual(str(card_data["card_id"]), created_id)
+            self.assertEqual(len(rows), 2)
+            self.assertEqual(sorted(start_line for _, _, start_line in rows), [1, 3])
+            created_ids = []
+            for created_id, created_path, _start_line in rows:
+                self.assertEqual(created_path, "/note.md")
+                self.assertRegex(created_id, r"^\d+$")
+                created_ids.append(created_id)
+                card_path = srs_dir / f"{created_id}.json"
+                self.assertTrue(card_path.exists())
+                card_data = json.loads(card_path.read_text(encoding="utf-8"))
+                self.assertEqual(str(card_data["card_id"]), created_id)
+
+            with note_path.open("a", encoding="utf-8") as handle:
+                handle.write("Last ~{three}\n")
+            run_command(["git", "add", "note.md"], cwd=repo_dir)
+            run_command(["git", "commit", "-m", "append note"], cwd=repo_dir)
+            rows = read_index_rows(index_path)
+            self.assertEqual(len(rows), 3)
+            self.assertEqual(sorted(start_line for _, _, start_line in rows), [1, 3, 4])
+            for existing_id in created_ids:
+                self.assertIn(existing_id, [row[0] for row in rows])
 
             run_command(["git", "mv", "note.md", "renamed.md"], cwd=repo_dir)
             run_command(["git", "commit", "-m", "rename note"], cwd=repo_dir)
-            self.assertEqual(read_index_rows(index_path), [(created_id, "/renamed.md")])
+            rows = read_index_rows(index_path)
+            self.assertEqual(len(rows), 3)
+            self.assertTrue(all(path == "/renamed.md" for _, path, _ in rows))
 
             run_command(["git", "rm", "renamed.md"], cwd=repo_dir)
             run_command(["git", "commit", "-m", "remove note"], cwd=repo_dir)
             self.assertEqual(read_index_rows(index_path), [])
-            self.assertFalse(card_path.exists())
+            for card_id, _path, _start_line in rows:
+                self.assertFalse((srs_dir / f"{card_id}.json").exists())
 
 
 if __name__ == "__main__":

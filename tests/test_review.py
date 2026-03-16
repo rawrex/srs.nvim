@@ -8,6 +8,7 @@ from fsrs import Card as FsrsCard
 from fsrs import Rating
 from rich.markdown import Markdown
 
+from hooks_runtime.index import split_note_into_cards
 from reviewing.card import ReviewCard, RevealMode, mask_hidden_text, parse_note_clozes
 from reviewing.config import DEFAULT_RATING_BUTTONS, load_review_config
 from reviewing.ui import ReviewUI
@@ -92,6 +93,14 @@ class ReviewRenderingTest(unittest.TestCase):
         )
         self.assertEqual(["A ", " B"], text_parts)
         self.assertEqual(["one"], clozes)
+
+    def test_split_note_into_cards_preserves_indented_blocks(self) -> None:
+        note_text = "A\n  B\n    C\nD\n\nE\n"
+        cards = split_note_into_cards(note_text)
+        self.assertEqual(
+            [(1, "A\n  B\n    C\n"), (4, "D\n"), (6, "E\n")],
+            cards,
+        )
 
 
 class ReviewConfigTest(unittest.TestCase):
