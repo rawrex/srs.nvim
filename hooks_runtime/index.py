@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import json
 import os
 import re
 from typing import Dict, List, Set, Tuple
@@ -193,8 +194,9 @@ class Index:
     def _write_card_file(self, card_id: str, payload: str) -> None:
         card_path = self._card_abs_path(card_id)
         tmp_card_path = card_path + ".tmp"
+        parsed = json.loads(payload)
         with open(tmp_card_path, "w", encoding="utf-8") as handle:
-            handle.write(payload)
+            json.dump(parsed, handle, ensure_ascii=False, indent=4, sort_keys=True)
         os.replace(tmp_card_path, card_path)
 
 
