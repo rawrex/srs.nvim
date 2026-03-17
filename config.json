@@ -11,5 +11,6 @@
         "close": "}"
     },
     "mask_char": "▇",
-    "between_notes_timeout_ms": 0
+    "between_notes_timeout_ms": 0,
+    "show_context": true
 }

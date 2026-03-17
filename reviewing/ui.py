@@ -8,16 +8,18 @@ from rich.console import Console
 from rich.markdown import Markdown
 
 from .card import Card, mask_hidden_text, parse_note_clozes
+from .config import ReviewConfig
 
 
 class ReviewUI:
     def __init__(
         self,
-        rating_buttons: Dict[Rating, str],
+        config: ReviewConfig,
         console: Console | None = None,
     ) -> None:
         self.console = console or Console()
-        self.rating_buttons = rating_buttons
+        self.rating_buttons = config.rating_buttons
+        self.show_context = config.show_context
         self.button_to_rating_byte: Dict[str, bytes] = {
             button: bytes([rating.value])
             for rating, button in self.rating_buttons.items()
@@ -76,6 +78,9 @@ class ReviewUI:
         return f"Rate [{', '.join(parts)}]: "
 
     def _print_note_context(self, card: Card, current_view: str) -> None:
+        if not self.show_context:
+            self.console.print(Markdown(current_view.rstrip("\n")))
+            return
         note_blocks = card.note_blocks or {card.start_line: card.note_text}
         for start_line in sorted(note_blocks):
             block = (

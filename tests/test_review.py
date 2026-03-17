@@ -15,7 +15,7 @@ from reviewing.card import (
     mask_hidden_text,
     parse_note_clozes,
 )
-from reviewing.config import DEFAULT_RATING_BUTTONS, load_review_config
+from reviewing.config import DEFAULT_RATING_BUTTONS, ReviewConfig, load_review_config
 from reviewing.ui import ReviewUI
 
 
@@ -76,7 +76,10 @@ class ReviewRenderingTest(unittest.TestCase):
             cloze_close="}",
             mask_char="▇",
         )
-        ui = ReviewUI(rating_buttons=DEFAULT_RATING_BUTTONS, console=console)  # type: ignore[arg-type]
+        ui = ReviewUI(
+            config=ReviewConfig(),
+            console=console,  # type: ignore[arg-type]
+        )
 
         with (
             patch("reviewing.ui.os.system", return_value=0),
@@ -116,7 +119,10 @@ class ReviewRenderingTest(unittest.TestCase):
             start_line=1,
             note_blocks=note_blocks,
         )
-        ui = ReviewUI(rating_buttons=DEFAULT_RATING_BUTTONS, console=console)  # type: ignore[arg-type]
+        ui = ReviewUI(
+            config=ReviewConfig(),
+            console=console,  # type: ignore[arg-type]
+        )
 
         with (
             patch("reviewing.ui.os.system", return_value=0),
@@ -136,6 +142,46 @@ class ReviewRenderingTest(unittest.TestCase):
         self.assertNotIn("context cloze", markdown_calls[1][0])
         self.assertIn("▇▇▇▇▇▇▇▇▇▇▇▇▇", markdown_calls[1][0])
         self.assertEqual("dim", markdown_calls[1][1].get("style"))
+
+    def test_prompt_cloze_reveal_hides_context_when_disabled(self) -> None:
+        note_blocks = {
+            1: "# One\nFirst ~{hidden} block.\n",
+            4: "# Two\nSecond ~{context cloze} block.\n",
+        }
+        console = FakeConsole()
+        card = Card(
+            note_id="1",
+            note_path="/tmp/note.md",
+            card_path="/tmp/1.json",
+            note_text=note_blocks[1],
+            scheduler_card=SchedulerCard(),
+            review_logs=[],
+            reveal_mode=RevealMode.WHOLE,
+            cloze_open="~{",
+            cloze_close="}",
+            mask_char="▇",
+            start_line=1,
+            note_blocks=note_blocks,
+        )
+        ui = ReviewUI(
+            config=ReviewConfig(show_context=False),
+            console=console,  # type: ignore[arg-type]
+        )
+
+        with (
+            patch("reviewing.ui.os.system", return_value=0),
+            patch("reviewing.ui.read_single_key", side_effect=["\n"]),
+        ):
+            ui.prompt_cloze_reveal("title", card)
+
+        markdown_calls = [
+            (item.markup, kwargs)
+            for item, kwargs in console.printed
+            if isinstance(item, Markdown)
+        ]
+        self.assertEqual(1, len(markdown_calls))
+        self.assertIn("[a]", markdown_calls[0][0])
+        self.assertNotIn("Second", markdown_calls[0][0])
 
     def test_parse_note_clozes_with_custom_syntax(self) -> None:
         text_parts, clozes = parse_note_clozes(
@@ -163,6 +209,7 @@ class ReviewConfigTest(unittest.TestCase):
         self.assertEqual("~{", config.cloze_open)
         self.assertEqual("}", config.cloze_close)
         self.assertEqual(0, config.between_notes_timeout_ms)
+        self.assertTrue(config.show_context)
 
     def test_load_review_config_reads_custom_values(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
@@ -183,6 +230,7 @@ class ReviewConfigTest(unittest.TestCase):
                         },
                         "mask_char": "*",
                         "between_notes_timeout_ms": 250,
+                        "show_context": False,
                     },
                     handle,
                 )
@@ -198,6 +246,7 @@ class ReviewConfigTest(unittest.TestCase):
         self.assertEqual("}}", config.cloze_close)
         self.assertEqual("*", config.mask_char)
         self.assertEqual(250, config.between_notes_timeout_ms)
+        self.assertFalse(config.show_context)
 
 
 if __name__ == "__main__":

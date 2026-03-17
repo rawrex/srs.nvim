@@ -7,7 +7,8 @@ from fsrs import Scheduler
 
 from hooks_runtime.index import Index, split_note_into_cards
 
-from .card import Card, RevealMode
+from .card import Card
+from .config import ReviewConfig
 from .ui import ReviewUI
 
 
@@ -16,20 +17,16 @@ class ReviewSession:
         self,
         repo_root: str,
         ui: ReviewUI,
-        reveal_mode: RevealMode,
-        cloze_open: str,
-        cloze_close: str,
-        mask_char: str,
-        between_notes_timeout_ms: int,
+        config: ReviewConfig,
         scheduler: Scheduler | None = None,
     ) -> None:
         self.repo_root = repo_root
         self.ui = ui
-        self.reveal_mode = RevealMode(reveal_mode)
-        self.cloze_open = cloze_open
-        self.cloze_close = cloze_close
-        self.mask_char = mask_char
-        self.between_notes_timeout_ms = between_notes_timeout_ms
+        self.reveal_mode = config.reveal_mode
+        self.cloze_open = config.cloze_open
+        self.cloze_close = config.cloze_close
+        self.mask_char = config.mask_char
+        self.between_notes_timeout_ms = config.between_notes_timeout_ms
         self.scheduler = scheduler or Scheduler()
         self.index_path = os.path.join(repo_root, ".srs", "index.txt")
 
