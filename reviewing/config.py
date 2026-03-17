@@ -28,6 +28,7 @@ class ReviewConfig:
     mask_char: str = "▇"
     between_notes_timeout_ms: int = 0
     show_context: bool = True
+    context_dim_style: str = "dim"
 
 
 def load_review_config(repo_root: str) -> ReviewConfig:
@@ -77,6 +78,11 @@ def load_review_config(repo_root: str) -> ReviewConfig:
     if isinstance(show_context_raw, bool):
         show_context = show_context_raw
 
+    context_dim_style = defaults.context_dim_style
+    context_dim_style_raw = raw.get("context_dim_style")
+    if isinstance(context_dim_style_raw, str) and context_dim_style_raw.strip():
+        context_dim_style = context_dim_style_raw
+
     return ReviewConfig(
         reveal_mode=reveal_mode,
         rating_buttons=rating_buttons,
@@ -85,6 +91,7 @@ def load_review_config(repo_root: str) -> ReviewConfig:
         mask_char=mask_char,
         between_notes_timeout_ms=between_notes_timeout_ms,
         show_context=show_context,
+        context_dim_style=context_dim_style,
     )
 
 

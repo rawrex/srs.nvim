@@ -20,6 +20,7 @@ class ReviewUI:
         self.console = console or Console()
         self.rating_buttons = config.rating_buttons
         self.show_context = config.show_context
+        self.context_dim_style = config.context_dim_style
         self.button_to_rating_byte: Dict[str, bytes] = {
             button: bytes([rating.value])
             for rating, button in self.rating_buttons.items()
@@ -88,7 +89,7 @@ class ReviewUI:
                 if start_line == card.start_line
                 else self._masked_context_block(note_blocks[start_line], card)
             )
-            style = None if start_line == card.start_line else "dim"
+            style = None if start_line == card.start_line else self.context_dim_style
             self.console.print(Markdown(block.rstrip("\n")), style=style)
 
     def _masked_context_block(self, block: str, card: Card) -> str:

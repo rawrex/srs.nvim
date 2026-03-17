@@ -183,6 +183,45 @@ class ReviewRenderingTest(unittest.TestCase):
         self.assertIn("[a]", markdown_calls[0][0])
         self.assertNotIn("Second", markdown_calls[0][0])
 
+    def test_prompt_cloze_reveal_uses_configured_context_style(self) -> None:
+        note_blocks = {
+            1: "# One\nFirst ~{hidden} block.\n",
+            4: "# Two\nSecond block.\n",
+        }
+        console = FakeConsole()
+        card = Card(
+            note_id="1",
+            note_path="/tmp/note.md",
+            card_path="/tmp/1.json",
+            note_text=note_blocks[1],
+            scheduler_card=SchedulerCard(),
+            review_logs=[],
+            reveal_mode=RevealMode.WHOLE,
+            cloze_open="~{",
+            cloze_close="}",
+            mask_char="▇",
+            start_line=1,
+            note_blocks=note_blocks,
+        )
+        ui = ReviewUI(
+            config=ReviewConfig(context_dim_style="grey50"),
+            console=console,  # type: ignore[arg-type]
+        )
+
+        with (
+            patch("reviewing.ui.os.system", return_value=0),
+            patch("reviewing.ui.read_single_key", side_effect=["\n"]),
+        ):
+            ui.prompt_cloze_reveal("title", card)
+
+        markdown_calls = [
+            (item.markup, kwargs)
+            for item, kwargs in console.printed
+            if isinstance(item, Markdown)
+        ]
+        self.assertEqual(2, len(markdown_calls))
+        self.assertEqual("grey50", markdown_calls[1][1].get("style"))
+
     def test_parse_note_clozes_with_custom_syntax(self) -> None:
         text_parts, clozes = parse_note_clozes(
             "A <<one>> B", cloze_open="<<", cloze_close=">>"
@@ -210,6 +249,7 @@ class ReviewConfigTest(unittest.TestCase):
         self.assertEqual("}", config.cloze_close)
         self.assertEqual(0, config.between_notes_timeout_ms)
         self.assertTrue(config.show_context)
+        self.assertEqual("dim", config.context_dim_style)
 
     def test_load_review_config_reads_custom_values(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
@@ -231,6 +271,7 @@ class ReviewConfigTest(unittest.TestCase):
                         "mask_char": "*",
                         "between_notes_timeout_ms": 250,
                         "show_context": False,
+                        "context_dim_style": "grey50",
                     },
                     handle,
                 )
@@ -247,6 +288,7 @@ class ReviewConfigTest(unittest.TestCase):
         self.assertEqual("*", config.mask_char)
         self.assertEqual(250, config.between_notes_timeout_ms)
         self.assertFalse(config.show_context)
+        self.assertEqual("grey50", config.context_dim_style)
 
 
 if __name__ == "__main__":

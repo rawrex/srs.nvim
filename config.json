@@ -12,5 +12,6 @@
     },
     "mask_char": "_",
     "between_notes_timeout_ms": 0,
-    "show_context": true
+    "show_context": true,
+    "context_dim_style": "grey50"
 }
