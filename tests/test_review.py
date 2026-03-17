@@ -99,7 +99,7 @@ class ReviewRenderingTest(unittest.TestCase):
     ) -> None:
         note_blocks = {
             1: "# One\nFirst ~{hidden} block.\n",
-            4: "# Two\nSecond block.\n",
+            4: "# Two\nSecond ~{context cloze} block.\n",
         }
         console = FakeConsole()
         card = Card(
@@ -132,7 +132,9 @@ class ReviewRenderingTest(unittest.TestCase):
         self.assertEqual(2, len(markdown_calls))
         self.assertIn("[a]", markdown_calls[0][0])
         self.assertIsNone(markdown_calls[0][1].get("style"))
-        self.assertIn("Second block.", markdown_calls[1][0])
+        self.assertIn("Second", markdown_calls[1][0])
+        self.assertNotIn("context cloze", markdown_calls[1][0])
+        self.assertIn("▇▇▇▇▇▇▇▇▇▇▇▇▇", markdown_calls[1][0])
         self.assertEqual("dim", markdown_calls[1][1].get("style"))
 
     def test_parse_note_clozes_with_custom_syntax(self) -> None:

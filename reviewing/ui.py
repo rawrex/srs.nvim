@@ -7,7 +7,7 @@ from fsrs import Rating
 from rich.console import Console
 from rich.markdown import Markdown
 
-from .card import Card
+from .card import Card, mask_hidden_text, parse_note_clozes
 
 
 class ReviewUI:
@@ -81,10 +81,20 @@ class ReviewUI:
             block = (
                 current_view
                 if start_line == card.start_line
-                else note_blocks[start_line]
+                else self._masked_context_block(note_blocks[start_line], card)
             )
             style = None if start_line == card.start_line else "dim"
             self.console.print(Markdown(block.rstrip("\n")), style=style)
+
+    def _masked_context_block(self, block: str, card: Card) -> str:
+        text_parts, clozes = parse_note_clozes(block, card.cloze_open, card.cloze_close)
+        if not clozes:
+            return block
+        parts = [text_parts[0]]
+        for idx, hidden in enumerate(clozes):
+            parts.append(mask_hidden_text(hidden, card.mask_char))
+            parts.append(text_parts[idx + 1])
+        return "".join(parts)
 
 
 def read_single_key() -> str:
