@@ -16,6 +16,7 @@ class Index:
     def __init__(self, path: str) -> None:
         self.path = path
         self.row_re = re.compile(r"^'([^']*)','([^']*)','(\d+)'\s*$")
+        self.hunk_re = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
 
     def _stage_paths(self, repo_root: str, indexed_paths: Set[str]) -> None:
         rel_paths = sorted(path.lstrip("/") for path in indexed_paths)
@@ -32,21 +33,29 @@ class Index:
             handle.writelines(lines)
         os.replace(tmp_path, self.path)
 
-    def apply_diff_and_stage(self, repo_root: str, diff_text: str) -> None:
-        changed, staged_paths = self._apply_diff(diff_text)
+    def apply_diff_and_stage(
+        self, repo_root: str, diff_text: str, patch_text: str = ""
+    ) -> None:
+        changed, staged_paths = self._apply_diff(diff_text, patch_text)
         if changed:
             self._stage_paths(repo_root, staged_paths)
 
-    def apply_diff(self, diff_text: str) -> bool:
-        changed, _staged_paths = self._apply_diff(diff_text)
+    def apply_diff(self, diff_text: str, patch_text: str = "") -> bool:
+        changed, _staged_paths = self._apply_diff(diff_text, patch_text)
         return changed
 
-    def _apply_diff(self, diff_text: str) -> Tuple[bool, Set[str]]:
+    def _apply_diff(self, diff_text: str, patch_text: str) -> Tuple[bool, Set[str]]:
         renames, deletes, adds, modifies = util.parse_diff(diff_text)
         if not renames and not deletes and not adds and not modifies:
             return False, set()
+        modified_hunks = self._parse_modified_hunks(patch_text)
         updated, changed, touched_card_paths = self._update_index_lines(
-            self._read(), renames, deletes, adds, modifies
+            self._read(),
+            renames,
+            deletes,
+            adds,
+            modifies,
+            modified_hunks,
         )
         if changed:
             self._write(updated)
@@ -72,6 +81,7 @@ class Index:
         deletes: Set[str],
         adds: Set[str],
         modifies: Set[str],
+        modified_hunks: Dict[str, List[Tuple[int, int, int, int]]],
     ) -> Tuple[List[str], bool, Set[str]]:
         change_flag = False
         touched_card_paths: Set[str] = set()
@@ -104,24 +114,31 @@ class Index:
                 change_flag = True
                 touched_card_paths.update(self._add_new(new_path, updated))
 
-        rows_by_path = self._rows_by_path(updated)
         for modified_path in sorted(modifies):
             if not self._is_note_path(modified_path):
                 continue
+            rows_by_path = self._rows_by_path(updated)
             if modified_path not in rows_by_path:
                 continue
+
+            remapped_rows: List[Tuple[str, int]] = []
+            hunks = modified_hunks.get(modified_path, [])
+            for note_id, start_line in rows_by_path[modified_path]:
+                remapped_start_line = self._remap_line_number(start_line, hunks)
+                if remapped_start_line is None:
+                    change_flag = True
+                    if removed_path := self._remove_card_file(note_id):
+                        touched_card_paths.add(removed_path)
+                    continue
+                if remapped_start_line != start_line:
+                    change_flag = True
+                remapped_rows.append((note_id, remapped_start_line))
+
             existing_start_lines = {
-                start_line for _note_id, start_line in rows_by_path[modified_path]
+                start_line for _note_id, start_line in remapped_rows
             }
-            max_existing_start_line = (
-                max(existing_start_lines) if existing_start_lines else 0
-            )
-            cards = self._load_note_cards(modified_path)
-            for start_line, _block_text in cards:
-                if (
-                    start_line in existing_start_lines
-                    or start_line <= max_existing_start_line
-                ):
+            for start_line, _block_text in self._load_note_cards(modified_path):
+                if start_line in existing_start_lines:
                     continue
                 change_flag = True
                 new_scheduler_card = SchedulerCard()
@@ -131,9 +148,108 @@ class Index:
                     storage_dict_for_scheduler_card(new_scheduler_card),
                 )
                 touched_card_paths.add(self._card_path(card_id))
-                updated.append(f"'{card_id}','{modified_path}','{start_line}'\n")
+                remapped_rows.append((card_id, start_line))
+
+            replacement = self._replace_rows_for_path(
+                updated,
+                modified_path,
+                remapped_rows,
+            )
+            if replacement != updated:
+                updated = replacement
 
         return updated, change_flag, touched_card_paths
+
+    def _replace_rows_for_path(
+        self,
+        lines: List[str],
+        indexed_path: str,
+        replacement_rows: List[Tuple[str, int]],
+    ) -> List[str]:
+        updated: List[str] = []
+        inserted = False
+        for line in lines:
+            match = self.row_re.match(line.rstrip("\n"))
+            if not match:
+                updated.append(line)
+                continue
+            _note_id, path, _start_line = match.groups()
+            if path != indexed_path:
+                updated.append(line)
+                continue
+            if not inserted:
+                for note_id, start_line in sorted(
+                    replacement_rows, key=lambda row: row[1]
+                ):
+                    updated.append(self._format_row(note_id, indexed_path, start_line))
+                inserted = True
+        if not inserted:
+            for note_id, start_line in sorted(replacement_rows, key=lambda row: row[1]):
+                updated.append(self._format_row(note_id, indexed_path, start_line))
+        return updated
+
+    def _format_row(self, note_id: str, indexed_path: str, start_line: int) -> str:
+        return f"'{note_id}','{indexed_path}','{start_line}'\n"
+
+    def _remap_line_number(
+        self,
+        start_line: int,
+        hunks: List[Tuple[int, int, int, int]],
+    ) -> int | None:
+        shift = 0
+        for old_start, old_count, new_start, new_count in sorted(hunks):
+            if old_count == 0:
+                if start_line > old_start:
+                    shift += new_count
+                continue
+
+            old_end = old_start + old_count - 1
+            if start_line < old_start:
+                break
+            if start_line > old_end:
+                shift += new_count - old_count
+                continue
+
+            preserved_count = min(old_count, new_count)
+            offset = start_line - old_start
+            if offset < preserved_count:
+                return new_start + offset
+            return None
+        return start_line + shift
+
+    def _parse_modified_hunks(
+        self, patch_text: str
+    ) -> Dict[str, List[Tuple[int, int, int, int]]]:
+        hunks_by_path: Dict[str, List[Tuple[int, int, int, int]]] = {}
+        current_path = ""
+        for line in patch_text.splitlines():
+            if line.startswith("diff --git "):
+                current_path = ""
+                continue
+            if line.startswith("+++ "):
+                raw_path = line[4:].strip()
+                if raw_path == "/dev/null":
+                    current_path = ""
+                else:
+                    if raw_path.startswith("a/") or raw_path.startswith("b/"):
+                        raw_path = raw_path[2:]
+                    current_path = util.normalize_path(raw_path)
+                continue
+
+            if not current_path or not line.startswith("@@"):
+                continue
+
+            match = self.hunk_re.match(line)
+            if not match:
+                continue
+            old_start = int(match.group(1))
+            old_count = int(match.group(2) or "1")
+            new_start = int(match.group(3))
+            new_count = int(match.group(4) or "1")
+            hunks_by_path.setdefault(current_path, []).append(
+                (old_start, old_count, new_start, new_count)
+            )
+        return hunks_by_path
 
     def _remove_card_file(self, note_id: str) -> str | None:
         card_path = self._card_abs_path(note_id)
@@ -152,7 +268,7 @@ class Index:
                 storage_dict_for_scheduler_card(new_scheduler_card),
             )
             touched_card_paths.add(self._card_path(card_id))
-            updated.append(f"'{card_id}','{new_path}','{start_line}'\n")
+            updated.append(self._format_row(card_id, new_path, start_line))
         return touched_card_paths
 
     def _rows_by_path(self, lines: List[str]) -> Dict[str, List[Tuple[str, int]]]:
