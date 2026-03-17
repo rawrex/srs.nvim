@@ -147,6 +147,143 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             for card_id, _path, _start_line in rows:
                 self.assertFalse((srs_dir / f"{card_id}.json").exists())
 
+    def test_index_tracks_middle_insert_delete_and_replacement(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            repo_dir = Path(tmp_dir)
+
+            run_command(["git", "init"], cwd=repo_dir)
+            run_command(
+                ["git", "config", "user.email", "test@example.com"], cwd=repo_dir
+            )
+            run_command(["git", "config", "user.name", "Test User"], cwd=repo_dir)
+            run_command([sys.executable, str(INSTALL_SCRIPT)], cwd=repo_dir)
+
+            note_path = repo_dir / "note.md"
+            index_path = repo_dir / ".srs" / "index.txt"
+            srs_dir = repo_dir / ".srs"
+
+            note_path.write_text("A\nB\nC\n", encoding="utf-8")
+            run_command(["git", "add", "note.md"], cwd=repo_dir)
+            run_command(["git", "commit", "-m", "seed note"], cwd=repo_dir)
+
+            rows = read_index_rows(index_path)
+            self.assertEqual(
+                [1, 2, 3], sorted(start_line for _id, _p, start_line in rows)
+            )
+            ids_by_line = {start_line: note_id for note_id, _path, start_line in rows}
+
+            note_path.write_text("A\nB2\nC\n", encoding="utf-8")
+            run_command(["git", "add", "note.md"], cwd=repo_dir)
+            run_command(["git", "commit", "-m", "replace middle line"], cwd=repo_dir)
+
+            rows = read_index_rows(index_path)
+            self.assertEqual(
+                ids_by_line, {line: note_id for note_id, _path, line in rows}
+            )
+
+            note_path.write_text("A\nX\nB2\nC\n", encoding="utf-8")
+            run_command(["git", "add", "note.md"], cwd=repo_dir)
+            run_command(["git", "commit", "-m", "insert middle line"], cwd=repo_dir)
+
+            rows = read_index_rows(index_path)
+            inserted_ids_by_line = {
+                start_line: note_id for note_id, _path, start_line in rows
+            }
+            self.assertEqual(4, len(rows))
+            self.assertEqual(ids_by_line[1], inserted_ids_by_line[1])
+            self.assertEqual(ids_by_line[2], inserted_ids_by_line[3])
+            self.assertEqual(ids_by_line[3], inserted_ids_by_line[4])
+            inserted_card_id = inserted_ids_by_line[2]
+            self.assertNotIn(inserted_card_id, set(ids_by_line.values()))
+            self.assertTrue((srs_dir / f"{inserted_card_id}.json").exists())
+
+            removed_card_id = inserted_ids_by_line[3]
+            note_path.write_text("A\nX\nC\n", encoding="utf-8")
+            run_command(["git", "add", "note.md"], cwd=repo_dir)
+            run_command(["git", "commit", "-m", "delete middle line"], cwd=repo_dir)
+
+            rows = read_index_rows(index_path)
+            final_ids_by_line = {
+                start_line: note_id for note_id, _path, start_line in rows
+            }
+            self.assertEqual(3, len(rows))
+            self.assertEqual(ids_by_line[1], final_ids_by_line[1])
+            self.assertEqual(inserted_card_id, final_ids_by_line[2])
+            self.assertEqual(ids_by_line[3], final_ids_by_line[3])
+            self.assertFalse((srs_dir / f"{removed_card_id}.json").exists())
+
+    def test_index_ignores_empty_line_insertions(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            repo_dir = Path(tmp_dir)
+
+            run_command(["git", "init"], cwd=repo_dir)
+            run_command(
+                ["git", "config", "user.email", "test@example.com"], cwd=repo_dir
+            )
+            run_command(["git", "config", "user.name", "Test User"], cwd=repo_dir)
+            run_command([sys.executable, str(INSTALL_SCRIPT)], cwd=repo_dir)
+
+            note_path = repo_dir / "note.md"
+            index_path = repo_dir / ".srs" / "index.txt"
+
+            note_path.write_text("A\nB\nC\n", encoding="utf-8")
+            run_command(["git", "add", "note.md"], cwd=repo_dir)
+            run_command(["git", "commit", "-m", "seed note"], cwd=repo_dir)
+
+            rows = read_index_rows(index_path)
+            ids_by_line = {start_line: note_id for note_id, _path, start_line in rows}
+
+            note_path.write_text("A\n\nB\nC\n", encoding="utf-8")
+            run_command(["git", "add", "note.md"], cwd=repo_dir)
+            run_command(["git", "commit", "-m", "insert empty line"], cwd=repo_dir)
+
+            rows = read_index_rows(index_path)
+            ids_after = {start_line: note_id for note_id, _path, start_line in rows}
+            self.assertEqual(3, len(rows))
+            self.assertEqual(ids_by_line[1], ids_after[1])
+            self.assertEqual(ids_by_line[2], ids_after[3])
+            self.assertEqual(ids_by_line[3], ids_after[4])
+
+    def test_index_handles_multiple_hunks_in_one_commit(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            repo_dir = Path(tmp_dir)
+
+            run_command(["git", "init"], cwd=repo_dir)
+            run_command(
+                ["git", "config", "user.email", "test@example.com"], cwd=repo_dir
+            )
+            run_command(["git", "config", "user.name", "Test User"], cwd=repo_dir)
+            run_command([sys.executable, str(INSTALL_SCRIPT)], cwd=repo_dir)
+
+            note_path = repo_dir / "note.md"
+            index_path = repo_dir / ".srs" / "index.txt"
+            srs_dir = repo_dir / ".srs"
+
+            note_path.write_text("A\nB\nC\nD\nE\nF\n", encoding="utf-8")
+            run_command(["git", "add", "note.md"], cwd=repo_dir)
+            run_command(["git", "commit", "-m", "seed note"], cwd=repo_dir)
+
+            rows = read_index_rows(index_path)
+            ids_by_line = {start_line: note_id for note_id, _path, start_line in rows}
+
+            note_path.write_text("A\nX\nB\nC\nD\nE\n", encoding="utf-8")
+            run_command(["git", "add", "note.md"], cwd=repo_dir)
+            run_command(["git", "commit", "-m", "multi-hunk edit"], cwd=repo_dir)
+
+            rows = read_index_rows(index_path)
+            ids_after = {start_line: note_id for note_id, _path, start_line in rows}
+            self.assertEqual(6, len(rows))
+            self.assertEqual(ids_by_line[1], ids_after[1])
+            self.assertEqual(ids_by_line[2], ids_after[3])
+            self.assertEqual(ids_by_line[3], ids_after[4])
+            self.assertEqual(ids_by_line[4], ids_after[5])
+            self.assertEqual(ids_by_line[5], ids_after[6])
+
+            inserted_card_id = ids_after[2]
+            self.assertNotIn(inserted_card_id, set(ids_by_line.values()))
+            self.assertTrue((srs_dir / f"{inserted_card_id}.json").exists())
+            self.assertFalse((srs_dir / f"{ids_by_line[6]}.json").exists())
+
 
 if __name__ == "__main__":
     unittest.main()
