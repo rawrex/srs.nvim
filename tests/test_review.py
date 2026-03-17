@@ -229,11 +229,11 @@ class ReviewRenderingTest(unittest.TestCase):
         self.assertEqual(["A ", " B"], text_parts)
         self.assertEqual(["one"], clozes)
 
-    def test_split_note_into_cards_preserves_indented_blocks(self) -> None:
+    def test_split_note_into_cards_maps_each_non_empty_line_to_a_card(self) -> None:
         note_text = "A\n  B\n    C\nD\n\nE\n"
         cards = split_note_into_cards(note_text)
         self.assertEqual(
-            [(1, "A\n  B\n    C\n"), (4, "D\n"), (6, "E\n")],
+            [(1, "A\n"), (2, "  B\n"), (3, "    C\n"), (4, "D\n"), (6, "E\n")],
             cards,
         )
 

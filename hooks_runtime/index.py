@@ -207,37 +207,7 @@ class Index:
 
 def split_note_into_cards(note_text: str) -> List[Tuple[int, str]]:
     cards: List[Tuple[int, str]] = []
-    lines = note_text.splitlines(keepends=True)
-    line_count = len(lines)
-    idx = 0
-
-    while idx < line_count:
-        line = lines[idx]
-        if not line.strip():
-            idx += 1
-            continue
-
-        start_idx = idx
-        base_indent = _indent_width(line)
-        idx += 1
-
-        while idx < line_count:
-            next_line = lines[idx]
-            if not next_line.strip() or _indent_width(next_line) <= base_indent:
-                break
-            idx += 1
-
-        block_text = "".join(lines[start_idx:idx])
-        cards.append((start_idx + 1, block_text))
-
+    for line_number, line in enumerate(note_text.splitlines(keepends=True), start=1):
+        if line.strip():
+            cards.append((line_number, line))
     return cards
-
-
-def _indent_width(line: str) -> int:
-    width = 0
-    for char in line:
-        if char in (" ", "\t"):
-            width += 1
-            continue
-        break
-    return width

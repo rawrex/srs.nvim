@@ -76,8 +76,8 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             run_command(["git", "add", "note.md"], cwd=repo_dir)
             run_command(["git", "commit", "-m", "add note"], cwd=repo_dir)
             rows = read_index_rows(index_path)
-            self.assertEqual(len(rows), 2)
-            self.assertEqual(sorted(start_line for _, _, start_line in rows), [1, 3])
+            self.assertEqual(len(rows), 3)
+            self.assertEqual(sorted(start_line for _, _, start_line in rows), [1, 2, 3])
             created_ids = []
             for created_id, created_path, _start_line in rows:
                 self.assertEqual(created_path, "/note.md")
@@ -107,8 +107,10 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             run_command(["git", "add", "note.md"], cwd=repo_dir)
             run_command(["git", "commit", "-m", "append note"], cwd=repo_dir)
             rows = read_index_rows(index_path)
-            self.assertEqual(len(rows), 3)
-            self.assertEqual(sorted(start_line for _, _, start_line in rows), [1, 3, 4])
+            self.assertEqual(len(rows), 4)
+            self.assertEqual(
+                sorted(start_line for _, _, start_line in rows), [1, 2, 3, 4]
+            )
             for existing_id in created_ids:
                 self.assertIn(existing_id, [row[0] for row in rows])
 
@@ -136,7 +138,7 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             run_command(["git", "mv", "note.md", "renamed.md"], cwd=repo_dir)
             run_command(["git", "commit", "-m", "rename note"], cwd=repo_dir)
             rows = read_index_rows(index_path)
-            self.assertEqual(len(rows), 3)
+            self.assertEqual(len(rows), 4)
             self.assertTrue(all(path == "/renamed.md" for _, path, _ in rows))
 
             run_command(["git", "rm", "renamed.md"], cwd=repo_dir)
