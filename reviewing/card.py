@@ -112,6 +112,8 @@ class Card:
     label_to_index: Dict[str, int] = field(init=False)
     whole_revealed: List[bool] = field(init=False)
     incremental_states: List[IncrementalRevealState] = field(init=False)
+    start_line: int = 1
+    note_blocks: Dict[int, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         self.reveal_mode = RevealMode(self.reveal_mode)
@@ -138,6 +140,8 @@ class Card:
         note_path: str,
         card_path: str,
         note_text: str,
+        start_line: int,
+        note_blocks: Dict[int, str],
         reveal_mode: RevealMode,
         cloze_open: str,
         cloze_close: str,
@@ -151,6 +155,8 @@ class Card:
             note_path=note_path,
             card_path=card_path,
             note_text=note_text,
+            start_line=start_line,
+            note_blocks=note_blocks,
             scheduler_card=scheduler_card,
             review_logs=review_logs,
             reveal_mode=reveal_mode,

@@ -23,8 +23,8 @@ class FakeConsole:
     def __init__(self) -> None:
         self.printed = []
 
-    def print(self, value) -> None:
-        self.printed.append(value)
+    def print(self, value, *args, **kwargs) -> None:
+        self.printed.append((value, kwargs))
 
 
 class ReviewRenderingTest(unittest.TestCase):
@@ -85,12 +85,55 @@ class ReviewRenderingTest(unittest.TestCase):
             ui.prompt_cloze_reveal("title", card)
 
         markdown_frames = [
-            item.markup for item in console.printed if isinstance(item, Markdown)
+            item.markup
+            for item, _kwargs in console.printed
+            if isinstance(item, Markdown)
         ]
         self.assertGreaterEqual(len(markdown_frames), 2)
         self.assertIn("[A]", markdown_frames[0])
         self.assertIn("`c26`", markdown_frames[1])
         self.assertNotIn("[A]", markdown_frames[1])
+
+    def test_prompt_cloze_reveal_renders_note_context_with_dimmed_other_blocks(
+        self,
+    ) -> None:
+        note_blocks = {
+            1: "# One\nFirst ~{hidden} block.\n",
+            4: "# Two\nSecond block.\n",
+        }
+        console = FakeConsole()
+        card = Card(
+            note_id="1",
+            note_path="/tmp/note.md",
+            card_path="/tmp/1.json",
+            note_text=note_blocks[1],
+            scheduler_card=SchedulerCard(),
+            review_logs=[],
+            reveal_mode=RevealMode.WHOLE,
+            cloze_open="~{",
+            cloze_close="}",
+            mask_char="▇",
+            start_line=1,
+            note_blocks=note_blocks,
+        )
+        ui = ReviewUI(rating_buttons=DEFAULT_RATING_BUTTONS, console=console)  # type: ignore[arg-type]
+
+        with (
+            patch("reviewing.ui.os.system", return_value=0),
+            patch("reviewing.ui.read_single_key", side_effect=["\n"]),
+        ):
+            ui.prompt_cloze_reveal("title", card)
+
+        markdown_calls = [
+            (item.markup, kwargs)
+            for item, kwargs in console.printed
+            if isinstance(item, Markdown)
+        ]
+        self.assertEqual(2, len(markdown_calls))
+        self.assertIn("[a]", markdown_calls[0][0])
+        self.assertIsNone(markdown_calls[0][1].get("style"))
+        self.assertIn("Second block.", markdown_calls[1][0])
+        self.assertEqual("dim", markdown_calls[1][1].get("style"))
 
     def test_parse_note_clozes_with_custom_syntax(self) -> None:
         text_parts, clozes = parse_note_clozes(

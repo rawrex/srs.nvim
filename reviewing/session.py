@@ -54,7 +54,7 @@ class ReviewSession:
             )
             self.ui.show_answer(
                 f"\n[{idx}/{total}] {card.note_filename} — answer",
-                card.answer_view(),
+                card,
             )
 
             print()
@@ -91,6 +91,8 @@ class ReviewSession:
                 note_path=note_path,
                 card_path=card_path,
                 note_text=note_text,
+                start_line=start_line,
+                note_blocks=note_blocks_cache[note_path],
                 reveal_mode=self.reveal_mode,
                 cloze_open=self.cloze_open,
                 cloze_close=self.cloze_close,

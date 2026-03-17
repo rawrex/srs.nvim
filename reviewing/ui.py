@@ -30,7 +30,7 @@ class ReviewUI:
         while True:
             self._clear_screen()
             self.console.print(title)
-            self.console.print(Markdown(card.question_view().rstrip("\n")))
+            self._print_note_context(card=card, current_view=card.question_view())
 
             key = read_single_key()
             if maybe_suspend_for_key(key):
@@ -39,10 +39,10 @@ class ReviewUI:
                 return
             card.reveal_for_label(key)
 
-    def show_answer(self, title: str, answer_view: str) -> None:
+    def show_answer(self, title: str, card: Card) -> None:
         self._clear_screen()
         self.console.print(title)
-        self.console.print(Markdown(answer_view.rstrip("\n")))
+        self._print_note_context(card=card, current_view=card.answer_view())
 
     def prompt_rating(self) -> Rating:
         prompt = self._rating_prompt()
@@ -74,6 +74,17 @@ class ReviewUI:
             f"{self.rating_buttons[Rating.Easy]}=Easy",
         ]
         return f"Rate [{', '.join(parts)}]: "
+
+    def _print_note_context(self, card: Card, current_view: str) -> None:
+        note_blocks = card.note_blocks or {card.start_line: card.note_text}
+        for start_line in sorted(note_blocks):
+            block = (
+                current_view
+                if start_line == card.start_line
+                else note_blocks[start_line]
+            )
+            style = None if start_line == card.start_line else "dim"
+            self.console.print(Markdown(block.rstrip("\n")), style=style)
 
 
 def read_single_key() -> str:
