@@ -12,7 +12,6 @@ from fsrs import ReviewLog
 
 from .storage import (
     REVIEW_LOGS_KEY,
-    parse_storage_json,
     storage_dict_for_scheduler_card,
     write_storage_file,
 )
@@ -273,53 +272,4 @@ class ClozeCard(Card):
         return "".join(
             ch if ch == "\n" or idx in state.revealed_positions else self.mask_char
             for idx, ch in enumerate(hidden)
-        )
-
-
-class CardFactory(ABC):
-    @abstractmethod
-    def from_storage_file(
-        self,
-        note_id: str,
-        note_path: str,
-        card_path: str,
-        note_text: str,
-        start_line: int,
-        note_blocks: Dict[int, str],
-    ) -> Card:
-        raise NotImplementedError
-
-
-@dataclass(frozen=True)
-class ClozeCardFactory(CardFactory):
-    reveal_mode: RevealMode
-    cloze_open: str
-    cloze_close: str
-    mask_char: str
-
-    def from_storage_file(
-        self,
-        note_id: str,
-        note_path: str,
-        card_path: str,
-        note_text: str,
-        start_line: int,
-        note_blocks: Dict[int, str],
-    ) -> Card:
-        with open(card_path, "r", encoding="utf-8") as handle:
-            raw_text = handle.read()
-        scheduler_card, review_logs = parse_storage_json(raw_text)
-        return ClozeCard(
-            note_id=note_id,
-            note_path=note_path,
-            card_path=card_path,
-            note_text=note_text,
-            start_line=start_line,
-            note_blocks=note_blocks,
-            scheduler_card=scheduler_card,
-            review_logs=review_logs,
-            reveal_mode=self.reveal_mode,
-            cloze_open=self.cloze_open,
-            cloze_close=self.cloze_close,
-            mask_char=self.mask_char,
         )

@@ -7,17 +7,16 @@ from unittest.mock import patch
 from fsrs import Rating
 from rich.markdown import Markdown
 
-from hooks_runtime.index import split_note_into_cards
 from reviewing.card import (
     REVEAL_ALL_LABEL,
     ClozeCard,
-    ClozeCardFactory,
     RevealMode,
     SchedulerCard,
     mask_hidden_text,
     parse_note_clozes,
 )
 from reviewing.config import DEFAULT_RATING_BUTTONS, ReviewConfig, load_review_config
+from reviewing.parsers import ClozeParser
 from reviewing.ui import ReviewUI
 
 
@@ -266,19 +265,19 @@ class ReviewRenderingTest(unittest.TestCase):
         self.assertEqual(["A ", " B"], text_parts)
         self.assertEqual(["one"], clozes)
 
-    def test_factory_creates_cloze_card_from_storage_file(self) -> None:
+    def test_parser_creates_cloze_card_from_storage_file(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             card_path = os.path.join(temp_dir, "1.json")
             with open(card_path, "w", encoding="utf-8") as handle:
                 json.dump(ClozeCard.new_storage_dict(), handle)
 
-            factory = ClozeCardFactory(
+            parser = ClozeParser(
                 reveal_mode=RevealMode.WHOLE,
                 cloze_open="~{",
                 cloze_close="}",
                 mask_char="▇",
             )
-            card = factory.from_storage_file(
+            card = parser.from_storage_file(
                 note_id="1",
                 note_path="/tmp/note.md",
                 card_path=card_path,
@@ -292,7 +291,13 @@ class ReviewRenderingTest(unittest.TestCase):
 
     def test_split_note_into_cards_maps_each_non_empty_line_to_a_card(self) -> None:
         note_text = "A\n  B\n    C\nD\n\nE\n"
-        cards = split_note_into_cards(note_text)
+        parser = ClozeParser(
+            reveal_mode=RevealMode.WHOLE,
+            cloze_open="~{",
+            cloze_close="}",
+            mask_char="▇",
+        )
+        cards = parser.split_note_into_cards(note_text)
         self.assertEqual(
             [(1, "A\n"), (2, "  B\n"), (3, "    C\n"), (4, "D\n"), (6, "E\n")],
             cards,

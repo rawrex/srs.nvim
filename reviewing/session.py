@@ -5,10 +5,11 @@ from typing import Dict, List
 
 from fsrs import Scheduler
 
-from hooks_runtime.index import Index, split_note_into_cards
+from hooks_runtime.index import Index
 
-from .card import Card, CardFactory, ClozeCardFactory
+from .card import Card
 from .config import ReviewConfig
+from .parsers import DEFAULT_PARSER_ID, ClozeParser, ParserRegistry
 from .ui import ReviewUI
 
 
@@ -19,7 +20,7 @@ class ReviewSession:
         ui: ReviewUI,
         config: ReviewConfig,
         scheduler: Scheduler | None = None,
-        card_factory: CardFactory | None = None,
+        parser_registry: ParserRegistry | None = None,
     ) -> None:
         self.repo_root = repo_root
         self.ui = ui
@@ -29,11 +30,16 @@ class ReviewSession:
         self.mask_char = config.mask_char
         self.between_notes_timeout_ms = config.between_notes_timeout_ms
         self.scheduler = scheduler or Scheduler()
-        self.card_factory = card_factory or ClozeCardFactory(
-            reveal_mode=self.reveal_mode,
-            cloze_open=self.cloze_open,
-            cloze_close=self.cloze_close,
-            mask_char=self.mask_char,
+        self.parser_registry = parser_registry or ParserRegistry(
+            parsers={
+                DEFAULT_PARSER_ID: ClozeParser(
+                    reveal_mode=self.reveal_mode,
+                    cloze_open=self.cloze_open,
+                    cloze_close=self.cloze_close,
+                    mask_char=self.mask_char,
+                )
+            },
+            default_parser_id=DEFAULT_PARSER_ID,
         )
         self.index_path = os.path.join(repo_root, ".srs", "index.txt")
 
@@ -83,23 +89,28 @@ class ReviewSession:
     def _load_due_cards(self) -> List[Card]:
         now = datetime.now(timezone.utc)
         cards: List[Card] = []
-        note_blocks_cache: Dict[str, Dict[int, str]] = {}
-        index = Index(self.index_path)
-        for note_id, indexed_path, start_line in index.read_rows():
+        note_blocks_cache: Dict[tuple[str, str], Dict[int, str]] = {}
+        index = Index(self.index_path, parser_registry=self.parser_registry)
+        for note_id, indexed_path, parser_id, start_line in index.read_rows():
             note_path = self._note_abs_path(indexed_path)
-            if note_path not in note_blocks_cache:
-                note_blocks_cache[note_path] = self._read_note_blocks(note_path)
-            note_text = note_blocks_cache[note_path].get(start_line)
+            cache_key = (note_path, parser_id)
+            if cache_key not in note_blocks_cache:
+                note_blocks_cache[cache_key] = self._read_note_blocks(
+                    note_path,
+                    parser_id,
+                )
+            note_text = note_blocks_cache[cache_key].get(start_line)
             if note_text is None:
                 continue
             card_path = os.path.join(self.repo_root, ".srs", f"{note_id}.json")
-            card = self.card_factory.from_storage_file(
+            parser = self.parser_registry.get(parser_id)
+            card = parser.from_storage_file(
                 note_id=note_id,
                 note_path=note_path,
                 card_path=card_path,
                 note_text=note_text,
                 start_line=start_line,
-                note_blocks=note_blocks_cache[note_path],
+                note_blocks=note_blocks_cache[cache_key],
             )
             if card.is_due(now):
                 cards.append(card)
@@ -108,12 +119,13 @@ class ReviewSession:
     def _note_abs_path(self, indexed_path: str) -> str:
         return os.path.join(self.repo_root, indexed_path.lstrip("/"))
 
-    def _read_note_blocks(self, path: str) -> Dict[int, str]:
+    def _read_note_blocks(self, path: str, parser_id: str) -> Dict[int, str]:
         with open(path, "r", encoding="utf-8") as handle:
             note_text = handle.read()
+        parser = self.parser_registry.get(parser_id)
         return {
             line_number: block
-            for line_number, block in split_note_into_cards(note_text)
+            for line_number, block in parser.split_note_into_cards(note_text)
         }
 
     def _save_reviewed_card(self, card: Card) -> None:

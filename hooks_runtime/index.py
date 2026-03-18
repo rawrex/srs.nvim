@@ -6,18 +6,21 @@ from typing import Dict, List, Set, Tuple
 from reviewing.card import (
     SchedulerCard,
 )
-from reviewing.storage import (
-    storage_dict_for_scheduler_card,
-    write_storage_file,
-)
+from reviewing.parsers import DEFAULT_PARSER_ID, ParserRegistry, default_parser_registry
+from reviewing.storage import write_storage_file
 
 import util
 
 
 class Index:
-    def __init__(self, path: str) -> None:
+    def __init__(
+        self,
+        path: str,
+        parser_registry: ParserRegistry | None = None,
+    ) -> None:
         self.path = path
-        self.row_re = re.compile(r"^'([^']*)','([^']*)','(\d+)'\s*$")
+        self.parser_registry = parser_registry or default_parser_registry()
+        self.row_re = re.compile(r"^'([^']*)','([^']*)','([^']*)','(\d+)'\s*$")
         self.hunk_re = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
 
     def _stage_paths(self, repo_root: str, indexed_paths: Set[str]) -> None:
@@ -64,8 +67,8 @@ class Index:
             touched_card_paths.add(self._index_file_path())
         return changed, touched_card_paths
 
-    def read_rows(self) -> List[Tuple[str, str, int]]:
-        rows: List[Tuple[str, str, int]] = []
+    def read_rows(self) -> List[Tuple[str, str, str, int]]:
+        rows: List[Tuple[str, str, str, int]] = []
         for raw_line in self._read():
             line = raw_line.strip()
             if not line:
@@ -73,7 +76,14 @@ class Index:
             match = self.row_re.match(line)
             if not match:
                 continue
-            rows.append((match.group(1), match.group(2), int(match.group(3))))
+            rows.append(
+                (
+                    match.group(1),
+                    match.group(2),
+                    match.group(3),
+                    int(match.group(4)),
+                )
+            )
         return rows
 
     def _update_index_lines(
@@ -93,7 +103,7 @@ class Index:
             if not match:
                 updated.append(line)
                 continue
-            note_id, path, start_line = match.groups()
+            note_id, path, parser_id, start_line = match.groups()
             if path in deletes:
                 change_flag = True
                 if removed_path := self._remove_card_file(note_id):
@@ -102,7 +112,9 @@ class Index:
             if path in renames:
                 change_flag = True
                 new_path = renames[path]
-                updated.append(f"'{note_id}','{new_path}','{start_line}'\n")
+                updated.append(
+                    f"'{note_id}','{new_path}','{parser_id}','{start_line}'\n"
+                )
             else:
                 updated.append(line)
 
@@ -114,7 +126,9 @@ class Index:
                 continue
             if new_path not in existing_paths:
                 change_flag = True
-                touched_card_paths.update(self._add_new(new_path, updated))
+                touched_card_paths.update(
+                    self._add_new(new_path, DEFAULT_PARSER_ID, updated)
+                )
 
         for modified_path in sorted(modifies):
             if not self._is_note_path(modified_path):
@@ -123,9 +137,9 @@ class Index:
             if modified_path not in rows_by_path:
                 continue
 
-            remapped_rows: List[Tuple[str, int]] = []
+            remapped_rows: List[Tuple[str, str, int]] = []
             hunks = modified_hunks.get(modified_path, [])
-            for note_id, start_line in rows_by_path[modified_path]:
+            for note_id, parser_id, start_line in rows_by_path[modified_path]:
                 remapped_start_line = self._remap_line_number(start_line, hunks)
                 if remapped_start_line is None:
                     change_flag = True
@@ -134,12 +148,18 @@ class Index:
                     continue
                 if remapped_start_line != start_line:
                     change_flag = True
-                remapped_rows.append((note_id, remapped_start_line))
+                remapped_rows.append((note_id, parser_id, remapped_start_line))
 
             existing_start_lines = {
-                start_line for _note_id, start_line in remapped_rows
+                start_line for _note_id, _parser_id, start_line in remapped_rows
             }
-            for start_line, _block_text in self._load_note_cards(modified_path):
+            parser_id_for_path = (
+                remapped_rows[0][1] if remapped_rows else DEFAULT_PARSER_ID
+            )
+            for start_line, _block_text in self._load_note_cards(
+                modified_path,
+                parser_id_for_path,
+            ):
                 if start_line in existing_start_lines:
                     continue
                 change_flag = True
@@ -147,10 +167,11 @@ class Index:
                 card_id = str(new_scheduler_card.card_id)
                 self._write_card_file(
                     card_id,
-                    storage_dict_for_scheduler_card(new_scheduler_card),
+                    parser_id_for_path,
+                    new_scheduler_card,
                 )
                 touched_card_paths.add(self._card_path(card_id))
-                remapped_rows.append((card_id, start_line))
+                remapped_rows.append((card_id, parser_id_for_path, start_line))
 
             replacement = self._replace_rows_for_path(
                 updated,
@@ -166,7 +187,7 @@ class Index:
         self,
         lines: List[str],
         indexed_path: str,
-        replacement_rows: List[Tuple[str, int]],
+        replacement_rows: List[Tuple[str, str, int]],
     ) -> List[str]:
         updated: List[str] = []
         inserted = False
@@ -175,23 +196,37 @@ class Index:
             if not match:
                 updated.append(line)
                 continue
-            _note_id, path, _start_line = match.groups()
+            _note_id, path, _parser_id, _start_line = match.groups()
             if path != indexed_path:
                 updated.append(line)
                 continue
             if not inserted:
-                for note_id, start_line in sorted(
-                    replacement_rows, key=lambda row: row[1]
+                for note_id, parser_id, start_line in sorted(
+                    replacement_rows,
+                    key=lambda row: row[2],
                 ):
-                    updated.append(self._format_row(note_id, indexed_path, start_line))
+                    updated.append(
+                        self._format_row(note_id, indexed_path, parser_id, start_line)
+                    )
                 inserted = True
         if not inserted:
-            for note_id, start_line in sorted(replacement_rows, key=lambda row: row[1]):
-                updated.append(self._format_row(note_id, indexed_path, start_line))
+            for note_id, parser_id, start_line in sorted(
+                replacement_rows,
+                key=lambda row: row[2],
+            ):
+                updated.append(
+                    self._format_row(note_id, indexed_path, parser_id, start_line)
+                )
         return updated
 
-    def _format_row(self, note_id: str, indexed_path: str, start_line: int) -> str:
-        return f"'{note_id}','{indexed_path}','{start_line}'\n"
+    def _format_row(
+        self,
+        note_id: str,
+        indexed_path: str,
+        parser_id: str,
+        start_line: int,
+    ) -> str:
+        return f"'{note_id}','{indexed_path}','{parser_id}','{start_line}'\n"
 
     def _remap_line_number(
         self,
@@ -260,27 +295,35 @@ class Index:
             return self._card_path(note_id)
         return None
 
-    def _add_new(self, new_path: str, updated: List[str]) -> Set[str]:
+    def _add_new(
+        self,
+        new_path: str,
+        parser_id: str,
+        updated: List[str],
+    ) -> Set[str]:
         touched_card_paths: Set[str] = set()
-        for start_line, _block_text in self._load_note_cards(new_path):
+        for start_line, _block_text in self._load_note_cards(new_path, parser_id):
             new_scheduler_card = SchedulerCard()
             card_id = str(new_scheduler_card.card_id)
             self._write_card_file(
                 card_id,
-                storage_dict_for_scheduler_card(new_scheduler_card),
+                parser_id,
+                new_scheduler_card,
             )
             touched_card_paths.add(self._card_path(card_id))
-            updated.append(self._format_row(card_id, new_path, start_line))
+            updated.append(self._format_row(card_id, new_path, parser_id, start_line))
         return touched_card_paths
 
-    def _rows_by_path(self, lines: List[str]) -> Dict[str, List[Tuple[str, int]]]:
-        rows_by_path: Dict[str, List[Tuple[str, int]]] = {}
+    def _rows_by_path(self, lines: List[str]) -> Dict[str, List[Tuple[str, str, int]]]:
+        rows_by_path: Dict[str, List[Tuple[str, str, int]]] = {}
         for line in lines:
             match = self.row_re.match(line.rstrip("\n"))
             if not match:
                 continue
-            note_id, path, raw_start_line = match.groups()
-            rows_by_path.setdefault(path, []).append((note_id, int(raw_start_line)))
+            note_id, path, parser_id, raw_start_line = match.groups()
+            rows_by_path.setdefault(path, []).append(
+                (note_id, parser_id, int(raw_start_line))
+            )
         return rows_by_path
 
     def _is_note_path(self, indexed_path: str) -> bool:
@@ -307,7 +350,9 @@ class Index:
     def _note_abs_path(self, indexed_path: str) -> str:
         return os.path.join(self._repo_root(), indexed_path.lstrip("/"))
 
-    def _load_note_cards(self, indexed_path: str) -> List[Tuple[int, str]]:
+    def _load_note_cards(
+        self, indexed_path: str, parser_id: str
+    ) -> List[Tuple[int, str]]:
         note_path = self._note_abs_path(indexed_path)
         if not os.path.exists(note_path):
             return []
@@ -316,16 +361,18 @@ class Index:
                 note_text = handle.read()
         except (OSError, UnicodeDecodeError):
             return []
-        return split_note_into_cards(note_text)
+        try:
+            parser = self.parser_registry.get(parser_id)
+        except KeyError:
+            return []
+        return parser.split_note_into_cards(note_text)
 
-    def _write_card_file(self, card_id: str, payload: Dict[str, object]) -> None:
+    def _write_card_file(
+        self,
+        card_id: str,
+        parser_id: str,
+        scheduler_card: SchedulerCard,
+    ) -> None:
         card_path = self._card_abs_path(card_id)
-        write_storage_file(card_path, payload)
-
-
-def split_note_into_cards(note_text: str) -> List[Tuple[int, str]]:
-    cards: List[Tuple[int, str]] = []
-    for line_number, line in enumerate(note_text.splitlines(keepends=True), start=1):
-        if line.strip():
-            cards.append((line_number, line))
-    return cards
+        parser = self.parser_registry.get(parser_id)
+        write_storage_file(card_path, parser.new_storage_dict(scheduler_card))
