@@ -29,7 +29,7 @@ class ReviewUI:
     def print_message(self, message: str) -> None:
         self.console.print(message)
 
-    def prompt_cloze_reveal(self, title: str, card: Card) -> CardView:
+    def run_question_step(self, title: str, card: Card) -> CardView:
         current_view = card.question_view()
         while True:
             self._clear_screen()
@@ -45,12 +45,12 @@ class ReviewUI:
             if maybe_view is not None:
                 current_view = maybe_view
 
-    def show_rating_view(self, title: str, view: CardView) -> None:
+    def show_answer_step(self, title: str, view: CardView) -> None:
         self._clear_screen()
         self.console.print(title)
         self._print_view(view)
 
-    def prompt_rating(self) -> Rating:
+    def prompt_rating_step(self) -> Rating:
         prompt = self._rating_prompt()
         while True:
             print(prompt, end="", flush=True)
@@ -68,6 +68,15 @@ class ReviewUI:
             print()
             print(f"Set rating: {rating.name}")
             return rating
+
+    def prompt_cloze_reveal(self, title: str, card: Card) -> CardView:
+        return self.run_question_step(title, card)
+
+    def show_rating_view(self, title: str, view: CardView) -> None:
+        self.show_answer_step(title, view)
+
+    def prompt_rating(self) -> Rating:
+        return self.prompt_rating_step()
 
     def _clear_screen(self) -> None:
         os.system("cls" if os.name == "nt" else "clear")

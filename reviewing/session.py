@@ -49,20 +49,23 @@ class ReviewSession:
 
         total = len(cards)
         for idx, card in enumerate(cards, start=1):
-            title = f"\n[{idx}/{total}] {card.note_filename}"
+            question_title = f"\n[{idx}/{total}] {card.note_filename}"
+            answer_title = f"\n[{idx}/{total}] {card.note_filename} — answer"
+
+            # Step 1: question + reveals.
             question_started_ns = time.monotonic_ns()
-            rating_view = self.ui.prompt_cloze_reveal(title, card)
+            answer_view = self.ui.run_question_step(question_title, card)
 
             review_duration_ms = max(
                 0, (time.monotonic_ns() - question_started_ns) // 1_000_000
             )
-            self.ui.show_rating_view(
-                f"\n[{idx}/{total}] {card.note_filename} — answer",
-                rating_view,
-            )
 
+            # Step 2: answer view.
+            self.ui.show_answer_step(answer_title, answer_view)
+
+            # Step 3: rating.
             print()
-            rating = self.ui.prompt_rating()
+            rating = self.ui.prompt_rating_step()
             updated_card, review_log = self.scheduler.review_card(
                 card.scheduler_card,
                 rating,
