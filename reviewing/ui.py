@@ -7,7 +7,7 @@ from fsrs import Rating
 from rich.console import Console
 from rich.markdown import Markdown
 
-from .card import Card, mask_hidden_text, parse_note_clozes
+from .card import Card, CardView
 from .config import ReviewConfig
 
 
@@ -29,23 +29,26 @@ class ReviewUI:
     def print_message(self, message: str) -> None:
         self.console.print(message)
 
-    def prompt_cloze_reveal(self, title: str, card: Card) -> None:
+    def prompt_cloze_reveal(self, title: str, card: Card) -> CardView:
+        current_view = card.question_view()
         while True:
             self._clear_screen()
             self.console.print(title)
-            self._print_note_context(card=card, current_view=card.question_view())
+            self._print_view(current_view)
 
             key = read_single_key()
             if maybe_suspend_for_key(key):
                 continue
             if key in {"\r", "\n"}:
-                return
-            card.reveal_for_label(key)
+                return card.reveal_for_label("") or current_view
+            maybe_view = card.reveal_for_label(key)
+            if maybe_view is not None:
+                current_view = maybe_view
 
-    def show_answer(self, title: str, card: Card) -> None:
+    def show_rating_view(self, title: str, view: CardView) -> None:
         self._clear_screen()
         self.console.print(title)
-        self._print_note_context(card=card, current_view=card.answer_view())
+        self._print_view(view)
 
     def prompt_rating(self) -> Rating:
         prompt = self._rating_prompt()
@@ -78,29 +81,13 @@ class ReviewUI:
         ]
         return f"Rate [{', '.join(parts)}]: "
 
-    def _print_note_context(self, card: Card, current_view: str) -> None:
+    def _print_view(self, view: CardView) -> None:
         if not self.show_context:
-            self.console.print(Markdown(current_view.rstrip("\n")))
+            self.console.print(Markdown(view.primary_block().text.rstrip("\n")))
             return
-        note_blocks = card.note_blocks or {card.start_line: card.note_text}
-        for start_line in sorted(note_blocks):
-            block = (
-                current_view
-                if start_line == card.start_line
-                else self._masked_context_block(note_blocks[start_line], card)
-            )
-            style = None if start_line == card.start_line else self.context_dim_style
-            self.console.print(Markdown(block.rstrip("\n")), style=style)
-
-    def _masked_context_block(self, block: str, card: Card) -> str:
-        text_parts, clozes = parse_note_clozes(block, card.cloze_open, card.cloze_close)
-        if not clozes:
-            return block
-        parts = [text_parts[0]]
-        for idx, hidden in enumerate(clozes):
-            parts.append(mask_hidden_text(hidden, card.mask_char))
-            parts.append(text_parts[idx + 1])
-        return "".join(parts)
+        for block in view.blocks:
+            style = None if block.is_primary else self.context_dim_style
+            self.console.print(Markdown(block.text.rstrip("\n")), style=style)
 
 
 def read_single_key() -> str:

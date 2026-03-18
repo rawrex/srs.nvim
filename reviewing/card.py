@@ -3,6 +3,7 @@ import os
 import random
 import re
 import string
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
@@ -31,6 +32,26 @@ class IncrementalRevealState:
     next_word_first_index: int = 0
     next_random_index: int = 0
     fully_revealed: bool = False
+
+
+@dataclass(frozen=True)
+class ViewBlock:
+    start_line: int
+    text: str
+    is_primary: bool
+
+
+@dataclass(frozen=True)
+class CardView:
+    blocks: List[ViewBlock]
+
+    def primary_block(self) -> ViewBlock:
+        for block in self.blocks:
+            if block.is_primary:
+                return block
+        if self.blocks:
+            return self.blocks[0]
+        return ViewBlock(start_line=1, text="", is_primary=True)
 
 
 def parse_note_clozes(
@@ -94,80 +115,20 @@ def reveal_next_incremental_char(state: IncrementalRevealState) -> None:
         state.fully_revealed = True
 
 
-@dataclass
-class Card:
+@dataclass(kw_only=True)
+class Card(ABC):
     note_id: str
     note_path: str
     card_path: str
     note_text: str
     scheduler_card: SchedulerCard
     review_logs: List[ReviewLog]
-    reveal_mode: RevealMode
-    cloze_open: str
-    cloze_close: str
-    mask_char: str
-    text_parts: List[str] = field(init=False)
-    clozes: List[str] = field(init=False)
-    labels: List[str] = field(init=False)
-    label_to_index: Dict[str, int] = field(init=False)
-    whole_revealed: List[bool] = field(init=False)
-    incremental_states: List[IncrementalRevealState] = field(init=False)
     start_line: int = 1
     note_blocks: Dict[int, str] = field(default_factory=dict)
-
-    def __post_init__(self) -> None:
-        self.reveal_mode = RevealMode(self.reveal_mode)
-        self.text_parts, self.clozes = parse_note_clozes(
-            self.note_text,
-            cloze_open=self.cloze_open,
-            cloze_close=self.cloze_close,
-        )
-        self.labels = [LABEL_CHARS[idx] for idx in range(len(self.clozes))]
-        self.label_to_index = {label: idx for idx, label in enumerate(self.labels)}
-        self.whole_revealed = [False] * len(self.clozes)
-        self.incremental_states = [
-            build_incremental_reveal_state(hidden) for hidden in self.clozes
-        ]
 
     @property
     def note_filename(self) -> str:
         return self.note_path.rsplit("/", 1)[-1]
-
-    @classmethod
-    def from_storage_file(
-        cls,
-        note_id: str,
-        note_path: str,
-        card_path: str,
-        note_text: str,
-        start_line: int,
-        note_blocks: Dict[int, str],
-        reveal_mode: RevealMode,
-        cloze_open: str,
-        cloze_close: str,
-        mask_char: str,
-    ) -> "Card":
-        with open(card_path, "r", encoding="utf-8") as handle:
-            raw_text = handle.read()
-        scheduler_card, review_logs = parse_storage_json(raw_text)
-        return cls(
-            note_id=note_id,
-            note_path=note_path,
-            card_path=card_path,
-            note_text=note_text,
-            start_line=start_line,
-            note_blocks=note_blocks,
-            scheduler_card=scheduler_card,
-            review_logs=review_logs,
-            reveal_mode=reveal_mode,
-            cloze_open=cloze_open,
-            cloze_close=cloze_close,
-            mask_char=mask_char,
-        )
-
-    @classmethod
-    def new_storage_dict(cls) -> Dict[str, object]:
-        return storage_dict_for_scheduler_card(SchedulerCard())
 
     def is_due(self, now: datetime) -> bool:
         due = self.scheduler_card.due
@@ -183,19 +144,74 @@ class Card:
     def save_storage_file(self) -> None:
         write_storage_file(self.card_path, self.to_storage_dict())
 
-    def reveal_for_label(self, label: str) -> bool:
+    @abstractmethod
+    def reveal_for_label(self, label: str) -> CardView | None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def question_view(self) -> CardView:
+        raise NotImplementedError
+
+
+@dataclass
+class ClozeCard(Card):
+    reveal_mode: RevealMode = RevealMode.INCREMENTAL
+    cloze_open: str = "~{"
+    cloze_close: str = "}"
+    mask_char: str = "▇"
+    text_parts: List[str] = field(init=False)
+    clozes: List[str] = field(init=False)
+    labels: List[str] = field(init=False)
+    label_to_index: Dict[str, int] = field(init=False)
+    whole_revealed: List[bool] = field(init=False)
+    incremental_states: List[IncrementalRevealState] = field(init=False)
+
+    def __post_init__(self) -> None:
+        self.reveal_mode = RevealMode(self.reveal_mode)
+        self.text_parts, self.clozes = parse_note_clozes(
+            self.note_text,
+            cloze_open=self.cloze_open,
+            cloze_close=self.cloze_close,
+        )
+        self.labels = [LABEL_CHARS[idx] for idx in range(len(self.clozes))]
+        self.label_to_index = {label: idx for idx, label in enumerate(self.labels)}
+        self.whole_revealed = [False] * len(self.clozes)
+        self.incremental_states = [
+            build_incremental_reveal_state(hidden) for hidden in self.clozes
+        ]
+
+    @classmethod
+    def new_storage_dict(cls) -> Dict[str, object]:
+        return storage_dict_for_scheduler_card(SchedulerCard())
+
+    def reveal_for_label(self, label: str) -> CardView | None:
+        if label == "":
+            if self.reveal_mode == RevealMode.INCREMENTAL:
+                for state in self.incremental_states:
+                    state.fully_revealed = True
+            else:
+                for idx in range(len(self.whole_revealed)):
+                    self.whole_revealed[idx] = True
+            return self.question_view()
+
         idx = self.label_to_index.get(label)
         if idx is None:
-            return False
+            return None
         if self.reveal_mode == RevealMode.INCREMENTAL:
+            if self.incremental_states[idx].fully_revealed:
+                return None
             reveal_next_incremental_char(self.incremental_states[idx])
-            return True
+            return self.question_view()
         if self.whole_revealed[idx]:
-            return False
+            return None
         self.whole_revealed[idx] = True
-        return True
+        return self.question_view()
 
-    def question_view(self) -> str:
+    def question_view(self) -> CardView:
+        current = self._question_block()
+        return self._build_view(current_block=current, mask_context=True)
+
+    def _question_block(self) -> str:
         parts: List[str] = [self.text_parts[0]]
         for idx, hidden in enumerate(self.clozes):
             if self.reveal_mode == RevealMode.INCREMENTAL:
@@ -215,11 +231,33 @@ class Card:
             parts.append(self.text_parts[idx + 1])
         return "".join(parts)
 
-    def answer_view(self) -> str:
-        parts: List[str] = [self.text_parts[0]]
-        for idx, hidden in enumerate(self.clozes):
-            parts.append(hidden)
-            parts.append(self.text_parts[idx + 1])
+    def _build_view(self, current_block: str, mask_context: bool) -> CardView:
+        blocks: List[ViewBlock] = []
+        note_blocks = self.note_blocks or {self.start_line: self.note_text}
+        for start_line in sorted(note_blocks):
+            if start_line == self.start_line:
+                blocks.append(
+                    ViewBlock(
+                        start_line=start_line, text=current_block, is_primary=True
+                    )
+                )
+                continue
+            block = note_blocks[start_line]
+            if mask_context:
+                block = self._masked_context_block(block)
+            blocks.append(
+                ViewBlock(start_line=start_line, text=block, is_primary=False)
+            )
+        return CardView(blocks=blocks)
+
+    def _masked_context_block(self, block: str) -> str:
+        text_parts, clozes = parse_note_clozes(block, self.cloze_open, self.cloze_close)
+        if not clozes:
+            return block
+        parts = [text_parts[0]]
+        for idx, hidden in enumerate(clozes):
+            parts.append(mask_hidden_text(hidden, self.mask_char))
+            parts.append(text_parts[idx + 1])
         return "".join(parts)
 
     def _incremental_hidden_view(
@@ -230,6 +268,55 @@ class Card:
         return "".join(
             ch if ch == "\n" or idx in state.revealed_positions else self.mask_char
             for idx, ch in enumerate(hidden)
+        )
+
+
+class CardFactory(ABC):
+    @abstractmethod
+    def from_storage_file(
+        self,
+        note_id: str,
+        note_path: str,
+        card_path: str,
+        note_text: str,
+        start_line: int,
+        note_blocks: Dict[int, str],
+    ) -> Card:
+        raise NotImplementedError
+
+
+@dataclass(frozen=True)
+class ClozeCardFactory(CardFactory):
+    reveal_mode: RevealMode
+    cloze_open: str
+    cloze_close: str
+    mask_char: str
+
+    def from_storage_file(
+        self,
+        note_id: str,
+        note_path: str,
+        card_path: str,
+        note_text: str,
+        start_line: int,
+        note_blocks: Dict[int, str],
+    ) -> Card:
+        with open(card_path, "r", encoding="utf-8") as handle:
+            raw_text = handle.read()
+        scheduler_card, review_logs = parse_storage_json(raw_text)
+        return ClozeCard(
+            note_id=note_id,
+            note_path=note_path,
+            card_path=card_path,
+            note_text=note_text,
+            start_line=start_line,
+            note_blocks=note_blocks,
+            scheduler_card=scheduler_card,
+            review_logs=review_logs,
+            reveal_mode=self.reveal_mode,
+            cloze_open=self.cloze_open,
+            cloze_close=self.cloze_close,
+            mask_char=self.mask_char,
         )
 
 

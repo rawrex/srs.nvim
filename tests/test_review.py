@@ -9,7 +9,8 @@ from rich.markdown import Markdown
 
 from hooks_runtime.index import split_note_into_cards
 from reviewing.card import (
-    Card,
+    ClozeCard,
+    ClozeCardFactory,
     RevealMode,
     SchedulerCard,
     mask_hidden_text,
@@ -28,13 +29,13 @@ class FakeConsole:
 
 
 class ReviewRenderingTest(unittest.TestCase):
-    def test_question_and_answer_views(self) -> None:
+    def test_question_and_reveal_all_views(self) -> None:
         note = "# Title\nThe ~{capital of France} is Paris."
 
         text_parts, clozes = parse_note_clozes(note, cloze_open="~{", cloze_close="}")
         self.assertEqual(["capital of France"], clozes)
 
-        card = Card(
+        card = ClozeCard(
             note_id="1",
             note_path="/tmp/note.md",
             card_path="/tmp/1.json",
@@ -46,13 +47,19 @@ class ReviewRenderingTest(unittest.TestCase):
             cloze_close="}",
             mask_char="▇",
         )
-        hidden_question = card.question_view()
+        hidden_question = card.question_view().primary_block().text
         self.assertIn("The [a]▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇ is Paris.", hidden_question)
 
-        card.reveal_for_label("a")
-        revealed_question = card.question_view()
+        revealed_question_view = card.reveal_for_label("a")
+        self.assertIsNotNone(revealed_question_view)
+        revealed_question = card.question_view().primary_block().text
         self.assertIn("The `capital of France` is Paris.", revealed_question)
-        self.assertIn("The capital of France is Paris.", card.answer_view())
+        final_view = card.reveal_for_label("")
+        self.assertIsNotNone(final_view)
+        assert final_view is not None
+        self.assertIn(
+            "The `capital of France` is Paris.", final_view.primary_block().text
+        )
         self.assertEqual(["# Title\nThe ", " is Paris."], text_parts)
 
     def test_mask_hidden_text_hides_spaces(self) -> None:
@@ -64,7 +71,7 @@ class ReviewRenderingTest(unittest.TestCase):
     def test_prompt_cloze_reveal_supports_uppercase_label(self) -> None:
         note = " ".join(f"~{{c{i}}}" for i in range(27))
         console = FakeConsole()
-        card = Card(
+        card = ClozeCard(
             note_id="1",
             note_path="/tmp/note.md",
             card_path="/tmp/1.json",
@@ -105,7 +112,7 @@ class ReviewRenderingTest(unittest.TestCase):
             4: "# Two\nSecond ~{context cloze} block.\n",
         }
         console = FakeConsole()
-        card = Card(
+        card = ClozeCard(
             note_id="1",
             note_path="/tmp/note.md",
             card_path="/tmp/1.json",
@@ -149,7 +156,7 @@ class ReviewRenderingTest(unittest.TestCase):
             4: "# Two\nSecond ~{context cloze} block.\n",
         }
         console = FakeConsole()
-        card = Card(
+        card = ClozeCard(
             note_id="1",
             note_path="/tmp/note.md",
             card_path="/tmp/1.json",
@@ -189,7 +196,7 @@ class ReviewRenderingTest(unittest.TestCase):
             4: "# Two\nSecond block.\n",
         }
         console = FakeConsole()
-        card = Card(
+        card = ClozeCard(
             note_id="1",
             note_path="/tmp/note.md",
             card_path="/tmp/1.json",
@@ -222,12 +229,65 @@ class ReviewRenderingTest(unittest.TestCase):
         self.assertEqual(2, len(markdown_calls))
         self.assertEqual("grey50", markdown_calls[1][1].get("style"))
 
+    def test_reveal_all_keeps_context_masked(self) -> None:
+        note_blocks = {
+            1: "# One\nFirst ~{hidden} block.\n",
+            4: "# Two\nSecond ~{context cloze} block.\n",
+        }
+        card = ClozeCard(
+            note_id="1",
+            note_path="/tmp/note.md",
+            card_path="/tmp/1.json",
+            note_text=note_blocks[1],
+            scheduler_card=SchedulerCard(),
+            review_logs=[],
+            reveal_mode=RevealMode.WHOLE,
+            cloze_open="~{",
+            cloze_close="}",
+            mask_char="▇",
+            start_line=1,
+            note_blocks=note_blocks,
+        )
+
+        view = card.reveal_for_label("")
+        self.assertIsNotNone(view)
+        assert view is not None
+        self.assertEqual(2, len(view.blocks))
+        self.assertIn("First `hidden` block.", view.primary_block().text)
+        context = next(block.text for block in view.blocks if not block.is_primary)
+        self.assertNotIn("context cloze", context)
+        self.assertIn("▇▇▇▇▇▇▇▇▇▇▇▇▇", context)
+
     def test_parse_note_clozes_with_custom_syntax(self) -> None:
         text_parts, clozes = parse_note_clozes(
             "A <<one>> B", cloze_open="<<", cloze_close=">>"
         )
         self.assertEqual(["A ", " B"], text_parts)
         self.assertEqual(["one"], clozes)
+
+    def test_factory_creates_cloze_card_from_storage_file(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            card_path = os.path.join(temp_dir, "1.json")
+            with open(card_path, "w", encoding="utf-8") as handle:
+                json.dump(ClozeCard.new_storage_dict(), handle)
+
+            factory = ClozeCardFactory(
+                reveal_mode=RevealMode.WHOLE,
+                cloze_open="~{",
+                cloze_close="}",
+                mask_char="▇",
+            )
+            card = factory.from_storage_file(
+                note_id="1",
+                note_path="/tmp/note.md",
+                card_path=card_path,
+                note_text="The ~{capital of France} is Paris.",
+                start_line=1,
+                note_blocks={1: "The ~{capital of France} is Paris.\n"},
+            )
+
+            self.assertIsInstance(card, ClozeCard)
+            self.assertIn("[a]", card.question_view().primary_block().text)
 
     def test_split_note_into_cards_maps_each_non_empty_line_to_a_card(self) -> None:
         note_text = "A\n  B\n    C\nD\n\nE\n"

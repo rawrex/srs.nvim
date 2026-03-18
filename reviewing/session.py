@@ -7,7 +7,7 @@ from fsrs import Scheduler
 
 from hooks_runtime.index import Index, split_note_into_cards
 
-from .card import Card
+from .card import Card, CardFactory, ClozeCardFactory
 from .config import ReviewConfig
 from .ui import ReviewUI
 
@@ -19,6 +19,7 @@ class ReviewSession:
         ui: ReviewUI,
         config: ReviewConfig,
         scheduler: Scheduler | None = None,
+        card_factory: CardFactory | None = None,
     ) -> None:
         self.repo_root = repo_root
         self.ui = ui
@@ -29,6 +30,12 @@ class ReviewSession:
         self.between_notes_timeout_ms = config.between_notes_timeout_ms
         self.ui.show_context = config.show_context
         self.scheduler = scheduler or Scheduler()
+        self.card_factory = card_factory or ClozeCardFactory(
+            reveal_mode=self.reveal_mode,
+            cloze_open=self.cloze_open,
+            cloze_close=self.cloze_close,
+            mask_char=self.mask_char,
+        )
         self.index_path = os.path.join(repo_root, ".srs", "index.txt")
 
     def run(self) -> int:
@@ -45,14 +52,14 @@ class ReviewSession:
         for idx, card in enumerate(cards, start=1):
             title = f"\n[{idx}/{total}] {card.note_filename}"
             question_started_ns = time.monotonic_ns()
-            self.ui.prompt_cloze_reveal(title, card)
+            rating_view = self.ui.prompt_cloze_reveal(title, card)
 
             review_duration_ms = max(
                 0, (time.monotonic_ns() - question_started_ns) // 1_000_000
             )
-            self.ui.show_answer(
+            self.ui.show_rating_view(
                 f"\n[{idx}/{total}] {card.note_filename} — answer",
-                card,
+                rating_view,
             )
 
             print()
@@ -84,17 +91,13 @@ class ReviewSession:
             if note_text is None:
                 continue
             card_path = os.path.join(self.repo_root, ".srs", f"{note_id}.json")
-            card = Card.from_storage_file(
+            card = self.card_factory.from_storage_file(
                 note_id=note_id,
                 note_path=note_path,
                 card_path=card_path,
                 note_text=note_text,
                 start_line=start_line,
                 note_blocks=note_blocks_cache[note_path],
-                reveal_mode=self.reveal_mode,
-                cloze_open=self.cloze_open,
-                cloze_close=self.cloze_close,
-                mask_char=self.mask_char,
             )
             if card.is_due(now):
                 cards.append(card)
