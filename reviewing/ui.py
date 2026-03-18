@@ -7,7 +7,7 @@ from fsrs import Rating
 from rich.console import Console
 from rich.markdown import Markdown
 
-from .card import Card, CardView
+from .card import REVEAL_ALL_LABEL, Card, CardView
 from .config import ReviewConfig
 
 
@@ -40,7 +40,7 @@ class ReviewUI:
             if maybe_suspend_for_key(key):
                 continue
             if key in {"\r", "\n"}:
-                return card.reveal_for_label("") or current_view
+                return card.reveal_for_label(REVEAL_ALL_LABEL) or current_view
             maybe_view = card.reveal_for_label(key)
             if maybe_view is not None:
                 current_view = maybe_view

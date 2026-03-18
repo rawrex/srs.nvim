@@ -9,6 +9,7 @@ from rich.markdown import Markdown
 
 from hooks_runtime.index import split_note_into_cards
 from reviewing.card import (
+    REVEAL_ALL_LABEL,
     ClozeCard,
     ClozeCardFactory,
     RevealMode,
@@ -54,7 +55,7 @@ class ReviewRenderingTest(unittest.TestCase):
         self.assertIsNotNone(revealed_question_view)
         revealed_question = card.question_view().primary_block().text
         self.assertIn("The `capital of France` is Paris.", revealed_question)
-        final_view = card.reveal_for_label("")
+        final_view = card.reveal_for_label(REVEAL_ALL_LABEL)
         self.assertIsNotNone(final_view)
         assert final_view is not None
         self.assertIn(
@@ -249,7 +250,7 @@ class ReviewRenderingTest(unittest.TestCase):
             note_blocks=note_blocks,
         )
 
-        view = card.reveal_for_label("")
+        view = card.reveal_for_label(REVEAL_ALL_LABEL)
         self.assertIsNotNone(view)
         assert view is not None
         self.assertEqual(2, len(view.blocks))
