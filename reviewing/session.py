@@ -1,7 +1,6 @@
 import os
 import time
 from datetime import datetime, timezone
-from typing import Dict, List
 
 from fsrs import Scheduler
 
@@ -70,7 +69,7 @@ class ReviewSession:
             self.ui.show_answer_step(answer_title, answer_view)
 
             # Step 3: rating.
-            print()
+            self.ui.print_message("")
             rating = self.ui.prompt_rating_step()
             updated_card, review_log = self.scheduler.review_card(
                 card.scheduler_card,
@@ -86,10 +85,10 @@ class ReviewSession:
 
         return 0
 
-    def _load_due_cards(self) -> List[Card]:
+    def _load_due_cards(self) -> list[Card]:
         now = datetime.now(timezone.utc)
-        cards: List[Card] = []
-        note_blocks_cache: Dict[tuple[str, str], Dict[int, str]] = {}
+        cards: list[Card] = []
+        note_blocks_cache: dict[tuple[str, str], dict[int, str]] = {}
         index = Index(self.index_path, parser_registry=self.parser_registry)
         for note_id, indexed_path, parser_id, start_line in index.read_rows():
             note_path = self._note_abs_path(indexed_path)
@@ -119,7 +118,7 @@ class ReviewSession:
     def _note_abs_path(self, indexed_path: str) -> str:
         return os.path.join(self.repo_root, indexed_path.lstrip("/"))
 
-    def _read_note_blocks(self, path: str, parser_id: str) -> Dict[int, str]:
+    def _read_note_blocks(self, path: str, parser_id: str) -> dict[int, str]:
         with open(path, "r", encoding="utf-8") as handle:
             note_text = handle.read()
         parser = self.parser_registry.get(parser_id)

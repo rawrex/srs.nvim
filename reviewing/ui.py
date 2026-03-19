@@ -1,7 +1,6 @@
 import os
 import signal
 import sys
-from typing import Dict
 
 from fsrs import Rating
 from rich.console import Console
@@ -21,7 +20,7 @@ class ReviewUI:
         self.rating_buttons = config.rating_buttons
         self.show_context = config.show_context
         self.context_dim_style = config.context_dim_style
-        self.button_to_rating_byte: Dict[str, bytes] = {
+        self.button_to_rating_byte: dict[str, bytes] = {
             button: bytes([rating.value])
             for rating, button in self.rating_buttons.items()
         }
@@ -53,20 +52,20 @@ class ReviewUI:
     def prompt_rating_step(self) -> Rating:
         prompt = self._rating_prompt()
         while True:
-            print(prompt, end="", flush=True)
+            self.console.print(prompt, end="", highlight=False)
             key = read_single_key()
             if maybe_suspend_for_key(key):
-                print()
+                self.console.print()
                 continue
             try:
                 rating = Rating.from_bytes(self.button_to_rating_byte[key])
             except (KeyError, ValueError):
-                print()
-                print("Invalid rating")
+                self.console.print()
+                self.console.print("Invalid rating")
                 continue
 
-            print()
-            print(f"Set rating: {rating.name}")
+            self.console.print()
+            self.console.print(f"Set rating: {rating.name}")
             return rating
 
     def prompt_cloze_reveal(self, title: str, card: Card) -> CardView:

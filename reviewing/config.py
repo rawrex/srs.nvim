@@ -2,14 +2,13 @@ import json
 import os
 from dataclasses import dataclass
 from dataclasses import field
-from typing import Dict
 
 from fsrs import Rating
 
 from .card import RevealMode
 
 
-DEFAULT_RATING_BUTTONS: Dict[Rating, str] = {
+DEFAULT_RATING_BUTTONS: dict[Rating, str] = {
     Rating.Again: "n",
     Rating.Hard: "e",
     Rating.Good: "i",
@@ -20,7 +19,7 @@ DEFAULT_RATING_BUTTONS: Dict[Rating, str] = {
 @dataclass(frozen=True)
 class ReviewConfig:
     reveal_mode: RevealMode = RevealMode.INCREMENTAL
-    rating_buttons: Dict[Rating, str] = field(
+    rating_buttons: dict[Rating, str] = field(
         default_factory=lambda: DEFAULT_RATING_BUTTONS.copy()
     )
     cloze_open: str = "~{"
@@ -95,11 +94,11 @@ def load_review_config(repo_root: str) -> ReviewConfig:
     )
 
 
-def _parse_rating_buttons(raw: object) -> Dict[Rating, str]:
+def _parse_rating_buttons(raw: object) -> dict[Rating, str]:
     if not isinstance(raw, dict):
         return DEFAULT_RATING_BUTTONS.copy()
 
-    parsed: Dict[Rating, str] = {}
+    parsed: dict[Rating, str] = {}
     for rating in (Rating.Again, Rating.Hard, Rating.Good, Rating.Easy):
         value = raw.get(rating.name)
         if not isinstance(value, str) or len(value) != 1:
