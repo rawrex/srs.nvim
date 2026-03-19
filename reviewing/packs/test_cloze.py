@@ -319,8 +319,8 @@ class ClozePackTest(unittest.TestCase):
             self.assertIsInstance(card, ClozeCard)
             self.assertIn("[a]", card.question_view().primary_block().text)
 
-    def test_split_note_into_cards_maps_each_non_empty_line_to_a_card(self) -> None:
-        note_text = "A\n  B\n    C\nD\n\nE\n"
+    def test_split_note_into_cards_maps_each_cloze_line_to_a_card(self) -> None:
+        note_text = "A\n  ~{B}\n    C\n~{D}\n\nE ~{F}\n"
         parser = ClozeParser(
             reveal_mode=RevealMode.WHOLE,
             cloze_open="~{",
@@ -330,11 +330,9 @@ class ClozePackTest(unittest.TestCase):
         cards = parser.split_note_into_cards(note_text)
         self.assertEqual(
             [
-                (1, 1, "A\n"),
-                (2, 2, "  B\n"),
-                (3, 3, "    C\n"),
-                (4, 4, "D\n"),
-                (6, 6, "E\n"),
+                (2, 2, "  ~{B}\n"),
+                (4, 4, "~{D}\n"),
+                (6, 6, "E ~{F}\n"),
             ],
             cards,
         )
