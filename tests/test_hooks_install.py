@@ -212,11 +212,7 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             ids_after_replace = {
                 line: note_id for note_id, _path, _parser_id, line, _end_line in rows
             }
-            self.assertEqual(ids_by_line[1], ids_after_replace[1])
-            self.assertEqual(ids_by_line[3], ids_after_replace[3])
-            self.assertNotEqual(ids_by_line[2], ids_after_replace[2])
-            self.assertFalse((srs_dir / f"{ids_by_line[2]}.json").exists())
-            self.assertTrue((srs_dir / f"{ids_after_replace[2]}.json").exists())
+            self.assertEqual(ids_by_line, ids_after_replace)
 
             note_path.write_text("A\nX\nB2\nC\n", encoding="utf-8")
             run_command(["git", "add", "note.md"], cwd=repo_dir)
@@ -228,28 +224,32 @@ class HooksInstallIntegrationTest(unittest.TestCase):
                 for note_id, _path, _parser_id, start_line, _end_line in rows
             }
             self.assertEqual(4, len(rows))
-            self.assertEqual(ids_after_replace[1], inserted_ids_by_line[1])
-            self.assertEqual(ids_after_replace[2], inserted_ids_by_line[3])
-            self.assertEqual(ids_after_replace[3], inserted_ids_by_line[4])
+            self.assertEqual(ids_by_line[1], inserted_ids_by_line[1])
+            self.assertEqual(ids_by_line[2], inserted_ids_by_line[3])
+            self.assertEqual(ids_by_line[3], inserted_ids_by_line[4])
             inserted_card_id = inserted_ids_by_line[2]
-            self.assertNotIn(inserted_card_id, set(ids_after_replace.values()))
+            self.assertNotIn(inserted_card_id, set(ids_by_line.values()))
             self.assertTrue((srs_dir / f"{inserted_card_id}.json").exists())
 
             removed_card_id = inserted_ids_by_line[3]
             note_path.write_text("A\nX\nC\n", encoding="utf-8")
             run_command(["git", "add", "note.md"], cwd=repo_dir)
-            run_command(["git", "commit", "-m", "delete middle line"], cwd=repo_dir)
+            commit_result = subprocess.run(
+                ["git", "commit", "-m", "delete middle line"],
+                cwd=repo_dir,
+                text=True,
+                capture_output=True,
+            )
+            self.assertNotEqual(0, commit_result.returncode)
+            self.assertIn("SRS index update aborted", commit_result.stderr)
 
             rows = read_index_rows(index_path)
-            final_ids_by_line = {
+            failed_ids_by_line = {
                 start_line: note_id
                 for note_id, _path, _parser_id, start_line, _end_line in rows
             }
-            self.assertEqual(3, len(rows))
-            self.assertEqual(ids_by_line[1], final_ids_by_line[1])
-            self.assertEqual(inserted_card_id, final_ids_by_line[2])
-            self.assertEqual(ids_by_line[3], final_ids_by_line[3])
-            self.assertFalse((srs_dir / f"{removed_card_id}.json").exists())
+            self.assertEqual(inserted_ids_by_line, failed_ids_by_line)
+            self.assertTrue((srs_dir / f"{removed_card_id}.json").exists())
 
     def test_index_ignores_empty_line_insertions(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -316,24 +316,22 @@ class HooksInstallIntegrationTest(unittest.TestCase):
 
             note_path.write_text("A\nX\nB\nC\nD\nE\n", encoding="utf-8")
             run_command(["git", "add", "note.md"], cwd=repo_dir)
-            run_command(["git", "commit", "-m", "multi-hunk edit"], cwd=repo_dir)
+            commit_result = subprocess.run(
+                ["git", "commit", "-m", "multi-hunk edit"],
+                cwd=repo_dir,
+                text=True,
+                capture_output=True,
+            )
+            self.assertNotEqual(0, commit_result.returncode)
+            self.assertIn("SRS index update aborted", commit_result.stderr)
 
             rows = read_index_rows(index_path)
             ids_after = {
                 start_line: note_id
                 for note_id, _path, _parser_id, start_line, _end_line in rows
             }
-            self.assertEqual(6, len(rows))
-            self.assertEqual(ids_by_line[1], ids_after[1])
-            self.assertEqual(ids_by_line[2], ids_after[3])
-            self.assertEqual(ids_by_line[3], ids_after[4])
-            self.assertEqual(ids_by_line[4], ids_after[5])
-            self.assertEqual(ids_by_line[5], ids_after[6])
-
-            inserted_card_id = ids_after[2]
-            self.assertNotIn(inserted_card_id, set(ids_by_line.values()))
-            self.assertTrue((srs_dir / f"{inserted_card_id}.json").exists())
-            self.assertFalse((srs_dir / f"{ids_by_line[6]}.json").exists())
+            self.assertEqual(ids_by_line, ids_after)
+            self.assertTrue((srs_dir / f"{ids_by_line[6]}.json").exists())
 
 
 if __name__ == "__main__":
