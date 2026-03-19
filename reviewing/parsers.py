@@ -1,5 +1,4 @@
-import importlib.util
-import sys
+import importlib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict
@@ -51,13 +50,7 @@ def _load_pack_module(module_name: str):
     if not module_path.exists():
         return None
     import_name = f"reviewing.packs.{module_name}"
-    spec = importlib.util.spec_from_file_location(import_name, module_path)
-    if spec is None or spec.loader is None:
-        return None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[import_name] = module
-    spec.loader.exec_module(module)
-    return module
+    return importlib.import_module(import_name)
 
 
 def _load_registered_packs(registry: ParserRegistry) -> None:

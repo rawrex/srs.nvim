@@ -81,13 +81,19 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             run_command(["git", "commit", "-m", "add quote block note"], cwd=repo_dir)
 
             rows = read_index_rows(index_path)
-            self.assertEqual(1, len(rows))
-            note_id, path, parser_id, start_line, end_line = rows[0]
-            self.assertRegex(note_id, r"^\d+$")
-            self.assertEqual("/note.md", path)
-            self.assertEqual("quote_block", parser_id)
-            self.assertEqual(2, start_line)
-            self.assertEqual(5, end_line)
+            self.assertEqual(2, len(rows))
+            rows_by_range = {
+                (start_line, end_line): (note_id, path, parser_id)
+                for note_id, path, parser_id, start_line, end_line in rows
+            }
+            quote_note_id, quote_path, quote_parser_id = rows_by_range[(2, 5)]
+            intro_note_id, intro_path, intro_parser_id = rows_by_range[(1, 1)]
+            self.assertRegex(quote_note_id, r"^\d+$")
+            self.assertRegex(intro_note_id, r"^\d+$")
+            self.assertEqual("/note.md", quote_path)
+            self.assertEqual("/note.md", intro_path)
+            self.assertEqual("quote_block", quote_parser_id)
+            self.assertEqual("cloze", intro_parser_id)
 
     def test_install_and_index_updates_on_add_rename_remove(self):
         with tempfile.TemporaryDirectory() as tmp_dir:

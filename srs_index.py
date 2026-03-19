@@ -299,9 +299,9 @@ class Index:
                 (note_id, parser_id, remapped_start_line, remapped_end_line)
             )
 
-        parser_id_for_path, parsed_cards = self._select_parser_cards(modified_path)
+        parsed_rows = self._collect_parser_rows(modified_path)
         parsed_ranges = [
-            (start_line, end_line) for start_line, end_line, _block_text in parsed_cards
+            (start_line, end_line) for _parser_id, start_line, end_line in parsed_rows
         ]
 
         claimed_ranges = {
@@ -327,11 +327,11 @@ class Index:
                 parsed_cursor,
             )
             if match_index is not None:
-                matched_start, matched_end = parsed_ranges[match_index]
+                matched_parser_id, matched_start, matched_end = parsed_rows[match_index]
                 if matched_start != start_line or matched_end != end_line:
                     changed = True
                 remapped_rows.append(
-                    (note_id, parser_id_for_path, matched_start, matched_end)
+                    (note_id, matched_parser_id, matched_start, matched_end)
                 )
                 claimed_ranges.add((matched_start, matched_end))
                 parsed_cursor = match_index + 1
@@ -362,26 +362,19 @@ class Index:
             fallback_start, fallback_end = fallback_range
             if fallback_start != start_line or fallback_end != end_line:
                 changed = True
-            remapped_rows.append(
-                (note_id, parser_id_for_path, fallback_start, fallback_end)
-            )
+            remapped_rows.append((note_id, _parser_id, fallback_start, fallback_end))
             claimed_ranges.add((fallback_start, fallback_end))
-
-        remapped_rows = [
-            (note_id, parser_id_for_path, start_line, end_line)
-            for note_id, _parser_id, start_line, end_line in remapped_rows
-        ]
 
         existing_ranges = {
             (start_line, end_line)
             for _note_id, _parser_id, start_line, end_line in remapped_rows
         }
-        for start_line, end_line in parsed_ranges:
+        for parsed_parser_id, start_line, end_line in parsed_rows:
             if (start_line, end_line) in existing_ranges:
                 continue
             changed = True
             row, touched_path = self._create_card_row(
-                parser_id_for_path,
+                parsed_parser_id,
                 start_line,
                 end_line,
             )
@@ -555,8 +548,7 @@ class Index:
         updated: list[str],
     ) -> set[str]:
         touched_card_paths: set[str] = set()
-        parser_id, cards = self._select_parser_cards(new_path)
-        for start_line, end_line, _block_text in cards:
+        for parser_id, start_line, end_line in self._collect_parser_rows(new_path):
             row, touched_path = self._create_card_row(parser_id, start_line, end_line)
             note_id, row_parser_id, row_start_line, row_end_line = row
             touched_card_paths.add(touched_path)
@@ -625,20 +617,28 @@ class Index:
         except (OSError, UnicodeDecodeError):
             return None
 
-    def _select_parser_cards(
+    def _collect_parser_rows(
         self,
         indexed_path: str,
-    ) -> tuple[str, list[tuple[int, int, str]]]:
+    ) -> list[tuple[str, int, int]]:
         note_text = self._read_note_text(indexed_path)
         if note_text is None:
-            return self.parser_registry.default().parser_id, []
+            return []
 
+        selected: list[tuple[str, int, int]] = []
+        claimed: list[tuple[int, int]] = []
         for parser in self.parser_registry.ordered():
             cards = parser.split_note_into_cards(note_text)
-            if cards:
-                return parser.parser_id, cards
+            for start_line, end_line, _block_text in cards:
+                if any(
+                    not (end_line < claimed_start or start_line > claimed_end)
+                    for claimed_start, claimed_end in claimed
+                ):
+                    continue
+                selected.append((parser.parser_id, start_line, end_line))
+                claimed.append((start_line, end_line))
 
-        return self.parser_registry.default().parser_id, []
+        return sorted(selected, key=lambda row: (row[1], row[2], row[0]))
 
     def _write_card_file(
         self,
