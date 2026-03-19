@@ -4,7 +4,7 @@ import sys
 
 import util
 from hooks_runtime.handler import Handler
-from srs_index import Index
+from srs_index import Index, IndexUpdateAbortError
 
 
 def main() -> int:
@@ -23,14 +23,18 @@ def main() -> int:
     index = Index(index_path)
     handler = Handler(repo_root)
 
-    if event == "pre-commit":
-        handler.handle_pre_commit(index)
-    elif event == "pre-merge-commit":
-        handler.handle_pre_merge_commit(index)
-    elif event == "post-checkout":
-        handler.handle_post_checkout(index, sys.argv[2:])
-    elif event == "post-rewrite":
-        handler.handle_post_rewrite(index)
+    try:
+        if event == "pre-commit":
+            handler.handle_pre_commit(index)
+        elif event == "pre-merge-commit":
+            handler.handle_pre_merge_commit(index)
+        elif event == "post-checkout":
+            handler.handle_post_checkout(index, sys.argv[2:])
+        elif event == "post-rewrite":
+            handler.handle_post_rewrite(index)
+    except IndexUpdateAbortError as error:
+        print(str(error), file=sys.stderr)
+        return 1
     return 0
 
 
