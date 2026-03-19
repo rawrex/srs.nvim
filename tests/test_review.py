@@ -13,6 +13,7 @@ from reviewing.card import (
     SchedulerCard,
 )
 from reviewing.packs.cloze import ClozeCard, mask_hidden_text, parse_note_clozes
+from reviewing.packs.quote_block import QuoteBlockCard, QuoteBlockParser
 from reviewing.config import DEFAULT_RATING_BUTTONS, ReviewConfig, load_review_config
 from reviewing.parsers import ClozeParser
 from reviewing.storage import Metadata, parse_storage_json
@@ -348,6 +349,38 @@ class ReviewRenderingTest(unittest.TestCase):
             ],
             cards,
         )
+
+    def test_quote_block_parser_claims_adjacent_quoted_lines(self) -> None:
+        note_text = "Intro\n>[!code]- Example\n>```cpp\n>int x = 1;\n>```\nEnd\n"
+        parser = QuoteBlockParser()
+
+        cards = parser.split_note_into_cards(note_text)
+
+        self.assertEqual(
+            [(2, 5, ">[!code]- Example\n>```cpp\n>int x = 1;\n>```\n")],
+            cards,
+        )
+
+    def test_quote_block_card_question_is_first_line(self) -> None:
+        block_text = ">[!code]- Example\n>```cpp\n>int x = 1;\n>```\n"
+        card = QuoteBlockCard(
+            note_id="1",
+            note_path="/tmp/note.md",
+            card_path="/tmp/1.json",
+            note_text=block_text,
+            metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
+            start_line=5,
+            end_line=8,
+            note_blocks={(5, 8): block_text},
+        )
+
+        self.assertEqual(
+            ">[!code]- Example\n", card.question_view().primary_block().text
+        )
+        answer = card.reveal_for_label(REVEAL_ALL_LABEL)
+        self.assertIsNotNone(answer)
+        assert answer is not None
+        self.assertEqual(block_text, answer.primary_block().text)
 
 
 class ReviewConfigTest(unittest.TestCase):
