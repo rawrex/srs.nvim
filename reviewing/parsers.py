@@ -1,78 +1,13 @@
-from abc import ABC, abstractmethod
+import importlib.util
+import sys
 from dataclasses import dataclass
-from typing import ClassVar, Dict, List, Tuple
+from pathlib import Path
+from typing import Dict
 
-from .card import Card, ClozeCard, RevealMode
-from .storage import Metadata
+from .api import NoteParser
 
 
 DEFAULT_PARSER_ID = "cloze"
-
-
-class NoteParser(ABC):
-    parser_id: ClassVar[str]
-
-    @abstractmethod
-    def split_note_into_cards(self, note_text: str) -> List[Tuple[int, int, str]]:
-        raise NotImplementedError
-
-    @abstractmethod
-    def build_card(
-        self,
-        note_id: str,
-        note_path: str,
-        note_text: str,
-        start_line: int,
-        end_line: int,
-        note_blocks: Dict[Tuple[int, int], str],
-        card_path: str,
-        metadata: Metadata,
-    ) -> Card:
-        raise NotImplementedError
-
-
-@dataclass(frozen=True)
-class ClozeParser(NoteParser):
-    parser_id: ClassVar[str] = DEFAULT_PARSER_ID
-    reveal_mode: RevealMode
-    cloze_open: str
-    cloze_close: str
-    mask_char: str
-
-    def split_note_into_cards(self, note_text: str) -> List[Tuple[int, int, str]]:
-        cards: List[Tuple[int, int, str]] = []
-        for line_number, line in enumerate(
-            note_text.splitlines(keepends=True), start=1
-        ):
-            if line.strip():
-                cards.append((line_number, line_number, line))
-        return cards
-
-    def build_card(
-        self,
-        note_id: str,
-        note_path: str,
-        note_text: str,
-        start_line: int,
-        end_line: int,
-        note_blocks: Dict[Tuple[int, int], str],
-        card_path: str,
-        metadata: Metadata,
-    ) -> Card:
-        return ClozeCard(
-            note_id=note_id,
-            note_path=note_path,
-            card_path=card_path,
-            note_text=note_text,
-            start_line=start_line,
-            end_line=end_line,
-            note_blocks=note_blocks,
-            metadata=metadata,
-            reveal_mode=self.reveal_mode,
-            cloze_open=self.cloze_open,
-            cloze_close=self.cloze_close,
-            mask_char=self.mask_char,
-        )
 
 
 @dataclass
@@ -90,14 +25,62 @@ class ParserRegistry:
         return self.get(self.default_parser_id)
 
 
+def _pack_modules_dir() -> Path:
+    return Path(__file__).resolve().parent / "packs"
+
+
+def _pack_module_names() -> list[str]:
+    names: list[str] = []
+    packs_dir = _pack_modules_dir()
+    if not packs_dir.exists():
+        return names
+    for path in sorted(packs_dir.glob("*.py")):
+        if path.name.startswith("_") or path.name == "__init__.py":
+            continue
+        names.append(path.stem)
+    return names
+
+
+def _load_pack_module(module_name: str):
+    module_path = _pack_modules_dir() / f"{module_name}.py"
+    if not module_path.exists():
+        return None
+    import_name = f"reviewing.packs.{module_name}"
+    spec = importlib.util.spec_from_file_location(import_name, module_path)
+    if spec is None or spec.loader is None:
+        return None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[import_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_registered_packs(registry: ParserRegistry) -> None:
+    for module_name in _pack_module_names():
+        module = _load_pack_module(module_name)
+        if module is None:
+            continue
+        register_pack = getattr(module, "register_pack", None)
+        if callable(register_pack):
+            register_pack(registry)
+
+
 def default_parser_registry() -> ParserRegistry:
-    cloze = ClozeParser(
-        reveal_mode=RevealMode.INCREMENTAL,
-        cloze_open="~{",
-        cloze_close="}",
-        mask_char="▇",
-    )
-    return ParserRegistry(
-        parsers={cloze.parser_id: cloze},
-        default_parser_id=cloze.parser_id,
-    )
+    registry = ParserRegistry(parsers={}, default_parser_id=DEFAULT_PARSER_ID)
+    _load_registered_packs(registry)
+    if DEFAULT_PARSER_ID not in registry.parsers:
+        from .packs.cloze import register_pack
+
+        register_pack(registry)
+    return registry
+
+
+from .packs.cloze import ClozeParser  # noqa: E402
+
+
+__all__ = [
+    "DEFAULT_PARSER_ID",
+    "ParserRegistry",
+    "default_parser_registry",
+    "ClozeParser",
+]
