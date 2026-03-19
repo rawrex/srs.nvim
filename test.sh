@@ -1,4 +1,4 @@
-rm -rf test;\
+rm -rf test;
 echo 'Romoved old test' &&\
 mkdir test &&\
 echo 'New test dir' &&\
@@ -11,6 +11,6 @@ echo 'Installed SRS' &&\
 git add .srs/index.txt &&\
 git commit -m 'Inited srs' &&\
 echo 'Added SRS to git' &&\
-cp ../test_data/unique_lock.md . &&\
-git add unique_lock.md &&\
-git commit -m 'Added a note'
+cp ../test_data/* . &&\
+git add -A &&\
+git commit -m 'Added test notes'
