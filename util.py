@@ -38,6 +38,8 @@ def parse_diff(text: str) -> tuple[dict[str, str], set[str], set[str], set[str]]
             old_path = normalize_path(parts[1])
             new_path = normalize_path(parts[2])
             renames[old_path] = new_path
+        elif code == "C" and len(parts) >= 3:
+            adds.add(normalize_path(parts[2]))
         elif code == "D" and len(parts) >= 2:
             deletes.add(normalize_path(parts[1]))
         elif code == "A" and len(parts) >= 2:
