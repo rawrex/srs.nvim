@@ -9,6 +9,7 @@ from srs_index import Index
 from .card import Card
 from .config import ReviewConfig
 from .parsers import DEFAULT_PARSER_ID, ClozeParser, ParserRegistry
+from .storage import parse_storage_json
 from .ui import ReviewUI
 
 
@@ -102,14 +103,19 @@ class ReviewSession:
             if note_text is None:
                 continue
             card_path = os.path.join(self.repo_root, ".srs", f"{note_id}.json")
+            with open(card_path, "r", encoding="utf-8") as handle:
+                raw_text = handle.read()
+            scheduler_card, review_logs = parse_storage_json(raw_text)
             parser = self.parser_registry.get(parser_id)
-            card = parser.from_storage_file(
+            card = parser.build_card(
                 note_id=note_id,
                 note_path=note_path,
-                card_path=card_path,
                 note_text=note_text,
                 start_line=start_line,
                 note_blocks=note_blocks_cache[cache_key],
+                card_path=card_path,
+                scheduler_card=scheduler_card,
+                review_logs=review_logs,
             )
             if card.is_due(now):
                 cards.append(card)

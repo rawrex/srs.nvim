@@ -17,6 +17,7 @@ from reviewing.card import (
 )
 from reviewing.config import DEFAULT_RATING_BUTTONS, ReviewConfig, load_review_config
 from reviewing.parsers import ClozeParser
+from reviewing.storage import parse_storage_json
 from reviewing.ui import ReviewUI
 
 
@@ -265,11 +266,13 @@ class ReviewRenderingTest(unittest.TestCase):
         self.assertEqual(["A ", " B"], text_parts)
         self.assertEqual(["one"], clozes)
 
-    def test_parser_creates_cloze_card_from_storage_file(self) -> None:
+    def test_parser_builds_cloze_card_from_storage_data(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             card_path = os.path.join(temp_dir, "1.json")
             with open(card_path, "w", encoding="utf-8") as handle:
                 json.dump(ClozeCard.new_storage_dict(), handle)
+            with open(card_path, "r", encoding="utf-8") as handle:
+                scheduler_card, review_logs = parse_storage_json(handle.read())
 
             parser = ClozeParser(
                 reveal_mode=RevealMode.WHOLE,
@@ -277,13 +280,15 @@ class ReviewRenderingTest(unittest.TestCase):
                 cloze_close="}",
                 mask_char="▇",
             )
-            card = parser.from_storage_file(
+            card = parser.build_card(
                 note_id="1",
                 note_path="/tmp/note.md",
-                card_path=card_path,
                 note_text="The ~{capital of France} is Paris.",
                 start_line=1,
                 note_blocks={1: "The ~{capital of France} is Paris.\n"},
+                card_path=card_path,
+                scheduler_card=scheduler_card,
+                review_logs=review_logs,
             )
 
             self.assertIsInstance(card, ClozeCard)

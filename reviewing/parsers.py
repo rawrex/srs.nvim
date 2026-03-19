@@ -2,8 +2,10 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import ClassVar, Dict, List, Tuple
 
+from fsrs import ReviewLog
+
 from .card import Card, ClozeCard, RevealMode, SchedulerCard
-from .storage import parse_storage_json, storage_dict_for_scheduler_card
+from .storage import storage_dict_for_scheduler_card
 
 
 DEFAULT_PARSER_ID = "cloze"
@@ -21,14 +23,16 @@ class NoteParser(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def from_storage_file(
+    def build_card(
         self,
         note_id: str,
         note_path: str,
-        card_path: str,
         note_text: str,
         start_line: int,
         note_blocks: Dict[int, str],
+        card_path: str,
+        scheduler_card: SchedulerCard,
+        review_logs: List[ReviewLog],
     ) -> Card:
         raise NotImplementedError
 
@@ -53,18 +57,17 @@ class ClozeParser(NoteParser):
     def new_storage_dict(self, scheduler_card: SchedulerCard) -> Dict[str, object]:
         return storage_dict_for_scheduler_card(scheduler_card)
 
-    def from_storage_file(
+    def build_card(
         self,
         note_id: str,
         note_path: str,
-        card_path: str,
         note_text: str,
         start_line: int,
         note_blocks: Dict[int, str],
+        card_path: str,
+        scheduler_card: SchedulerCard,
+        review_logs: List[ReviewLog],
     ) -> Card:
-        with open(card_path, "r", encoding="utf-8") as handle:
-            raw_text = handle.read()
-        scheduler_card, review_logs = parse_storage_json(raw_text)
         return ClozeCard(
             note_id=note_id,
             note_path=note_path,
