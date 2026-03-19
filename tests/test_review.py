@@ -9,12 +9,10 @@ from rich.markdown import Markdown
 
 from reviewing.card import (
     REVEAL_ALL_LABEL,
-    ClozeCard,
     RevealMode,
     SchedulerCard,
-    mask_hidden_text,
-    parse_note_clozes,
 )
+from reviewing.packs.cloze import ClozeCard, mask_hidden_text, parse_note_clozes
 from reviewing.config import DEFAULT_RATING_BUTTONS, ReviewConfig, load_review_config
 from reviewing.parsers import ClozeParser
 from reviewing.storage import Metadata, parse_storage_json
