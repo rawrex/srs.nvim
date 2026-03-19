@@ -13,7 +13,7 @@ class NoteParser(ABC):
     parser_id: ClassVar[str]
 
     @abstractmethod
-    def split_note_into_cards(self, note_text: str) -> List[Tuple[int, str]]:
+    def split_note_into_cards(self, note_text: str) -> List[Tuple[int, int, str]]:
         raise NotImplementedError
 
     @abstractmethod
@@ -23,7 +23,8 @@ class NoteParser(ABC):
         note_path: str,
         note_text: str,
         start_line: int,
-        note_blocks: Dict[int, str],
+        end_line: int,
+        note_blocks: Dict[Tuple[int, int], str],
         card_path: str,
         metadata: Metadata,
     ) -> Card:
@@ -38,13 +39,13 @@ class ClozeParser(NoteParser):
     cloze_close: str
     mask_char: str
 
-    def split_note_into_cards(self, note_text: str) -> List[Tuple[int, str]]:
-        cards: List[Tuple[int, str]] = []
+    def split_note_into_cards(self, note_text: str) -> List[Tuple[int, int, str]]:
+        cards: List[Tuple[int, int, str]] = []
         for line_number, line in enumerate(
             note_text.splitlines(keepends=True), start=1
         ):
             if line.strip():
-                cards.append((line_number, line))
+                cards.append((line_number, line_number, line))
         return cards
 
     def build_card(
@@ -53,7 +54,8 @@ class ClozeParser(NoteParser):
         note_path: str,
         note_text: str,
         start_line: int,
-        note_blocks: Dict[int, str],
+        end_line: int,
+        note_blocks: Dict[Tuple[int, int], str],
         card_path: str,
         metadata: Metadata,
     ) -> Card:
@@ -63,6 +65,7 @@ class ClozeParser(NoteParser):
             card_path=card_path,
             note_text=note_text,
             start_line=start_line,
+            end_line=end_line,
             note_blocks=note_blocks,
             metadata=metadata,
             reveal_mode=self.reveal_mode,

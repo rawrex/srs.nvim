@@ -13,8 +13,8 @@ import util
 
 
 Hunk = tuple[int, int, int, int]
-PathRows = dict[str, list[tuple[str, str, int]]]
-IndexRowTuple = tuple[str, str, int]
+PathRows = dict[str, list[tuple[str, str, int, int]]]
+IndexRowTuple = tuple[str, str, int, int]
 
 
 @dataclass(frozen=True)
@@ -58,11 +58,12 @@ class IndexRow:
     path: str
     parser_id: str
     start_line: int
+    end_line: int
 
 
 class IndexRowReader:
     def __init__(self) -> None:
-        self.row_re = re.compile(r"^'([^']*)','([^']*)','([^']*)','(\d+)'\s*$")
+        self.row_re = re.compile(r"^'([^']*)','([^']*)','([^']*)','(\d+)','(\d+)'\s*$")
 
     def parse(self, raw_line: str) -> IndexRow | None:
         match = self.row_re.match(raw_line.rstrip("\n"))
@@ -73,6 +74,7 @@ class IndexRowReader:
             path=match.group(2),
             parser_id=match.group(3),
             start_line=int(match.group(4)),
+            end_line=int(match.group(5)),
         )
 
 
@@ -131,13 +133,15 @@ class Index:
             return True, touched_paths
         return False, set()
 
-    def read_rows(self) -> list[tuple[str, str, str, int]]:
-        rows: list[tuple[str, str, str, int]] = []
+    def read_rows(self) -> list[tuple[str, str, str, int, int]]:
+        rows: list[tuple[str, str, str, int, int]] = []
         for raw_line in self._read():
             row = self.row_reader.parse(raw_line)
             if row is None:
                 continue
-            rows.append((row.note_id, row.path, row.parser_id, row.start_line))
+            rows.append(
+                (row.note_id, row.path, row.parser_id, row.start_line, row.end_line)
+            )
         return rows
 
     def _update_index_lines(
@@ -193,6 +197,7 @@ class Index:
                         renames[row.path],
                         row.parser_id,
                         row.start_line,
+                        row.end_line,
                     )
                 )
                 continue
@@ -265,28 +270,36 @@ class Index:
         touched_paths: set[str] = set()
         remapped_rows: list[IndexRowTuple] = []
 
-        for note_id, parser_id, start_line in path_rows:
-            remapped_start_line = self._remap_line_number(start_line, hunks)
-            if remapped_start_line is None:
+        for note_id, parser_id, start_line, end_line in path_rows:
+            remapped_range = self._remap_line_range(start_line, end_line, hunks)
+            if remapped_range is None:
                 changed = True
                 if removed_path := self._remove_card_file(note_id):
                     touched_paths.add(removed_path)
                 continue
-            if remapped_start_line != start_line:
+            remapped_start_line, remapped_end_line = remapped_range
+            if remapped_start_line != start_line or remapped_end_line != end_line:
                 changed = True
-            remapped_rows.append((note_id, parser_id, remapped_start_line))
+            remapped_rows.append(
+                (note_id, parser_id, remapped_start_line, remapped_end_line)
+            )
 
-        existing_start_lines = {
-            start_line for _note_id, _parser_id, start_line in remapped_rows
+        existing_ranges = {
+            (start_line, end_line)
+            for _note_id, _parser_id, start_line, end_line in remapped_rows
         }
         parser_id_for_path = remapped_rows[0][1] if remapped_rows else DEFAULT_PARSER_ID
-        for start_line, _block_text in self._load_note_cards(
+        for start_line, end_line, _block_text in self._load_note_cards(
             modified_path, parser_id_for_path
         ):
-            if start_line in existing_start_lines:
+            if (start_line, end_line) in existing_ranges:
                 continue
             changed = True
-            row, touched_path = self._create_card_row(parser_id_for_path, start_line)
+            row, touched_path = self._create_card_row(
+                parser_id_for_path,
+                start_line,
+                end_line,
+            )
             touched_paths.add(touched_path)
             remapped_rows.append(row)
 
@@ -328,8 +341,10 @@ class Index:
         rows: list[IndexRowTuple],
     ) -> list[str]:
         return [
-            self._format_row(note_id, indexed_path, parser_id, start_line)
-            for note_id, parser_id, start_line in sorted(rows, key=lambda row: row[2])
+            self._format_row(note_id, indexed_path, parser_id, start_line, end_line)
+            for note_id, parser_id, start_line, end_line in sorted(
+                rows, key=lambda row: (row[2], row[3])
+            )
         ]
 
     def _format_row(
@@ -338,34 +353,36 @@ class Index:
         indexed_path: str,
         parser_id: str,
         start_line: int,
+        end_line: int,
     ) -> str:
-        return f"'{note_id}','{indexed_path}','{parser_id}','{start_line}'\n"
+        return (
+            f"'{note_id}','{indexed_path}','{parser_id}','{start_line}','{end_line}'\n"
+        )
 
-    def _remap_line_number(
+    def _remap_line_range(
         self,
         start_line: int,
+        end_line: int,
         hunks: list[Hunk],
-    ) -> int | None:
+    ) -> tuple[int, int] | None:
         shift = 0
-        for old_start, old_count, new_start, new_count in sorted(hunks):
+        for old_start, old_count, _new_start, new_count in sorted(hunks):
             if old_count == 0:
                 if start_line > old_start:
                     shift += new_count
+                elif start_line < old_start <= end_line:
+                    return None
                 continue
 
             old_end = old_start + old_count - 1
-            if start_line < old_start:
+            if end_line < old_start:
                 break
             if start_line > old_end:
                 shift += new_count - old_count
                 continue
 
-            preserved_count = min(old_count, new_count)
-            offset = start_line - old_start
-            if offset < preserved_count:
-                return new_start + offset
             return None
-        return start_line + shift
+        return start_line + shift, end_line + shift
 
     def _parse_modified_hunks(self, patch_text: str) -> dict[str, list[Hunk]]:
         hunks_by_path: dict[str, list[Hunk]] = {}
@@ -413,23 +430,31 @@ class Index:
         updated: list[str],
     ) -> set[str]:
         touched_card_paths: set[str] = set()
-        for start_line, _block_text in self._load_note_cards(new_path, parser_id):
-            row, touched_path = self._create_card_row(parser_id, start_line)
-            note_id, row_parser_id, row_start_line = row
+        for start_line, end_line, _block_text in self._load_note_cards(
+            new_path, parser_id
+        ):
+            row, touched_path = self._create_card_row(parser_id, start_line, end_line)
+            note_id, row_parser_id, row_start_line, row_end_line = row
             touched_card_paths.add(touched_path)
             updated.append(
-                self._format_row(note_id, new_path, row_parser_id, row_start_line)
+                self._format_row(
+                    note_id,
+                    new_path,
+                    row_parser_id,
+                    row_start_line,
+                    row_end_line,
+                )
             )
         return touched_card_paths
 
     def _create_card_row(
-        self, parser_id: str, start_line: int
+        self, parser_id: str, start_line: int, end_line: int
     ) -> tuple[IndexRowTuple, str]:
         scheduler_card = SchedulerCard()
         metadata = Metadata(scheduler_card=scheduler_card, review_logs=[])
         card_id = str(scheduler_card.card_id)
         self._write_card_file(card_id, metadata)
-        return (card_id, parser_id, start_line), self._card_path(card_id)
+        return (card_id, parser_id, start_line, end_line), self._card_path(card_id)
 
     def _rows_by_path(self, lines: list[str]) -> PathRows:
         rows_by_path: PathRows = {}
@@ -438,7 +463,7 @@ class Index:
             if row is None:
                 continue
             rows_by_path.setdefault(row.path, []).append(
-                (row.note_id, row.parser_id, row.start_line)
+                (row.note_id, row.parser_id, row.start_line, row.end_line)
             )
         return rows_by_path
 
@@ -468,7 +493,7 @@ class Index:
 
     def _load_note_cards(
         self, indexed_path: str, parser_id: str
-    ) -> list[tuple[int, str]]:
+    ) -> list[tuple[int, int, str]]:
         note_path = self._note_abs_path(indexed_path)
         if not os.path.exists(note_path):
             return []

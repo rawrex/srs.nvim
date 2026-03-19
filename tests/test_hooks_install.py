@@ -30,7 +30,7 @@ def run_command(args, cwd):
 def read_index_rows(index_path: Path):
     if not index_path.exists():
         return []
-    row_re = re.compile(r"^'([^']*)','([^']*)','([^']*)','(\d+)'$")
+    row_re = re.compile(r"^'([^']*)','([^']*)','([^']*)','(\d+)','(\d+)'$")
     rows = []
     for raw_line in index_path.read_text(encoding="utf-8").splitlines():
         line = raw_line.strip()
@@ -40,7 +40,13 @@ def read_index_rows(index_path: Path):
         if not match:
             raise AssertionError(f"unexpected index row format: {line}")
         rows.append(
-            (match.group(1), match.group(2), match.group(3), int(match.group(4)))
+            (
+                match.group(1),
+                match.group(2),
+                match.group(3),
+                int(match.group(4)),
+                int(match.group(5)),
+            )
         )
     return rows
 
@@ -89,11 +95,11 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             rows = read_index_rows(index_path)
             self.assertEqual(len(rows), 3)
             self.assertEqual(
-                sorted(start_line for _, _, _, start_line in rows),
+                sorted(start_line for _, _, _, start_line, _end_line in rows),
                 [1, 2, 3],
             )
             created_ids = []
-            for created_id, created_path, parser_id, _start_line in rows:
+            for created_id, created_path, parser_id, _start_line, _end_line in rows:
                 self.assertEqual(created_path, "/note.md")
                 self.assertEqual(parser_id, "cloze")
                 self.assertRegex(created_id, r"^\d+$")
@@ -124,7 +130,7 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             rows = read_index_rows(index_path)
             self.assertEqual(len(rows), 4)
             self.assertEqual(
-                sorted(start_line for _, _, _, start_line in rows),
+                sorted(start_line for _, _, _, start_line, _end_line in rows),
                 [1, 2, 3, 4],
             )
             for existing_id in created_ids:
@@ -140,9 +146,9 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             ).stdout.strip()
             self.assertEqual(prev_blob, head_blob)
 
-            new_ids = {note_id for note_id, _path, _parser, _line in rows} - set(
-                created_ids
-            )
+            new_ids = {
+                note_id for note_id, _path, _parser, _line, _end_line in rows
+            } - set(created_ids)
             self.assertEqual(1, len(new_ids))
             new_id = next(iter(new_ids))
             tracked_files = set(
@@ -152,19 +158,19 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             )
             self.assertIn(f".srs/{new_id}.json", tracked_files)
             self.assertTrue(
-                all(not path.startswith("/.srs/") for _, path, _, _ in rows)
+                all(not path.startswith("/.srs/") for _, path, _, _, _ in rows)
             )
 
             run_command(["git", "mv", "note.md", "renamed.md"], cwd=repo_dir)
             run_command(["git", "commit", "-m", "rename note"], cwd=repo_dir)
             rows = read_index_rows(index_path)
             self.assertEqual(len(rows), 4)
-            self.assertTrue(all(path == "/renamed.md" for _, path, _, _ in rows))
+            self.assertTrue(all(path == "/renamed.md" for _, path, _, _, _ in rows))
 
             run_command(["git", "rm", "renamed.md"], cwd=repo_dir)
             run_command(["git", "commit", "-m", "remove note"], cwd=repo_dir)
             self.assertEqual(read_index_rows(index_path), [])
-            for card_id, _path, _parser_id, _start_line in rows:
+            for card_id, _path, _parser_id, _start_line, _end_line in rows:
                 self.assertFalse((srs_dir / f"{card_id}.json").exists())
 
     def test_index_tracks_middle_insert_delete_and_replacement(self):
@@ -189,10 +195,13 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             rows = read_index_rows(index_path)
             self.assertEqual(
                 [1, 2, 3],
-                sorted(start_line for _id, _p, _parser_id, start_line in rows),
+                sorted(
+                    start_line for _id, _p, _parser_id, start_line, _end_line in rows
+                ),
             )
             ids_by_line = {
-                start_line: note_id for note_id, _path, _parser_id, start_line in rows
+                start_line: note_id
+                for note_id, _path, _parser_id, start_line, _end_line in rows
             }
 
             note_path.write_text("A\nB2\nC\n", encoding="utf-8")
@@ -200,10 +209,14 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             run_command(["git", "commit", "-m", "replace middle line"], cwd=repo_dir)
 
             rows = read_index_rows(index_path)
-            self.assertEqual(
-                ids_by_line,
-                {line: note_id for note_id, _path, _parser_id, line in rows},
-            )
+            ids_after_replace = {
+                line: note_id for note_id, _path, _parser_id, line, _end_line in rows
+            }
+            self.assertEqual(ids_by_line[1], ids_after_replace[1])
+            self.assertEqual(ids_by_line[3], ids_after_replace[3])
+            self.assertNotEqual(ids_by_line[2], ids_after_replace[2])
+            self.assertFalse((srs_dir / f"{ids_by_line[2]}.json").exists())
+            self.assertTrue((srs_dir / f"{ids_after_replace[2]}.json").exists())
 
             note_path.write_text("A\nX\nB2\nC\n", encoding="utf-8")
             run_command(["git", "add", "note.md"], cwd=repo_dir)
@@ -211,14 +224,15 @@ class HooksInstallIntegrationTest(unittest.TestCase):
 
             rows = read_index_rows(index_path)
             inserted_ids_by_line = {
-                start_line: note_id for note_id, _path, _parser_id, start_line in rows
+                start_line: note_id
+                for note_id, _path, _parser_id, start_line, _end_line in rows
             }
             self.assertEqual(4, len(rows))
-            self.assertEqual(ids_by_line[1], inserted_ids_by_line[1])
-            self.assertEqual(ids_by_line[2], inserted_ids_by_line[3])
-            self.assertEqual(ids_by_line[3], inserted_ids_by_line[4])
+            self.assertEqual(ids_after_replace[1], inserted_ids_by_line[1])
+            self.assertEqual(ids_after_replace[2], inserted_ids_by_line[3])
+            self.assertEqual(ids_after_replace[3], inserted_ids_by_line[4])
             inserted_card_id = inserted_ids_by_line[2]
-            self.assertNotIn(inserted_card_id, set(ids_by_line.values()))
+            self.assertNotIn(inserted_card_id, set(ids_after_replace.values()))
             self.assertTrue((srs_dir / f"{inserted_card_id}.json").exists())
 
             removed_card_id = inserted_ids_by_line[3]
@@ -228,7 +242,8 @@ class HooksInstallIntegrationTest(unittest.TestCase):
 
             rows = read_index_rows(index_path)
             final_ids_by_line = {
-                start_line: note_id for note_id, _path, _parser_id, start_line in rows
+                start_line: note_id
+                for note_id, _path, _parser_id, start_line, _end_line in rows
             }
             self.assertEqual(3, len(rows))
             self.assertEqual(ids_by_line[1], final_ids_by_line[1])
@@ -256,7 +271,8 @@ class HooksInstallIntegrationTest(unittest.TestCase):
 
             rows = read_index_rows(index_path)
             ids_by_line = {
-                start_line: note_id for note_id, _path, _parser_id, start_line in rows
+                start_line: note_id
+                for note_id, _path, _parser_id, start_line, _end_line in rows
             }
 
             note_path.write_text("A\n\nB\nC\n", encoding="utf-8")
@@ -265,7 +281,8 @@ class HooksInstallIntegrationTest(unittest.TestCase):
 
             rows = read_index_rows(index_path)
             ids_after = {
-                start_line: note_id for note_id, _path, _parser_id, start_line in rows
+                start_line: note_id
+                for note_id, _path, _parser_id, start_line, _end_line in rows
             }
             self.assertEqual(3, len(rows))
             self.assertEqual(ids_by_line[1], ids_after[1])
@@ -293,7 +310,8 @@ class HooksInstallIntegrationTest(unittest.TestCase):
 
             rows = read_index_rows(index_path)
             ids_by_line = {
-                start_line: note_id for note_id, _path, _parser_id, start_line in rows
+                start_line: note_id
+                for note_id, _path, _parser_id, start_line, _end_line in rows
             }
 
             note_path.write_text("A\nX\nB\nC\nD\nE\n", encoding="utf-8")
@@ -302,7 +320,8 @@ class HooksInstallIntegrationTest(unittest.TestCase):
 
             rows = read_index_rows(index_path)
             ids_after = {
-                start_line: note_id for note_id, _path, _parser_id, start_line in rows
+                start_line: note_id
+                for note_id, _path, _parser_id, start_line, _end_line in rows
             }
             self.assertEqual(6, len(rows))
             self.assertEqual(ids_by_line[1], ids_after[1])

@@ -122,7 +122,8 @@ class Card(ABC):
     note_text: str
     metadata: Metadata
     start_line: int = 1
-    note_blocks: Dict[int, str] = field(default_factory=dict)
+    end_line: int = 1
+    note_blocks: Dict[Tuple[int, int], str] = field(default_factory=dict)
 
     @property
     def note_filename(self) -> str:
@@ -230,16 +231,19 @@ class ClozeCard(Card):
 
     def _build_view(self, current_block: str, mask_context: bool) -> CardView:
         blocks: List[ViewBlock] = []
-        note_blocks = self.note_blocks or {self.start_line: self.note_text}
-        for start_line in sorted(note_blocks):
-            if start_line == self.start_line:
+        note_blocks = self.note_blocks or {
+            (self.start_line, self.end_line): self.note_text
+        }
+        for line_range in sorted(note_blocks):
+            start_line, end_line = line_range
+            if line_range == (self.start_line, self.end_line):
                 blocks.append(
                     ViewBlock(
                         start_line=start_line, text=current_block, is_primary=True
                     )
                 )
                 continue
-            block = note_blocks[start_line]
+            block = note_blocks[line_range]
             if mask_context:
                 block = self._masked_context_block(block)
             blocks.append(

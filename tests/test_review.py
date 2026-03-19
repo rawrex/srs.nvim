@@ -107,21 +107,22 @@ class ReviewRenderingTest(unittest.TestCase):
         self,
     ) -> None:
         note_blocks = {
-            1: "# One\nFirst ~{hidden} block.\n",
-            4: "# Two\nSecond ~{context cloze} block.\n",
+            (1, 1): "# One\nFirst ~{hidden} block.\n",
+            (4, 4): "# Two\nSecond ~{context cloze} block.\n",
         }
         console = FakeConsole()
         card = ClozeCard(
             note_id="1",
             note_path="/tmp/note.md",
             card_path="/tmp/1.json",
-            note_text=note_blocks[1],
+            note_text=note_blocks[(1, 1)],
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             reveal_mode=RevealMode.WHOLE,
             cloze_open="~{",
             cloze_close="}",
             mask_char="▇",
             start_line=1,
+            end_line=1,
             note_blocks=note_blocks,
         )
         ui = ReviewUI(
@@ -150,21 +151,22 @@ class ReviewRenderingTest(unittest.TestCase):
 
     def test_prompt_cloze_reveal_hides_context_when_disabled(self) -> None:
         note_blocks = {
-            1: "# One\nFirst ~{hidden} block.\n",
-            4: "# Two\nSecond ~{context cloze} block.\n",
+            (1, 1): "# One\nFirst ~{hidden} block.\n",
+            (4, 4): "# Two\nSecond ~{context cloze} block.\n",
         }
         console = FakeConsole()
         card = ClozeCard(
             note_id="1",
             note_path="/tmp/note.md",
             card_path="/tmp/1.json",
-            note_text=note_blocks[1],
+            note_text=note_blocks[(1, 1)],
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             reveal_mode=RevealMode.WHOLE,
             cloze_open="~{",
             cloze_close="}",
             mask_char="▇",
             start_line=1,
+            end_line=1,
             note_blocks=note_blocks,
         )
         ui = ReviewUI(
@@ -189,21 +191,22 @@ class ReviewRenderingTest(unittest.TestCase):
 
     def test_prompt_cloze_reveal_uses_configured_context_style(self) -> None:
         note_blocks = {
-            1: "# One\nFirst ~{hidden} block.\n",
-            4: "# Two\nSecond block.\n",
+            (1, 1): "# One\nFirst ~{hidden} block.\n",
+            (4, 4): "# Two\nSecond block.\n",
         }
         console = FakeConsole()
         card = ClozeCard(
             note_id="1",
             note_path="/tmp/note.md",
             card_path="/tmp/1.json",
-            note_text=note_blocks[1],
+            note_text=note_blocks[(1, 1)],
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             reveal_mode=RevealMode.WHOLE,
             cloze_open="~{",
             cloze_close="}",
             mask_char="▇",
             start_line=1,
+            end_line=1,
             note_blocks=note_blocks,
         )
         ui = ReviewUI(
@@ -227,20 +230,21 @@ class ReviewRenderingTest(unittest.TestCase):
 
     def test_reveal_all_keeps_context_masked(self) -> None:
         note_blocks = {
-            1: "# One\nFirst ~{hidden} block.\n",
-            4: "# Two\nSecond ~{context cloze} block.\n",
+            (1, 1): "# One\nFirst ~{hidden} block.\n",
+            (4, 4): "# Two\nSecond ~{context cloze} block.\n",
         }
         card = ClozeCard(
             note_id="1",
             note_path="/tmp/note.md",
             card_path="/tmp/1.json",
-            note_text=note_blocks[1],
+            note_text=note_blocks[(1, 1)],
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             reveal_mode=RevealMode.WHOLE,
             cloze_open="~{",
             cloze_close="}",
             mask_char="▇",
             start_line=1,
+            end_line=1,
             note_blocks=note_blocks,
         )
 
@@ -279,7 +283,8 @@ class ReviewRenderingTest(unittest.TestCase):
                 note_path="/tmp/note.md",
                 note_text="The ~{capital of France} is Paris.",
                 start_line=1,
-                note_blocks={1: "The ~{capital of France} is Paris.\n"},
+                end_line=1,
+                note_blocks={(1, 1): "The ~{capital of France} is Paris.\n"},
                 card_path=card_path,
                 metadata=metadata,
             )
@@ -297,7 +302,13 @@ class ReviewRenderingTest(unittest.TestCase):
         )
         cards = parser.split_note_into_cards(note_text)
         self.assertEqual(
-            [(1, "A\n"), (2, "  B\n"), (3, "    C\n"), (4, "D\n"), (6, "E\n")],
+            [
+                (1, 1, "A\n"),
+                (2, 2, "  B\n"),
+                (3, 3, "    C\n"),
+                (4, 4, "D\n"),
+                (6, 6, "E\n"),
+            ],
             cards,
         )
 
