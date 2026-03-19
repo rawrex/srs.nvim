@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
-import util
 import os
+import shlex
 import stat
+import sys
+
+import util
 
 HOOKS = ["pre-commit", "pre-merge-commit", "post-checkout", "post-rewrite"]
 SRS_DIR_NAME = ".srs"
@@ -19,19 +22,21 @@ def get_git_dir(repo_root: str) -> str:
 
 
 def write_hook(hook_path: str, script_path: str, hook_name: str) -> None:
-    # Hook is a bash wrapper-caller of the according python processing script
+    python_executable = shlex.quote(sys.executable)
+    quoted_script_path = shlex.quote(script_path)
+    quoted_hook_name = shlex.quote(hook_name)
     content = "\n".join(
         [
             "#!/bin/sh",
             "set -e",
-            f'exec python3 "{script_path}" {hook_name} "$@"',
+            f'exec {python_executable} {quoted_script_path} {quoted_hook_name} "$@"',
             "",
         ]
     )
     with open(hook_path, "w", encoding="utf-8") as handle:
         handle.write(content)
     mode = os.stat(hook_path).st_mode
-    # Exectute permisson for owner, group, and others
+    # Execute permission for owner, group, and others.
     os.chmod(hook_path, mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
 
