@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import sys
 
-from .index import Index
 import util
+from srs_index import Index
 
 
 class Handler:

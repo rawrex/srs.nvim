@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 from fsrs import Scheduler
 
-from hooks_runtime.index import Index
+from srs_index import Index
 
 from .card import Card
 from .config import ReviewConfig

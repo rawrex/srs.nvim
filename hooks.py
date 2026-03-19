@@ -3,7 +3,8 @@ import os
 import sys
 
 import util
-from hooks_runtime import Handler, Index
+from hooks_runtime.handler import Handler
+from srs_index import Index
 
 
 def main() -> int:
