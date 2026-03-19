@@ -74,7 +74,7 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             index_path = repo_dir / ".srs" / "index.txt"
 
             note_path.write_text(
-                "Intro\n>[!code]- Example\n>```cpp\n>int x = 1;\n>```\n",
+                "Intro ~{overview}\n>[!code]- Example\n>```cpp\n>int x = 1;\n>```\n",
                 encoding="utf-8",
             )
             run_command(["git", "add", "note.md"], cwd=repo_dir)
@@ -122,7 +122,7 @@ class HooksInstallIntegrationTest(unittest.TestCase):
 
             note_path = repo_dir / "note.md"
             note_path.write_text(
-                "Top ~{one}\n  detail\nNext ~{two}\n",
+                "Top ~{one}\n  ~{detail}\nNext ~{two}\n",
                 encoding="utf-8",
             )
 
@@ -224,7 +224,7 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             index_path = repo_dir / ".srs" / "index.txt"
             srs_dir = repo_dir / ".srs"
 
-            note_path.write_text("A\nB\nC\n", encoding="utf-8")
+            note_path.write_text("~{A}\n~{B}\n~{C}\n", encoding="utf-8")
             run_command(["git", "add", "note.md"], cwd=repo_dir)
             run_command(["git", "commit", "-m", "seed note"], cwd=repo_dir)
 
@@ -240,7 +240,7 @@ class HooksInstallIntegrationTest(unittest.TestCase):
                 for note_id, _path, _parser_id, start_line, _end_line in rows
             }
 
-            note_path.write_text("A\nB2\nC\n", encoding="utf-8")
+            note_path.write_text("~{A}\n~{B2}\n~{C}\n", encoding="utf-8")
             run_command(["git", "add", "note.md"], cwd=repo_dir)
             run_command(["git", "commit", "-m", "replace middle line"], cwd=repo_dir)
 
@@ -250,7 +250,7 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             }
             self.assertEqual(ids_by_line, ids_after_replace)
 
-            note_path.write_text("A\nX\nB2\nC\n", encoding="utf-8")
+            note_path.write_text("~{A}\n~{X}\n~{B2}\n~{C}\n", encoding="utf-8")
             run_command(["git", "add", "note.md"], cwd=repo_dir)
             run_command(["git", "commit", "-m", "insert middle line"], cwd=repo_dir)
 
@@ -268,7 +268,7 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             self.assertTrue((srs_dir / f"{inserted_card_id}.json").exists())
 
             removed_card_id = inserted_ids_by_line[3]
-            note_path.write_text("A\nX\nC\n", encoding="utf-8")
+            note_path.write_text("~{A}\n~{X}\n~{C}\n", encoding="utf-8")
             run_command(["git", "add", "note.md"], cwd=repo_dir)
             commit_result = subprocess.run(
                 ["git", "commit", "-m", "delete middle line"],
@@ -301,7 +301,7 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             note_path = repo_dir / "note.md"
             index_path = repo_dir / ".srs" / "index.txt"
 
-            note_path.write_text("A\nB\nC\n", encoding="utf-8")
+            note_path.write_text("~{A}\n~{B}\n~{C}\n", encoding="utf-8")
             run_command(["git", "add", "note.md"], cwd=repo_dir)
             run_command(["git", "commit", "-m", "seed note"], cwd=repo_dir)
 
@@ -311,7 +311,7 @@ class HooksInstallIntegrationTest(unittest.TestCase):
                 for note_id, _path, _parser_id, start_line, _end_line in rows
             }
 
-            note_path.write_text("A\n\nB\nC\n", encoding="utf-8")
+            note_path.write_text("~{A}\n\n~{B}\n~{C}\n", encoding="utf-8")
             run_command(["git", "add", "note.md"], cwd=repo_dir)
             run_command(["git", "commit", "-m", "insert empty line"], cwd=repo_dir)
 
@@ -340,7 +340,10 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             index_path = repo_dir / ".srs" / "index.txt"
             srs_dir = repo_dir / ".srs"
 
-            note_path.write_text("A\nB\nC\nD\nE\nF\n", encoding="utf-8")
+            note_path.write_text(
+                "~{A}\n~{B}\n~{C}\n~{D}\n~{E}\n~{F}\n",
+                encoding="utf-8",
+            )
             run_command(["git", "add", "note.md"], cwd=repo_dir)
             run_command(["git", "commit", "-m", "seed note"], cwd=repo_dir)
 
@@ -350,7 +353,10 @@ class HooksInstallIntegrationTest(unittest.TestCase):
                 for note_id, _path, _parser_id, start_line, _end_line in rows
             }
 
-            note_path.write_text("A\nX\nB\nC\nD\nE\n", encoding="utf-8")
+            note_path.write_text(
+                "~{A}\n~{X}\n~{B}\n~{C}\n~{D}\n~{E}\n",
+                encoding="utf-8",
+            )
             run_command(["git", "add", "note.md"], cwd=repo_dir)
             commit_result = subprocess.run(
                 ["git", "commit", "-m", "multi-hunk edit"],
