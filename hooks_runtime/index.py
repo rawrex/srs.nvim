@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import os
 import re
-from typing import Dict, List, Set, Tuple
+from dataclasses import dataclass
 
 from reviewing.card import (
     SchedulerCard,
@@ -12,6 +12,34 @@ from reviewing.storage import write_storage_file
 import util
 
 
+Hunk = tuple[int, int, int, int]
+PathRows = dict[str, list[tuple[str, str, int]]]
+
+
+@dataclass(frozen=True)
+class IndexRow:
+    note_id: str
+    path: str
+    parser_id: str
+    start_line: int
+
+
+class IndexRowReader:
+    def __init__(self) -> None:
+        self.row_re = re.compile(r"^'([^']*)','([^']*)','([^']*)','(\d+)'\s*$")
+
+    def parse(self, raw_line: str) -> IndexRow | None:
+        match = self.row_re.match(raw_line.rstrip("\n"))
+        if not match:
+            return None
+        return IndexRow(
+            note_id=match.group(1),
+            path=match.group(2),
+            parser_id=match.group(3),
+            start_line=int(match.group(4)),
+        )
+
+
 class Index:
     def __init__(
         self,
@@ -20,19 +48,19 @@ class Index:
     ) -> None:
         self.path = path
         self.parser_registry = parser_registry or default_parser_registry()
-        self.row_re = re.compile(r"^'([^']*)','([^']*)','([^']*)','(\d+)'\s*$")
+        self.row_reader = IndexRowReader()
         self.hunk_re = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
 
-    def _stage_paths(self, repo_root: str, indexed_paths: Set[str]) -> None:
+    def _stage_paths(self, repo_root: str, indexed_paths: set[str]) -> None:
         rel_paths = sorted(path.lstrip("/") for path in indexed_paths)
         if rel_paths:
             util.run_git(["add", "--"] + rel_paths, cwd=repo_root)
 
-    def _read(self) -> List[str]:
+    def _read(self) -> list[str]:
         with open(self.path, "r", encoding="utf-8") as handle:
             return handle.readlines()
 
-    def _write(self, lines: List[str]) -> None:
+    def _write(self, lines: list[str]) -> None:
         tmp_path = self.path + ".tmp"
         with open(tmp_path, "w", encoding="utf-8") as handle:
             handle.writelines(lines)
@@ -49,7 +77,7 @@ class Index:
         changed, _staged_paths = self._apply_diff(diff_text, patch_text)
         return changed
 
-    def _apply_diff(self, diff_text: str, patch_text: str) -> Tuple[bool, Set[str]]:
+    def _apply_diff(self, diff_text: str, patch_text: str) -> tuple[bool, set[str]]:
         renames, deletes, adds, modifies = util.parse_diff(diff_text)
         if not renames and not deletes and not adds and not modifies:
             return False, set()
@@ -67,69 +95,99 @@ class Index:
             touched_card_paths.add(self._index_file_path())
         return changed, touched_card_paths
 
-    def read_rows(self) -> List[Tuple[str, str, str, int]]:
-        rows: List[Tuple[str, str, str, int]] = []
+    def read_rows(self) -> list[tuple[str, str, str, int]]:
+        rows: list[tuple[str, str, str, int]] = []
         for raw_line in self._read():
-            line = raw_line.strip()
-            if not line:
+            row = self.row_reader.parse(raw_line)
+            if row is None:
                 continue
-            match = self.row_re.match(line)
-            if not match:
-                continue
-            rows.append(
-                (
-                    match.group(1),
-                    match.group(2),
-                    match.group(3),
-                    int(match.group(4)),
-                )
-            )
+            rows.append((row.note_id, row.path, row.parser_id, row.start_line))
         return rows
 
     def _update_index_lines(
         self,
-        lines: List[str],
-        renames: Dict[str, str],
-        deletes: Set[str],
-        adds: Set[str],
-        modifies: Set[str],
-        modified_hunks: Dict[str, List[Tuple[int, int, int, int]]],
-    ) -> Tuple[List[str], bool, Set[str]]:
-        change_flag = False
-        touched_card_paths: Set[str] = set()
-        updated: List[str] = []
+        lines: list[str],
+        renames: dict[str, str],
+        deletes: set[str],
+        adds: set[str],
+        modifies: set[str],
+        modified_hunks: dict[str, list[Hunk]],
+    ) -> tuple[list[str], bool, set[str]]:
+        updated, removed_or_renamed, touched_paths = self._apply_deletes_and_renames(
+            lines,
+            renames,
+            deletes,
+        )
+        updated, added_new, added_paths = self._apply_adds(updated, adds)
+        updated, remapped_modified, remapped_paths = self._apply_modifies(
+            updated,
+            modifies,
+            modified_hunks,
+        )
+        touched_paths.update(added_paths)
+        touched_paths.update(remapped_paths)
+        changed = removed_or_renamed or added_new or remapped_modified
+        return updated, changed, touched_paths
+
+    def _apply_deletes_and_renames(
+        self,
+        lines: list[str],
+        renames: dict[str, str],
+        deletes: set[str],
+    ) -> tuple[list[str], bool, set[str]]:
+        changed = False
+        touched_paths: set[str] = set()
+        updated: list[str] = []
         for line in lines:
-            match = self.row_re.match(line.rstrip("\n"))
-            if not match:
+            row = self.row_reader.parse(line)
+            if row is None:
                 updated.append(line)
                 continue
-            note_id, path, parser_id, start_line = match.groups()
-            if path in deletes:
-                change_flag = True
-                if removed_path := self._remove_card_file(note_id):
-                    touched_card_paths.add(removed_path)
+            if row.path in deletes:
+                changed = True
+                if removed_path := self._remove_card_file(row.note_id):
+                    touched_paths.add(removed_path)
                 continue
-            if path in renames:
-                change_flag = True
-                new_path = renames[path]
+            if row.path in renames:
+                changed = True
                 updated.append(
-                    f"'{note_id}','{new_path}','{parser_id}','{start_line}'\n"
+                    self._format_row(
+                        row.note_id,
+                        renames[row.path],
+                        row.parser_id,
+                        row.start_line,
+                    )
                 )
-            else:
-                updated.append(line)
-
-        rows_by_path = self._rows_by_path(updated)
-        existing_paths = set(rows_by_path.keys())
-
-        for new_path in sorted(adds):
-            if not self._is_note_path(new_path):
                 continue
-            if new_path not in existing_paths:
-                change_flag = True
-                touched_card_paths.update(
-                    self._add_new(new_path, DEFAULT_PARSER_ID, updated)
-                )
+            updated.append(line)
+        return updated, changed, touched_paths
 
+    def _apply_adds(
+        self,
+        lines: list[str],
+        adds: set[str],
+    ) -> tuple[list[str], bool, set[str]]:
+        changed = False
+        touched_paths: set[str] = set()
+        rows_by_path = self._rows_by_path(lines)
+        existing_paths = set(rows_by_path)
+        for new_path in sorted(adds):
+            if not self._is_note_path(new_path) or new_path in existing_paths:
+                continue
+            changed = True
+            touched_paths.update(self._add_new(new_path, DEFAULT_PARSER_ID, lines))
+            existing_paths.add(new_path)
+        return lines, changed, touched_paths
+
+    def _apply_modifies(
+        self,
+        lines: list[str],
+        modifies: set[str],
+        modified_hunks: dict[str, list[Hunk]],
+    ) -> tuple[list[str], bool, set[str]]:
+        changed = False
+        touched_paths: set[str] = set()
+        updated = lines
         for modified_path in sorted(modifies):
             if not self._is_note_path(modified_path):
                 continue
@@ -137,67 +195,76 @@ class Index:
             if modified_path not in rows_by_path:
                 continue
 
-            remapped_rows: List[Tuple[str, str, int]] = []
-            hunks = modified_hunks.get(modified_path, [])
-            for note_id, parser_id, start_line in rows_by_path[modified_path]:
-                remapped_start_line = self._remap_line_number(start_line, hunks)
-                if remapped_start_line is None:
-                    change_flag = True
-                    if removed_path := self._remove_card_file(note_id):
-                        touched_card_paths.add(removed_path)
-                    continue
-                if remapped_start_line != start_line:
-                    change_flag = True
-                remapped_rows.append((note_id, parser_id, remapped_start_line))
-
-            existing_start_lines = {
-                start_line for _note_id, _parser_id, start_line in remapped_rows
-            }
-            parser_id_for_path = (
-                remapped_rows[0][1] if remapped_rows else DEFAULT_PARSER_ID
+            remapped_rows, path_changed, path_touched = self._remap_rows_for_path(
+                modified_path,
+                rows_by_path[modified_path],
+                modified_hunks.get(modified_path, []),
             )
-            for start_line, _block_text in self._load_note_cards(
-                modified_path,
-                parser_id_for_path,
-            ):
-                if start_line in existing_start_lines:
-                    continue
-                change_flag = True
-                new_scheduler_card = SchedulerCard()
-                card_id = str(new_scheduler_card.card_id)
-                self._write_card_file(
-                    card_id,
-                    parser_id_for_path,
-                    new_scheduler_card,
-                )
-                touched_card_paths.add(self._card_path(card_id))
-                remapped_rows.append((card_id, parser_id_for_path, start_line))
-
             replacement = self._replace_rows_for_path(
-                updated,
-                modified_path,
-                remapped_rows,
+                updated, modified_path, remapped_rows
             )
             if replacement != updated:
                 updated = replacement
+                path_changed = True
 
-        return updated, change_flag, touched_card_paths
+            changed = changed or path_changed
+            touched_paths.update(path_touched)
+
+        return updated, changed, touched_paths
+
+    def _remap_rows_for_path(
+        self,
+        modified_path: str,
+        path_rows: list[tuple[str, str, int]],
+        hunks: list[Hunk],
+    ) -> tuple[list[tuple[str, str, int]], bool, set[str]]:
+        changed = False
+        touched_paths: set[str] = set()
+        remapped_rows: list[tuple[str, str, int]] = []
+
+        for note_id, parser_id, start_line in path_rows:
+            remapped_start_line = self._remap_line_number(start_line, hunks)
+            if remapped_start_line is None:
+                changed = True
+                if removed_path := self._remove_card_file(note_id):
+                    touched_paths.add(removed_path)
+                continue
+            if remapped_start_line != start_line:
+                changed = True
+            remapped_rows.append((note_id, parser_id, remapped_start_line))
+
+        existing_start_lines = {
+            start_line for _note_id, _parser_id, start_line in remapped_rows
+        }
+        parser_id_for_path = remapped_rows[0][1] if remapped_rows else DEFAULT_PARSER_ID
+        for start_line, _block_text in self._load_note_cards(
+            modified_path, parser_id_for_path
+        ):
+            if start_line in existing_start_lines:
+                continue
+            changed = True
+            new_scheduler_card = SchedulerCard()
+            card_id = str(new_scheduler_card.card_id)
+            self._write_card_file(card_id, parser_id_for_path, new_scheduler_card)
+            touched_paths.add(self._card_path(card_id))
+            remapped_rows.append((card_id, parser_id_for_path, start_line))
+
+        return remapped_rows, changed, touched_paths
 
     def _replace_rows_for_path(
         self,
-        lines: List[str],
+        lines: list[str],
         indexed_path: str,
-        replacement_rows: List[Tuple[str, str, int]],
-    ) -> List[str]:
-        updated: List[str] = []
+        replacement_rows: list[tuple[str, str, int]],
+    ) -> list[str]:
+        updated: list[str] = []
         inserted = False
         for line in lines:
-            match = self.row_re.match(line.rstrip("\n"))
-            if not match:
+            row = self.row_reader.parse(line)
+            if row is None:
                 updated.append(line)
                 continue
-            _note_id, path, _parser_id, _start_line = match.groups()
-            if path != indexed_path:
+            if row.path != indexed_path:
                 updated.append(line)
                 continue
             if not inserted:
@@ -231,7 +298,7 @@ class Index:
     def _remap_line_number(
         self,
         start_line: int,
-        hunks: List[Tuple[int, int, int, int]],
+        hunks: list[Hunk],
     ) -> int | None:
         shift = 0
         for old_start, old_count, new_start, new_count in sorted(hunks):
@@ -254,10 +321,8 @@ class Index:
             return None
         return start_line + shift
 
-    def _parse_modified_hunks(
-        self, patch_text: str
-    ) -> Dict[str, List[Tuple[int, int, int, int]]]:
-        hunks_by_path: Dict[str, List[Tuple[int, int, int, int]]] = {}
+    def _parse_modified_hunks(self, patch_text: str) -> dict[str, list[Hunk]]:
+        hunks_by_path: dict[str, list[Hunk]] = {}
         current_path = ""
         for line in patch_text.splitlines():
             if line.startswith("diff --git "):
@@ -299,9 +364,9 @@ class Index:
         self,
         new_path: str,
         parser_id: str,
-        updated: List[str],
-    ) -> Set[str]:
-        touched_card_paths: Set[str] = set()
+        updated: list[str],
+    ) -> set[str]:
+        touched_card_paths: set[str] = set()
         for start_line, _block_text in self._load_note_cards(new_path, parser_id):
             new_scheduler_card = SchedulerCard()
             card_id = str(new_scheduler_card.card_id)
@@ -314,15 +379,14 @@ class Index:
             updated.append(self._format_row(card_id, new_path, parser_id, start_line))
         return touched_card_paths
 
-    def _rows_by_path(self, lines: List[str]) -> Dict[str, List[Tuple[str, str, int]]]:
-        rows_by_path: Dict[str, List[Tuple[str, str, int]]] = {}
+    def _rows_by_path(self, lines: list[str]) -> PathRows:
+        rows_by_path: PathRows = {}
         for line in lines:
-            match = self.row_re.match(line.rstrip("\n"))
-            if not match:
+            row = self.row_reader.parse(line)
+            if row is None:
                 continue
-            note_id, path, parser_id, raw_start_line = match.groups()
-            rows_by_path.setdefault(path, []).append(
-                (note_id, parser_id, int(raw_start_line))
+            rows_by_path.setdefault(row.path, []).append(
+                (row.note_id, row.parser_id, row.start_line)
             )
         return rows_by_path
 
@@ -352,7 +416,7 @@ class Index:
 
     def _load_note_cards(
         self, indexed_path: str, parser_id: str
-    ) -> List[Tuple[int, str]]:
+    ) -> list[tuple[int, str]]:
         note_path = self._note_abs_path(indexed_path)
         if not os.path.exists(note_path):
             return []

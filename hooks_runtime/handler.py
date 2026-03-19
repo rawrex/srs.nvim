@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import sys
-from typing import List
 
 from .index import Index
 import util
@@ -53,22 +52,21 @@ class Handler:
         return out
 
     def handle_pre_commit(self, index: Index) -> None:
-        diff_text = self.diff_name_status_cached()
-        patch_text = self.diff_patch_cached()
-        index.apply_diff_and_stage(self.repository_root, diff_text, patch_text)
+        self._handle_cached_diff(index)
 
     def handle_pre_merge_commit(self, index: Index) -> None:
+        self._handle_cached_diff(index)
+
+    def _handle_cached_diff(self, index: Index) -> None:
         diff_text = self.diff_name_status_cached()
         patch_text = self.diff_patch_cached()
         index.apply_diff_and_stage(self.repository_root, diff_text, patch_text)
 
-    def handle_post_checkout(self, index: Index, args: List[str]) -> None:
+    def handle_post_checkout(self, index: Index, args: list[str]) -> None:
         if len(args) < 2:
             return
         old_ref, new_ref = args[0], args[1]
-        diff_text = self.diff_name_status(old_ref, new_ref)
-        patch_text = self.diff_patch(old_ref, new_ref)
-        index.apply_diff(diff_text, patch_text)
+        self._apply_ref_diff(index, old_ref, new_ref)
 
     def handle_post_rewrite(self, index: Index) -> None:
         data = sys.stdin.read().strip().splitlines()
@@ -79,6 +77,9 @@ class Handler:
             if len(parts) < 2:
                 continue
             old_ref, new_ref = parts[0], parts[1]
-            diff_text = self.diff_name_status(old_ref, new_ref)
-            patch_text = self.diff_patch(old_ref, new_ref)
-            index.apply_diff(diff_text, patch_text)
+            self._apply_ref_diff(index, old_ref, new_ref)
+
+    def _apply_ref_diff(self, index: Index, old_ref: str, new_ref: str) -> None:
+        diff_text = self.diff_name_status(old_ref, new_ref)
+        patch_text = self.diff_patch(old_ref, new_ref)
+        index.apply_diff(diff_text, patch_text)
