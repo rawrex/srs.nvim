@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 import os
-import time
-import hashlib
 import subprocess
-from typing import Dict, Set, Tuple
 
 
-def run_git(args: list, cwd: str):
+def run_git(args: list[str], cwd: str) -> tuple[int, str, str]:
     result = subprocess.run(["git"] + args, cwd=cwd, text=True, capture_output=True)
     return result.returncode, result.stdout, result.stderr
 
@@ -26,31 +23,11 @@ def normalize_path(path: str) -> str:
     return "/" + path
 
 
-def note_id_from_path(path: str) -> str:
-    base = os.path.basename(path)
-    name, _ = os.path.splitext(base)
-    return name
-
-
-def generate_note_id(path: str, existing_ids: Set[str]) -> str:
-    created_at_ns = str(time.time_ns())
-    filename = os.path.basename(path)
-    if not filename:
-        filename = "item"
-    suffix = 0
-    while True:
-        payload = f"{created_at_ns}:{filename}:{suffix}".encode("utf-8")
-        candidate = hashlib.blake2s(payload, digest_size=12).hexdigest()
-        if candidate not in existing_ids:
-            return candidate
-        suffix += 1
-
-
-def parse_diff(text: str) -> Tuple[Dict[str, str], Set[str], Set[str], Set[str]]:
-    renames: Dict[str, str] = {}
-    deletes: Set[str] = set()
-    adds: Set[str] = set()
-    modifies: Set[str] = set()
+def parse_diff(text: str) -> tuple[dict[str, str], set[str], set[str], set[str]]:
+    renames: dict[str, str] = {}
+    deletes: set[str] = set()
+    adds: set[str] = set()
+    modifies: set[str] = set()
     for line in text.splitlines():
         if not line.strip():
             continue
