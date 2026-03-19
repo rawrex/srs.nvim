@@ -17,7 +17,7 @@ from reviewing.card import (
 )
 from reviewing.config import DEFAULT_RATING_BUTTONS, ReviewConfig, load_review_config
 from reviewing.parsers import ClozeParser
-from reviewing.storage import parse_storage_json
+from reviewing.storage import Metadata, parse_storage_json
 from reviewing.ui import ReviewUI
 
 
@@ -41,8 +41,7 @@ class ReviewRenderingTest(unittest.TestCase):
             note_path="/tmp/note.md",
             card_path="/tmp/1.json",
             note_text=note,
-            scheduler_card=SchedulerCard(),
-            review_logs=[],
+            metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             reveal_mode=RevealMode.WHOLE,
             cloze_open="~{",
             cloze_close="}",
@@ -77,8 +76,7 @@ class ReviewRenderingTest(unittest.TestCase):
             note_path="/tmp/note.md",
             card_path="/tmp/1.json",
             note_text=note,
-            scheduler_card=SchedulerCard(),
-            review_logs=[],
+            metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             reveal_mode=RevealMode.WHOLE,
             cloze_open="~{",
             cloze_close="}",
@@ -118,8 +116,7 @@ class ReviewRenderingTest(unittest.TestCase):
             note_path="/tmp/note.md",
             card_path="/tmp/1.json",
             note_text=note_blocks[1],
-            scheduler_card=SchedulerCard(),
-            review_logs=[],
+            metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             reveal_mode=RevealMode.WHOLE,
             cloze_open="~{",
             cloze_close="}",
@@ -162,8 +159,7 @@ class ReviewRenderingTest(unittest.TestCase):
             note_path="/tmp/note.md",
             card_path="/tmp/1.json",
             note_text=note_blocks[1],
-            scheduler_card=SchedulerCard(),
-            review_logs=[],
+            metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             reveal_mode=RevealMode.WHOLE,
             cloze_open="~{",
             cloze_close="}",
@@ -202,8 +198,7 @@ class ReviewRenderingTest(unittest.TestCase):
             note_path="/tmp/note.md",
             card_path="/tmp/1.json",
             note_text=note_blocks[1],
-            scheduler_card=SchedulerCard(),
-            review_logs=[],
+            metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             reveal_mode=RevealMode.WHOLE,
             cloze_open="~{",
             cloze_close="}",
@@ -240,8 +235,7 @@ class ReviewRenderingTest(unittest.TestCase):
             note_path="/tmp/note.md",
             card_path="/tmp/1.json",
             note_text=note_blocks[1],
-            scheduler_card=SchedulerCard(),
-            review_logs=[],
+            metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             reveal_mode=RevealMode.WHOLE,
             cloze_open="~{",
             cloze_close="}",
@@ -272,7 +266,7 @@ class ReviewRenderingTest(unittest.TestCase):
             with open(card_path, "w", encoding="utf-8") as handle:
                 json.dump(ClozeCard.new_storage_dict(), handle)
             with open(card_path, "r", encoding="utf-8") as handle:
-                scheduler_card, review_logs = parse_storage_json(handle.read())
+                metadata = parse_storage_json(handle.read())
 
             parser = ClozeParser(
                 reveal_mode=RevealMode.WHOLE,
@@ -287,8 +281,7 @@ class ReviewRenderingTest(unittest.TestCase):
                 start_line=1,
                 note_blocks={1: "The ~{capital of France} is Paris.\n"},
                 card_path=card_path,
-                scheduler_card=scheduler_card,
-                review_logs=review_logs,
+                metadata=metadata,
             )
 
             self.assertIsInstance(card, ClozeCard)

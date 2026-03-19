@@ -8,13 +8,8 @@ from enum import Enum
 from typing import Dict, List, Tuple
 
 from fsrs import Card as SchedulerCard
-from fsrs import ReviewLog
 
-from .storage import (
-    REVIEW_LOGS_KEY,
-    storage_dict_for_scheduler_card,
-    write_storage_file,
-)
+from .storage import Metadata, write_metadata_file
 
 
 LABEL_CHARS = (
@@ -125,8 +120,7 @@ class Card(ABC):
     note_path: str
     card_path: str
     note_text: str
-    scheduler_card: SchedulerCard
-    review_logs: List[ReviewLog]
+    metadata: Metadata
     start_line: int = 1
     note_blocks: Dict[int, str] = field(default_factory=dict)
 
@@ -135,18 +129,16 @@ class Card(ABC):
         return self.note_path.rsplit("/", 1)[-1]
 
     def is_due(self, now: datetime) -> bool:
-        due = self.scheduler_card.due
+        due = self.metadata.scheduler_card.due
         if due.tzinfo is None:
             due = due.replace(tzinfo=timezone.utc)
         return due <= now
 
     def to_storage_dict(self) -> Dict[str, object]:
-        merged = storage_dict_for_scheduler_card(self.scheduler_card)
-        merged[REVIEW_LOGS_KEY] = [log.to_dict() for log in self.review_logs]
-        return merged
+        return self.metadata.to_storage_dict()
 
     def save_storage_file(self) -> None:
-        write_storage_file(self.card_path, self.to_storage_dict())
+        write_metadata_file(self.card_path, self.metadata)
 
     @abstractmethod
     def reveal_for_label(self, label: str) -> CardView | None:
@@ -186,7 +178,8 @@ class ClozeCard(Card):
 
     @classmethod
     def new_storage_dict(cls) -> Dict[str, object]:
-        return storage_dict_for_scheduler_card(SchedulerCard())
+        metadata = Metadata(scheduler_card=SchedulerCard(), review_logs=[])
+        return metadata.to_storage_dict()
 
     def reveal_for_label(self, label: str) -> CardView | None:
         if label == REVEAL_ALL_LABEL:

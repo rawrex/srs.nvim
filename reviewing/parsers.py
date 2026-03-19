@@ -2,10 +2,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import ClassVar, Dict, List, Tuple
 
-from fsrs import ReviewLog
-
-from .card import Card, ClozeCard, RevealMode, SchedulerCard
-from .storage import storage_dict_for_scheduler_card
+from .card import Card, ClozeCard, RevealMode
+from .storage import Metadata
 
 
 DEFAULT_PARSER_ID = "cloze"
@@ -19,10 +17,6 @@ class NoteParser(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def new_storage_dict(self, scheduler_card: SchedulerCard) -> Dict[str, object]:
-        raise NotImplementedError
-
-    @abstractmethod
     def build_card(
         self,
         note_id: str,
@@ -31,8 +25,7 @@ class NoteParser(ABC):
         start_line: int,
         note_blocks: Dict[int, str],
         card_path: str,
-        scheduler_card: SchedulerCard,
-        review_logs: List[ReviewLog],
+        metadata: Metadata,
     ) -> Card:
         raise NotImplementedError
 
@@ -54,9 +47,6 @@ class ClozeParser(NoteParser):
                 cards.append((line_number, line))
         return cards
 
-    def new_storage_dict(self, scheduler_card: SchedulerCard) -> Dict[str, object]:
-        return storage_dict_for_scheduler_card(scheduler_card)
-
     def build_card(
         self,
         note_id: str,
@@ -65,8 +55,7 @@ class ClozeParser(NoteParser):
         start_line: int,
         note_blocks: Dict[int, str],
         card_path: str,
-        scheduler_card: SchedulerCard,
-        review_logs: List[ReviewLog],
+        metadata: Metadata,
     ) -> Card:
         return ClozeCard(
             note_id=note_id,
@@ -75,8 +64,7 @@ class ClozeParser(NoteParser):
             note_text=note_text,
             start_line=start_line,
             note_blocks=note_blocks,
-            scheduler_card=scheduler_card,
-            review_logs=review_logs,
+            metadata=metadata,
             reveal_mode=self.reveal_mode,
             cloze_open=self.cloze_open,
             cloze_close=self.cloze_close,

@@ -73,12 +73,12 @@ class ReviewSession:
             self.ui.print_message("")
             rating = self.ui.prompt_rating_step()
             updated_card, review_log = self.scheduler.review_card(
-                card.scheduler_card,
+                card.metadata.scheduler_card,
                 rating,
                 review_duration=int(review_duration_ms),
             )
-            card.scheduler_card = updated_card
-            card.review_logs.append(review_log)
+            card.metadata.scheduler_card = updated_card
+            card.metadata.review_logs.append(review_log)
             self._save_reviewed_card(card)
             self.ui.print_message("Saved")
             if idx < total and self.between_notes_timeout_ms > 0:
@@ -105,7 +105,7 @@ class ReviewSession:
             card_path = os.path.join(self.repo_root, ".srs", f"{note_id}.json")
             with open(card_path, "r", encoding="utf-8") as handle:
                 raw_text = handle.read()
-            scheduler_card, review_logs = parse_storage_json(raw_text)
+            metadata = parse_storage_json(raw_text)
             parser = self.parser_registry.get(parser_id)
             card = parser.build_card(
                 note_id=note_id,
@@ -114,8 +114,7 @@ class ReviewSession:
                 start_line=start_line,
                 note_blocks=note_blocks_cache[cache_key],
                 card_path=card_path,
-                scheduler_card=scheduler_card,
-                review_logs=review_logs,
+                metadata=metadata,
             )
             if card.is_due(now):
                 cards.append(card)

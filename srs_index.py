@@ -7,7 +7,7 @@ from reviewing.card import (
     SchedulerCard,
 )
 from reviewing.parsers import DEFAULT_PARSER_ID, ParserRegistry, default_parser_registry
-from reviewing.storage import write_storage_file
+from reviewing.storage import Metadata, write_metadata_file
 
 import util
 
@@ -426,8 +426,9 @@ class Index:
         self, parser_id: str, start_line: int
     ) -> tuple[IndexRowTuple, str]:
         scheduler_card = SchedulerCard()
+        metadata = Metadata(scheduler_card=scheduler_card, review_logs=[])
         card_id = str(scheduler_card.card_id)
-        self._write_card_file(card_id, parser_id, scheduler_card)
+        self._write_card_file(card_id, metadata)
         return (card_id, parser_id, start_line), self._card_path(card_id)
 
     def _rows_by_path(self, lines: list[str]) -> PathRows:
@@ -485,9 +486,7 @@ class Index:
     def _write_card_file(
         self,
         card_id: str,
-        parser_id: str,
-        scheduler_card: SchedulerCard,
+        metadata: Metadata,
     ) -> None:
         card_path = self._card_abs_path(card_id)
-        parser = self.parser_registry.get(parser_id)
-        write_storage_file(card_path, parser.new_storage_dict(scheduler_card))
+        write_metadata_file(card_path, metadata)
