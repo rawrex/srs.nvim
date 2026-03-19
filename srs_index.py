@@ -43,6 +43,11 @@ class PathRemapResult:
     rows: list[IndexRowTuple]
     changed: bool
     touched_paths: set[str]
+    error_message: str | None = None
+
+
+class IndexUpdateAbortError(Exception):
+    pass
 
 
 @dataclass(frozen=True)
@@ -242,6 +247,8 @@ class Index:
                 rows_by_path[modified_path],
                 modified_hunks.get(modified_path, []),
             )
+            if remap_result.error_message:
+                raise IndexUpdateAbortError(remap_result.error_message)
             replacement = self._replace_rows_for_path(
                 updated,
                 modified_path,
@@ -270,13 +277,25 @@ class Index:
         touched_paths: set[str] = set()
         remapped_rows: list[IndexRowTuple] = []
 
-        for note_id, parser_id, start_line, end_line in path_rows:
+        pending_rows: list[tuple[IndexRowTuple, bool, tuple[int, int] | None]] = []
+
+        for row in sorted(path_rows, key=lambda item: (item[2], item[3])):
+            note_id, parser_id, start_line, end_line = row
+            within_range, adjacent_insert = self._classify_range_touch(
+                start_line,
+                end_line,
+                hunks,
+            )
             remapped_range = self._remap_line_range(start_line, end_line, hunks)
-            if remapped_range is None:
-                changed = True
-                if removed_path := self._remove_card_file(note_id):
-                    touched_paths.add(removed_path)
+
+            if within_range or adjacent_insert:
+                pending_rows.append((row, within_range, remapped_range))
                 continue
+
+            if remapped_range is None:
+                pending_rows.append((row, True, None))
+                continue
+
             remapped_start_line, remapped_end_line = remapped_range
             if remapped_start_line != start_line or remapped_end_line != end_line:
                 changed = True
@@ -284,14 +303,79 @@ class Index:
                 (note_id, parser_id, remapped_start_line, remapped_end_line)
             )
 
+        parser_id_for_path = path_rows[0][1] if path_rows else DEFAULT_PARSER_ID
+        parsed_ranges = [
+            (start_line, end_line)
+            for start_line, end_line, _block_text in self._load_note_cards(
+                modified_path,
+                parser_id_for_path,
+            )
+        ]
+
+        claimed_ranges = {
+            (start_line, end_line)
+            for _note_id, _parser_id, start_line, end_line in remapped_rows
+        }
+        parsed_cursor = 0
+
+        for (
+            note_id,
+            parser_id,
+            start_line,
+            end_line,
+        ), within_range, fallback_range in pending_rows:
+            target_start, target_end = (
+                fallback_range if fallback_range is not None else (start_line, end_line)
+            )
+            match_index = self._find_claimed_range_index(
+                parsed_ranges,
+                claimed_ranges,
+                target_start,
+                target_end,
+                parsed_cursor,
+            )
+            if match_index is not None:
+                matched_start, matched_end = parsed_ranges[match_index]
+                if matched_start != start_line or matched_end != end_line:
+                    changed = True
+                remapped_rows.append((note_id, parser_id, matched_start, matched_end))
+                claimed_ranges.add((matched_start, matched_end))
+                parsed_cursor = match_index + 1
+                continue
+
+            if within_range:
+                return PathRemapResult(
+                    rows=path_rows,
+                    changed=False,
+                    touched_paths=touched_paths,
+                    error_message=(
+                        "SRS index update aborted: parser could not claim an edited "
+                        f"card range in {modified_path}. Please resolve manually."
+                    ),
+                )
+
+            if fallback_range is None:
+                return PathRemapResult(
+                    rows=path_rows,
+                    changed=False,
+                    touched_paths=touched_paths,
+                    error_message=(
+                        "SRS index update aborted: failed to remap card range "
+                        f"in {modified_path}. Please resolve manually."
+                    ),
+                )
+
+            fallback_start, fallback_end = fallback_range
+            if fallback_start != start_line or fallback_end != end_line:
+                changed = True
+            remapped_rows.append((note_id, parser_id, fallback_start, fallback_end))
+            claimed_ranges.add((fallback_start, fallback_end))
+
         existing_ranges = {
             (start_line, end_line)
             for _note_id, _parser_id, start_line, end_line in remapped_rows
         }
-        parser_id_for_path = remapped_rows[0][1] if remapped_rows else DEFAULT_PARSER_ID
-        for start_line, end_line, _block_text in self._load_note_cards(
-            modified_path, parser_id_for_path
-        ):
+        for start_line, end_line in parsed_ranges:
             if (start_line, end_line) in existing_ranges:
                 continue
             changed = True
@@ -308,6 +392,47 @@ class Index:
             changed=changed,
             touched_paths=touched_paths,
         )
+
+    def _find_claimed_range_index(
+        self,
+        parsed_ranges: list[tuple[int, int]],
+        claimed_ranges: set[tuple[int, int]],
+        target_start: int,
+        target_end: int,
+        cursor: int,
+    ) -> int | None:
+        for index in range(cursor, len(parsed_ranges)):
+            parsed_start, parsed_end = parsed_ranges[index]
+            if (parsed_start, parsed_end) in claimed_ranges:
+                continue
+            if parsed_end < target_start:
+                continue
+            if parsed_start > target_end:
+                return None
+            return index
+        return None
+
+    def _classify_range_touch(
+        self,
+        start_line: int,
+        end_line: int,
+        hunks: list[Hunk],
+    ) -> tuple[bool, bool]:
+        within_range = False
+        adjacent_insert = False
+        for old_start, old_count, _new_start, _new_count in hunks:
+            if old_count == 0:
+                if start_line <= old_start <= end_line:
+                    within_range = True
+                elif old_start == start_line - 1 or old_start == end_line:
+                    adjacent_insert = True
+                continue
+
+            old_end = old_start + old_count - 1
+            if old_end < start_line or old_start > end_line:
+                continue
+            within_range = True
+        return within_range, adjacent_insert
 
     def _replace_rows_for_path(
         self,
