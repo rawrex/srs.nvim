@@ -7,6 +7,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import util
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 INSTALL_SCRIPT = REPO_ROOT / "install.py"
@@ -44,6 +46,13 @@ def read_index_rows(index_path: Path):
 
 
 class HooksInstallIntegrationTest(unittest.TestCase):
+    def test_parse_diff_treats_copy_as_add(self):
+        renames, deletes, adds, modifies = util.parse_diff("C100\told.md\tnew.md\n")
+        self.assertEqual({}, renames)
+        self.assertEqual(set(), deletes)
+        self.assertEqual({"/new.md"}, adds)
+        self.assertEqual(set(), modifies)
+
     def test_install_and_index_updates_on_add_rename_remove(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             repo_dir = Path(tmp_dir)
