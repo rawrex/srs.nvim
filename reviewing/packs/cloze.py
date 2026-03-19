@@ -197,12 +197,15 @@ class ClozeCard(Card):
     def _masked_context_block(self, block: str) -> str:
         text_parts, clozes = parse_note_clozes(block, self.cloze_open, self.cloze_close)
         if not clozes:
-            return block
+            label_re = re.compile(r"\[[^\]]\]")
+            return label_re.sub("", block)
         parts = [text_parts[0]]
         for idx, hidden in enumerate(clozes):
             parts.append(mask_hidden_text(hidden, self.mask_char))
             parts.append(text_parts[idx + 1])
-        return "".join(parts)
+        masked = "".join(parts)
+        label_re = re.compile(r"\[[^\]]\]")
+        return label_re.sub("", masked)
 
     def _incremental_hidden_view(
         self, hidden: str, state: IncrementalRevealState

@@ -77,18 +77,19 @@ class ReviewSession:
 
     def _load_due_cards(self) -> list[Card]:
         now = datetime.now(timezone.utc)
-        cards: list[Card] = []
-        note_blocks_cache: dict[tuple[str, str], dict[tuple[int, int], str]] = {}
+        cards_with_paths: list[tuple[Card, str]] = []
+        note_question_blocks: dict[str, dict[tuple[int, int], str]] = {}
+        raw_blocks_cache: dict[tuple[str, str], dict[tuple[int, int], str]] = {}
         index = Index(self.index_path)
         for note_id, indexed_path, parser_id, start_line, end_line in index.read_rows():
             note_path = self._note_abs_path(indexed_path)
             cache_key = (note_path, parser_id)
-            if cache_key not in note_blocks_cache:
-                note_blocks_cache[cache_key] = self._read_note_blocks(
+            if cache_key not in raw_blocks_cache:
+                raw_blocks_cache[cache_key] = self._read_note_blocks(
                     note_path,
                     parser_id,
                 )
-            note_text = note_blocks_cache[cache_key].get((start_line, end_line))
+            note_text = raw_blocks_cache[cache_key].get((start_line, end_line))
             if note_text is None:
                 continue
             card_path = os.path.join(self.repo_root, ".srs", f"{note_id}.json")
@@ -102,13 +103,21 @@ class ReviewSession:
                 note_text=note_text,
                 start_line=start_line,
                 end_line=end_line,
-                note_blocks=note_blocks_cache[cache_key],
+                note_blocks=raw_blocks_cache[cache_key],
                 card_path=card_path,
                 metadata=metadata,
             )
+            note_question_blocks.setdefault(note_path, {})[(start_line, end_line)] = (
+                card.question_view().primary_block().text
+            )
+            cards_with_paths.append((card, note_path))
+
+        due_cards: list[Card] = []
+        for card, note_path in cards_with_paths:
+            card.note_blocks = note_question_blocks.get(note_path, {})
             if card.is_due(now):
-                cards.append(card)
-        return cards
+                due_cards.append(card)
+        return due_cards
 
     def _note_abs_path(self, indexed_path: str) -> str:
         return os.path.join(self.repo_root, indexed_path.lstrip("/"))
