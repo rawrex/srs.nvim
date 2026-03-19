@@ -77,11 +77,19 @@ class ReviewSession:
 
     def _load_due_cards(self) -> list[Card]:
         now = datetime.now(timezone.utc)
+        index_rows = list(Index(self.index_path).read_rows())
         cards_with_paths: list[tuple[Card, str]] = []
         note_question_blocks: dict[str, dict[tuple[int, int], str]] = {}
         raw_blocks_cache: dict[tuple[str, str], dict[tuple[int, int], str]] = {}
-        index = Index(self.index_path)
-        for note_id, indexed_path, parser_id, start_line, end_line in index.read_rows():
+        claimed_lines_by_note: dict[str, set[int]] = {}
+
+        for _note_id, indexed_path, _parser_id, start_line, end_line in index_rows:
+            note_path = self._note_abs_path(indexed_path)
+            claimed_lines_by_note.setdefault(note_path, set()).update(
+                range(start_line, end_line + 1)
+            )
+
+        for note_id, indexed_path, parser_id, start_line, end_line in index_rows:
             note_path = self._note_abs_path(indexed_path)
             cache_key = (note_path, parser_id)
             if cache_key not in raw_blocks_cache:
@@ -112,6 +120,14 @@ class ReviewSession:
             )
             cards_with_paths.append((card, note_path))
 
+        for note_path, claimed_lines in claimed_lines_by_note.items():
+            fallback_blocks = self._read_unclaimed_line_blocks(note_path, claimed_lines)
+            if not fallback_blocks:
+                continue
+            note_blocks = note_question_blocks.setdefault(note_path, {})
+            for line_range, block in fallback_blocks.items():
+                note_blocks.setdefault(line_range, block)
+
         due_cards: list[Card] = []
         for card, note_path in cards_with_paths:
             card.note_blocks = note_question_blocks.get(note_path, {})
@@ -135,3 +151,14 @@ class ReviewSession:
 
     def _save_reviewed_card(self, card: Card) -> None:
         card.save_storage_file()
+
+    def _read_unclaimed_line_blocks(
+        self, note_path: str, claimed_lines: set[int]
+    ) -> dict[tuple[int, int], str]:
+        with open(note_path, "r", encoding="utf-8") as handle:
+            lines = handle.readlines()
+        return {
+            (line_number, line_number): line
+            for line_number, line in enumerate(lines, start=1)
+            if line_number not in claimed_lines and line.strip()
+        }
