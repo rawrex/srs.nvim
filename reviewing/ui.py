@@ -52,7 +52,7 @@ class ReviewUI:
     def prompt_rating_step(self) -> Rating:
         prompt = self._rating_prompt()
         while True:
-            self.console.print(prompt, end="", highlight=False)
+            self.console.print(prompt, end="", markup=False, highlight=False)
             key = read_single_key()
             if maybe_suspend_for_key(key):
                 self.console.print()
