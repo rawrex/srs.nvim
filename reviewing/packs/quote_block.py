@@ -49,6 +49,7 @@ class QuoteBlockCard(Card):
 @dataclass(frozen=True)
 class QuoteBlockParser(NoteParser):
     parser_id: ClassVar[str] = QUOTE_BLOCK_PARSER_ID
+    priority: ClassVar[int] = 10
 
     def split_note_into_cards(self, note_text: str) -> List[Tuple[int, int, str]]:
         cards: List[Tuple[int, int, str]] = []

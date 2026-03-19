@@ -8,7 +8,7 @@ from srs_index import Index
 
 from .card import Card
 from .config import ReviewConfig
-from .parsers import DEFAULT_PARSER_ID, ClozeParser, ParserRegistry
+from .parsers import PARSER_REGISTRY
 from .storage import parse_storage_json
 from .ui import ReviewUI
 
@@ -20,7 +20,6 @@ class ReviewSession:
         ui: ReviewUI,
         config: ReviewConfig,
         scheduler: Scheduler | None = None,
-        parser_registry: ParserRegistry | None = None,
     ) -> None:
         self.repo_root = repo_root
         self.ui = ui
@@ -30,17 +29,7 @@ class ReviewSession:
         self.mask_char = config.mask_char
         self.between_notes_timeout_ms = config.between_notes_timeout_ms
         self.scheduler = scheduler or Scheduler()
-        self.parser_registry = parser_registry or ParserRegistry(
-            parsers={
-                DEFAULT_PARSER_ID: ClozeParser(
-                    reveal_mode=self.reveal_mode,
-                    cloze_open=self.cloze_open,
-                    cloze_close=self.cloze_close,
-                    mask_char=self.mask_char,
-                )
-            },
-            default_parser_id=DEFAULT_PARSER_ID,
-        )
+        self.parser_registry = PARSER_REGISTRY
         self.index_path = os.path.join(repo_root, ".srs", "index.txt")
 
     def run(self) -> int:
@@ -90,7 +79,7 @@ class ReviewSession:
         now = datetime.now(timezone.utc)
         cards: list[Card] = []
         note_blocks_cache: dict[tuple[str, str], dict[tuple[int, int], str]] = {}
-        index = Index(self.index_path, parser_registry=self.parser_registry)
+        index = Index(self.index_path)
         for note_id, indexed_path, parser_id, start_line, end_line in index.read_rows():
             note_path = self._note_abs_path(indexed_path)
             cache_key = (note_path, parser_id)

@@ -59,6 +59,36 @@ class HooksInstallIntegrationTest(unittest.TestCase):
         self.assertEqual({"/new.md"}, adds)
         self.assertEqual(set(), modifies)
 
+    def test_new_note_uses_highest_priority_parser(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            repo_dir = Path(tmp_dir)
+
+            run_command(["git", "init"], cwd=repo_dir)
+            run_command(
+                ["git", "config", "user.email", "test@example.com"], cwd=repo_dir
+            )
+            run_command(["git", "config", "user.name", "Test User"], cwd=repo_dir)
+            run_command([sys.executable, str(INSTALL_SCRIPT)], cwd=repo_dir)
+
+            note_path = repo_dir / "note.md"
+            index_path = repo_dir / ".srs" / "index.txt"
+
+            note_path.write_text(
+                "Intro\n>[!code]- Example\n>```cpp\n>int x = 1;\n>```\n",
+                encoding="utf-8",
+            )
+            run_command(["git", "add", "note.md"], cwd=repo_dir)
+            run_command(["git", "commit", "-m", "add quote block note"], cwd=repo_dir)
+
+            rows = read_index_rows(index_path)
+            self.assertEqual(1, len(rows))
+            note_id, path, parser_id, start_line, end_line = rows[0]
+            self.assertRegex(note_id, r"^\d+$")
+            self.assertEqual("/note.md", path)
+            self.assertEqual("quote_block", parser_id)
+            self.assertEqual(2, start_line)
+            self.assertEqual(5, end_line)
+
     def test_install_and_index_updates_on_add_rename_remove(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             repo_dir = Path(tmp_dir)

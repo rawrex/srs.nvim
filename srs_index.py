@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from reviewing.card import (
     SchedulerCard,
 )
-from reviewing.parsers import DEFAULT_PARSER_ID, ParserRegistry, default_parser_registry
+from reviewing.parsers import PARSER_REGISTRY
 from reviewing.storage import Metadata, write_metadata_file
 
 import util
@@ -84,13 +84,9 @@ class IndexRowReader:
 
 
 class Index:
-    def __init__(
-        self,
-        path: str,
-        parser_registry: ParserRegistry | None = None,
-    ) -> None:
+    def __init__(self, path: str) -> None:
         self.path = path
-        self.parser_registry = parser_registry or default_parser_registry()
+        self.parser_registry = PARSER_REGISTRY
         self.row_reader = IndexRowReader()
         self.hunk_re = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
 
@@ -222,7 +218,7 @@ class Index:
             if not self._is_note_path(new_path) or new_path in existing_paths:
                 continue
             changed = True
-            touched_paths.update(self._add_new(new_path, DEFAULT_PARSER_ID, lines))
+            touched_paths.update(self._add_new(new_path, lines))
             existing_paths.add(new_path)
         return lines, changed, touched_paths
 
@@ -303,13 +299,9 @@ class Index:
                 (note_id, parser_id, remapped_start_line, remapped_end_line)
             )
 
-        parser_id_for_path = path_rows[0][1] if path_rows else DEFAULT_PARSER_ID
+        parser_id_for_path, parsed_cards = self._select_parser_cards(modified_path)
         parsed_ranges = [
-            (start_line, end_line)
-            for start_line, end_line, _block_text in self._load_note_cards(
-                modified_path,
-                parser_id_for_path,
-            )
+            (start_line, end_line) for start_line, end_line, _block_text in parsed_cards
         ]
 
         claimed_ranges = {
@@ -320,7 +312,7 @@ class Index:
 
         for (
             note_id,
-            parser_id,
+            _parser_id,
             start_line,
             end_line,
         ), within_range, fallback_range in pending_rows:
@@ -338,7 +330,9 @@ class Index:
                 matched_start, matched_end = parsed_ranges[match_index]
                 if matched_start != start_line or matched_end != end_line:
                     changed = True
-                remapped_rows.append((note_id, parser_id, matched_start, matched_end))
+                remapped_rows.append(
+                    (note_id, parser_id_for_path, matched_start, matched_end)
+                )
                 claimed_ranges.add((matched_start, matched_end))
                 parsed_cursor = match_index + 1
                 continue
@@ -368,8 +362,15 @@ class Index:
             fallback_start, fallback_end = fallback_range
             if fallback_start != start_line or fallback_end != end_line:
                 changed = True
-            remapped_rows.append((note_id, parser_id, fallback_start, fallback_end))
+            remapped_rows.append(
+                (note_id, parser_id_for_path, fallback_start, fallback_end)
+            )
             claimed_ranges.add((fallback_start, fallback_end))
+
+        remapped_rows = [
+            (note_id, parser_id_for_path, start_line, end_line)
+            for note_id, _parser_id, start_line, end_line in remapped_rows
+        ]
 
         existing_ranges = {
             (start_line, end_line)
@@ -551,13 +552,11 @@ class Index:
     def _add_new(
         self,
         new_path: str,
-        parser_id: str,
         updated: list[str],
     ) -> set[str]:
         touched_card_paths: set[str] = set()
-        for start_line, end_line, _block_text in self._load_note_cards(
-            new_path, parser_id
-        ):
+        parser_id, cards = self._select_parser_cards(new_path)
+        for start_line, end_line, _block_text in cards:
             row, touched_path = self._create_card_row(parser_id, start_line, end_line)
             note_id, row_parser_id, row_start_line, row_end_line = row
             touched_card_paths.add(touched_path)
@@ -616,22 +615,30 @@ class Index:
     def _note_abs_path(self, indexed_path: str) -> str:
         return os.path.join(self._repo_root(), indexed_path.lstrip("/"))
 
-    def _load_note_cards(
-        self, indexed_path: str, parser_id: str
-    ) -> list[tuple[int, int, str]]:
+    def _read_note_text(self, indexed_path: str) -> str | None:
         note_path = self._note_abs_path(indexed_path)
         if not os.path.exists(note_path):
-            return []
+            return None
         try:
             with open(note_path, "r", encoding="utf-8") as handle:
-                note_text = handle.read()
+                return handle.read()
         except (OSError, UnicodeDecodeError):
-            return []
-        try:
-            parser = self.parser_registry.get(parser_id)
-        except KeyError:
-            return []
-        return parser.split_note_into_cards(note_text)
+            return None
+
+    def _select_parser_cards(
+        self,
+        indexed_path: str,
+    ) -> tuple[str, list[tuple[int, int, str]]]:
+        note_text = self._read_note_text(indexed_path)
+        if note_text is None:
+            return self.parser_registry.default().parser_id, []
+
+        for parser in self.parser_registry.ordered():
+            cards = parser.split_note_into_cards(note_text)
+            if cards:
+                return parser.parser_id, cards
+
+        return self.parser_registry.default().parser_id, []
 
     def _write_card_file(
         self,

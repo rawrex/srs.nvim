@@ -7,6 +7,7 @@ from .storage import Metadata
 
 class NoteParser(ABC):
     parser_id: ClassVar[str]
+    priority: ClassVar[int] = 0
 
     @abstractmethod
     def split_note_into_cards(self, note_text: str) -> List[Tuple[int, int, str]]:

@@ -218,6 +218,7 @@ class ClozeCard(Card):
 @dataclass(frozen=True)
 class ClozeParser(NoteParser):
     parser_id: ClassVar[str] = CLOZE_PARSER_ID
+    priority: ClassVar[int] = 0
     reveal_mode: RevealMode
     cloze_open: str
     cloze_close: str

@@ -7,13 +7,9 @@ from typing import Dict
 from .api import NoteParser
 
 
-DEFAULT_PARSER_ID = "cloze"
-
-
 @dataclass
 class ParserRegistry:
     parsers: Dict[str, NoteParser]
-    default_parser_id: str
 
     def register(self, parser: NoteParser) -> None:
         self.parsers[parser.parser_id] = parser
@@ -22,7 +18,16 @@ class ParserRegistry:
         return self.parsers[parser_id]
 
     def default(self) -> NoteParser:
-        return self.get(self.default_parser_id)
+        ordered = self.ordered()
+        if not ordered:
+            raise KeyError("No parsers are registered")
+        return ordered[-1]
+
+    def ordered(self) -> list[NoteParser]:
+        return sorted(
+            self.parsers.values(),
+            key=lambda parser: (-parser.priority, parser.parser_id),
+        )
 
 
 def _pack_modules_dir() -> Path:
@@ -65,22 +70,21 @@ def _load_registered_packs(registry: ParserRegistry) -> None:
             register_pack(registry)
 
 
-def default_parser_registry() -> ParserRegistry:
-    registry = ParserRegistry(parsers={}, default_parser_id=DEFAULT_PARSER_ID)
+def _build_parser_registry() -> ParserRegistry:
+    registry = ParserRegistry(parsers={})
     _load_registered_packs(registry)
-    if DEFAULT_PARSER_ID not in registry.parsers:
-        from .packs.cloze import register_pack
-
-        register_pack(registry)
+    if not registry.parsers:
+        raise RuntimeError("No parser packs found in reviewing/packs")
     return registry
+
+
+PARSER_REGISTRY: ParserRegistry = _build_parser_registry()
 
 
 from .packs.cloze import ClozeParser  # noqa: E402
 
 
 __all__ = [
-    "DEFAULT_PARSER_ID",
-    "ParserRegistry",
-    "default_parser_registry",
+    "PARSER_REGISTRY",
     "ClozeParser",
 ]
