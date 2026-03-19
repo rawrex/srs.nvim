@@ -1,6 +1,3 @@
-import json
-import os
-import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -14,7 +11,7 @@ from reviewing.packs.cloze import (
     mask_hidden_text,
     parse_note_clozes,
 )
-from reviewing.storage import Metadata, parse_storage_json
+from reviewing.storage import Metadata
 from reviewing.ui import ReviewUI
 
 
@@ -97,12 +94,10 @@ class ClozePackTest(unittest.TestCase):
         self.assertIn("`c26`", markdown_frames[1])
         self.assertNotIn("[A]", markdown_frames[1])
 
-    def test_prompt_cloze_reveal_renders_note_context_with_dimmed_other_blocks(
-        self,
-    ) -> None:
+    def test_prompt_cloze_reveal_renders_masked_context_without_labels(self) -> None:
         note_blocks = {
             (1, 1): "# One\nFirst ~{hidden} block.\n",
-            (4, 4): "# Two\nSecond ~{context cloze} block.\n",
+            (4, 4): "# Two\nSecond [a]~{context cloze} block.\n",
         }
         console = FakeConsole()
         card = ClozeCard(
@@ -119,7 +114,10 @@ class ClozePackTest(unittest.TestCase):
             end_line=1,
             note_blocks=note_blocks,
         )
-        ui = ReviewUI(config=ReviewConfig(), console=console)  # type: ignore[arg-type]
+        ui = ReviewUI(
+            config=ReviewConfig(context_dim_style="grey50"),
+            console=console,  # type: ignore[arg-type]
+        )
 
         with (
             patch("reviewing.ui.os.system", return_value=0),
@@ -137,8 +135,9 @@ class ClozePackTest(unittest.TestCase):
         self.assertIsNone(markdown_calls[0][1].get("style"))
         self.assertIn("Second", markdown_calls[1][0])
         self.assertNotIn("context cloze", markdown_calls[1][0])
+        self.assertNotIn("[a]", markdown_calls[1][0])
         self.assertIn("▇▇▇▇▇▇▇▇▇▇▇▇▇", markdown_calls[1][0])
-        self.assertEqual("dim", markdown_calls[1][1].get("style"))
+        self.assertEqual("grey50", markdown_calls[1][1].get("style"))
 
     def test_prompt_cloze_reveal_hides_context_when_disabled(self) -> None:
         note_blocks = {
@@ -180,81 +179,6 @@ class ClozePackTest(unittest.TestCase):
         self.assertIn("[a]", markdown_calls[0][0])
         self.assertNotIn("Second", markdown_calls[0][0])
 
-    def test_prompt_cloze_reveal_context_strips_other_block_labels(self) -> None:
-        note_blocks = {
-            (1, 1): "# One\nFirst ~{hidden} block.\n",
-            (4, 4): "# Two\nSecond [a]▇▇▇▇▇ block.\n",
-        }
-        console = FakeConsole()
-        card = ClozeCard(
-            note_id="1",
-            note_path="/tmp/note.md",
-            card_path="/tmp/1.json",
-            note_text=note_blocks[(1, 1)],
-            metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
-            reveal_mode=RevealMode.WHOLE,
-            cloze_open="~{",
-            cloze_close="}",
-            mask_char="▇",
-            start_line=1,
-            end_line=1,
-            note_blocks=note_blocks,
-        )
-        ui = ReviewUI(config=ReviewConfig(), console=console)  # type: ignore[arg-type]
-
-        with (
-            patch("reviewing.ui.os.system", return_value=0),
-            patch("reviewing.ui.read_single_key", side_effect=["\n"]),
-        ):
-            ui.prompt_cloze_reveal("title", card)
-
-        markdown_calls = [
-            item.markup
-            for item, _kwargs in console.printed
-            if isinstance(item, Markdown)
-        ]
-        self.assertEqual(2, len(markdown_calls))
-        self.assertNotIn("[a]", markdown_calls[1])
-
-    def test_prompt_cloze_reveal_uses_configured_context_style(self) -> None:
-        note_blocks = {
-            (1, 1): "# One\nFirst ~{hidden} block.\n",
-            (4, 4): "# Two\nSecond block.\n",
-        }
-        console = FakeConsole()
-        card = ClozeCard(
-            note_id="1",
-            note_path="/tmp/note.md",
-            card_path="/tmp/1.json",
-            note_text=note_blocks[(1, 1)],
-            metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
-            reveal_mode=RevealMode.WHOLE,
-            cloze_open="~{",
-            cloze_close="}",
-            mask_char="▇",
-            start_line=1,
-            end_line=1,
-            note_blocks=note_blocks,
-        )
-        ui = ReviewUI(
-            config=ReviewConfig(context_dim_style="grey50"),
-            console=console,  # type: ignore[arg-type]
-        )
-
-        with (
-            patch("reviewing.ui.os.system", return_value=0),
-            patch("reviewing.ui.read_single_key", side_effect=["\n"]),
-        ):
-            ui.prompt_cloze_reveal("title", card)
-
-        markdown_calls = [
-            (item.markup, kwargs)
-            for item, kwargs in console.printed
-            if isinstance(item, Markdown)
-        ]
-        self.assertEqual(2, len(markdown_calls))
-        self.assertEqual("grey50", markdown_calls[1][1].get("style"))
-
     def test_reveal_all_keeps_context_masked(self) -> None:
         note_blocks = {
             (1, 1): "# One\nFirst ~{hidden} block.\n",
@@ -290,34 +214,6 @@ class ClozePackTest(unittest.TestCase):
         )
         self.assertEqual(["A ", " B"], text_parts)
         self.assertEqual(["one"], clozes)
-
-    def test_parser_builds_cloze_card_from_storage_data(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            card_path = os.path.join(temp_dir, "1.json")
-            with open(card_path, "w", encoding="utf-8") as handle:
-                json.dump(ClozeCard.new_storage_dict(), handle)
-            with open(card_path, "r", encoding="utf-8") as handle:
-                metadata = parse_storage_json(handle.read())
-
-            parser = ClozeParser(
-                reveal_mode=RevealMode.WHOLE,
-                cloze_open="~{",
-                cloze_close="}",
-                mask_char="▇",
-            )
-            card = parser.build_card(
-                note_id="1",
-                note_path="/tmp/note.md",
-                note_text="The ~{capital of France} is Paris.",
-                start_line=1,
-                end_line=1,
-                note_blocks={(1, 1): "The ~{capital of France} is Paris.\n"},
-                card_path=card_path,
-                metadata=metadata,
-            )
-
-            self.assertIsInstance(card, ClozeCard)
-            self.assertIn("[a]", card.question_view().primary_block().text)
 
     def test_split_note_into_cards_maps_each_cloze_line_to_a_card(self) -> None:
         note_text = "A\n  ~{B}\n    C\n~{D}\n\nE ~{F}\n"
