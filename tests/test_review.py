@@ -187,6 +187,45 @@ class ReviewRenderingTest(unittest.TestCase):
         self.assertIn("[a]", markdown_calls[0][0])
         self.assertNotIn("Second", markdown_calls[0][0])
 
+    def test_prompt_cloze_reveal_context_strips_other_block_labels(self) -> None:
+        note_blocks = {
+            (1, 1): "# One\nFirst ~{hidden} block.\n",
+            (4, 4): "# Two\nSecond [a]▇▇▇▇▇ block.\n",
+        }
+        console = FakeConsole()
+        card = ClozeCard(
+            note_id="1",
+            note_path="/tmp/note.md",
+            card_path="/tmp/1.json",
+            note_text=note_blocks[(1, 1)],
+            metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
+            reveal_mode=RevealMode.WHOLE,
+            cloze_open="~{",
+            cloze_close="}",
+            mask_char="▇",
+            start_line=1,
+            end_line=1,
+            note_blocks=note_blocks,
+        )
+        ui = ReviewUI(
+            config=ReviewConfig(),
+            console=console,  # type: ignore[arg-type]
+        )
+
+        with (
+            patch("reviewing.ui.os.system", return_value=0),
+            patch("reviewing.ui.read_single_key", side_effect=["\n"]),
+        ):
+            ui.prompt_cloze_reveal("title", card)
+
+        markdown_calls = [
+            item.markup
+            for item, _kwargs in console.printed
+            if isinstance(item, Markdown)
+        ]
+        self.assertEqual(2, len(markdown_calls))
+        self.assertNotIn("[a]", markdown_calls[1])
+
     def test_prompt_cloze_reveal_uses_configured_context_style(self) -> None:
         note_blocks = {
             (1, 1): "# One\nFirst ~{hidden} block.\n",
