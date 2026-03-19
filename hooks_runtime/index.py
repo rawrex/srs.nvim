@@ -14,6 +14,42 @@ import util
 
 Hunk = tuple[int, int, int, int]
 PathRows = dict[str, list[tuple[str, str, int]]]
+IndexRowTuple = tuple[str, str, int]
+
+
+@dataclass(frozen=True)
+class DiffChangeSet:
+    renames: dict[str, str]
+    deletes: set[str]
+    adds: set[str]
+    modifies: set[str]
+
+    @classmethod
+    def from_diff_text(cls, diff_text: str) -> "DiffChangeSet":
+        renames, deletes, adds, modifies = util.parse_diff(diff_text)
+        return cls(
+            renames=renames,
+            deletes=deletes,
+            adds=adds,
+            modifies=modifies,
+        )
+
+    def has_changes(self) -> bool:
+        return bool(self.renames or self.deletes or self.adds or self.modifies)
+
+
+@dataclass(frozen=True)
+class PathRemapResult:
+    rows: list[IndexRowTuple]
+    changed: bool
+    touched_paths: set[str]
+
+
+@dataclass(frozen=True)
+class IndexUpdateResult:
+    lines: list[str]
+    changed: bool
+    touched_paths: set[str]
 
 
 @dataclass(frozen=True)
@@ -78,22 +114,22 @@ class Index:
         return changed
 
     def _apply_diff(self, diff_text: str, patch_text: str) -> tuple[bool, set[str]]:
-        renames, deletes, adds, modifies = util.parse_diff(diff_text)
-        if not renames and not deletes and not adds and not modifies:
+        changes = DiffChangeSet.from_diff_text(diff_text)
+        if not changes.has_changes():
             return False, set()
+
         modified_hunks = self._parse_modified_hunks(patch_text)
-        updated, changed, touched_card_paths = self._update_index_lines(
+        result = self._update_index_lines(
             self._read(),
-            renames,
-            deletes,
-            adds,
-            modifies,
+            changes,
             modified_hunks,
         )
-        if changed:
-            self._write(updated)
-            touched_card_paths.add(self._index_file_path())
-        return changed, touched_card_paths
+        if result.changed:
+            self._write(result.lines)
+            touched_paths = set(result.touched_paths)
+            touched_paths.add(self._index_file_path())
+            return True, touched_paths
+        return False, set()
 
     def read_rows(self) -> list[tuple[str, str, str, int]]:
         rows: list[tuple[str, str, str, int]] = []
@@ -107,27 +143,28 @@ class Index:
     def _update_index_lines(
         self,
         lines: list[str],
-        renames: dict[str, str],
-        deletes: set[str],
-        adds: set[str],
-        modifies: set[str],
+        changes: DiffChangeSet,
         modified_hunks: dict[str, list[Hunk]],
-    ) -> tuple[list[str], bool, set[str]]:
+    ) -> IndexUpdateResult:
         updated, removed_or_renamed, touched_paths = self._apply_deletes_and_renames(
             lines,
-            renames,
-            deletes,
+            changes.renames,
+            changes.deletes,
         )
-        updated, added_new, added_paths = self._apply_adds(updated, adds)
+        updated, added_new, added_paths = self._apply_adds(updated, changes.adds)
         updated, remapped_modified, remapped_paths = self._apply_modifies(
             updated,
-            modifies,
+            changes.modifies,
             modified_hunks,
         )
         touched_paths.update(added_paths)
         touched_paths.update(remapped_paths)
         changed = removed_or_renamed or added_new or remapped_modified
-        return updated, changed, touched_paths
+        return IndexUpdateResult(
+            lines=updated,
+            changed=changed,
+            touched_paths=touched_paths,
+        )
 
     def _apply_deletes_and_renames(
         self,
@@ -195,32 +232,38 @@ class Index:
             if modified_path not in rows_by_path:
                 continue
 
-            remapped_rows, path_changed, path_touched = self._remap_rows_for_path(
+            remap_result = self._remap_rows_for_path(
                 modified_path,
                 rows_by_path[modified_path],
                 modified_hunks.get(modified_path, []),
             )
             replacement = self._replace_rows_for_path(
-                updated, modified_path, remapped_rows
+                updated,
+                modified_path,
+                remap_result.rows,
             )
             if replacement != updated:
                 updated = replacement
-                path_changed = True
+                remap_result = PathRemapResult(
+                    rows=remap_result.rows,
+                    changed=True,
+                    touched_paths=remap_result.touched_paths,
+                )
 
-            changed = changed or path_changed
-            touched_paths.update(path_touched)
+            changed = changed or remap_result.changed
+            touched_paths.update(remap_result.touched_paths)
 
         return updated, changed, touched_paths
 
     def _remap_rows_for_path(
         self,
         modified_path: str,
-        path_rows: list[tuple[str, str, int]],
+        path_rows: list[IndexRowTuple],
         hunks: list[Hunk],
-    ) -> tuple[list[tuple[str, str, int]], bool, set[str]]:
+    ) -> PathRemapResult:
         changed = False
         touched_paths: set[str] = set()
-        remapped_rows: list[tuple[str, str, int]] = []
+        remapped_rows: list[IndexRowTuple] = []
 
         for note_id, parser_id, start_line in path_rows:
             remapped_start_line = self._remap_line_number(start_line, hunks)
@@ -243,22 +286,26 @@ class Index:
             if start_line in existing_start_lines:
                 continue
             changed = True
-            new_scheduler_card = SchedulerCard()
-            card_id = str(new_scheduler_card.card_id)
-            self._write_card_file(card_id, parser_id_for_path, new_scheduler_card)
-            touched_paths.add(self._card_path(card_id))
-            remapped_rows.append((card_id, parser_id_for_path, start_line))
+            row, touched_path = self._create_card_row(parser_id_for_path, start_line)
+            touched_paths.add(touched_path)
+            remapped_rows.append(row)
 
-        return remapped_rows, changed, touched_paths
+        return PathRemapResult(
+            rows=remapped_rows,
+            changed=changed,
+            touched_paths=touched_paths,
+        )
 
     def _replace_rows_for_path(
         self,
         lines: list[str],
         indexed_path: str,
-        replacement_rows: list[tuple[str, str, int]],
+        replacement_rows: list[IndexRowTuple],
     ) -> list[str]:
         updated: list[str] = []
         inserted = False
+        replacement_lines = self._format_rows_for_path(indexed_path, replacement_rows)
+
         for line in lines:
             row = self.row_reader.parse(line)
             if row is None:
@@ -268,23 +315,22 @@ class Index:
                 updated.append(line)
                 continue
             if not inserted:
-                for note_id, parser_id, start_line in sorted(
-                    replacement_rows,
-                    key=lambda row: row[2],
-                ):
-                    updated.append(
-                        self._format_row(note_id, indexed_path, parser_id, start_line)
-                    )
+                updated.extend(replacement_lines)
                 inserted = True
+
         if not inserted:
-            for note_id, parser_id, start_line in sorted(
-                replacement_rows,
-                key=lambda row: row[2],
-            ):
-                updated.append(
-                    self._format_row(note_id, indexed_path, parser_id, start_line)
-                )
+            updated.extend(replacement_lines)
         return updated
+
+    def _format_rows_for_path(
+        self,
+        indexed_path: str,
+        rows: list[IndexRowTuple],
+    ) -> list[str]:
+        return [
+            self._format_row(note_id, indexed_path, parser_id, start_line)
+            for note_id, parser_id, start_line in sorted(rows, key=lambda row: row[2])
+        ]
 
     def _format_row(
         self,
@@ -368,16 +414,21 @@ class Index:
     ) -> set[str]:
         touched_card_paths: set[str] = set()
         for start_line, _block_text in self._load_note_cards(new_path, parser_id):
-            new_scheduler_card = SchedulerCard()
-            card_id = str(new_scheduler_card.card_id)
-            self._write_card_file(
-                card_id,
-                parser_id,
-                new_scheduler_card,
+            row, touched_path = self._create_card_row(parser_id, start_line)
+            note_id, row_parser_id, row_start_line = row
+            touched_card_paths.add(touched_path)
+            updated.append(
+                self._format_row(note_id, new_path, row_parser_id, row_start_line)
             )
-            touched_card_paths.add(self._card_path(card_id))
-            updated.append(self._format_row(card_id, new_path, parser_id, start_line))
         return touched_card_paths
+
+    def _create_card_row(
+        self, parser_id: str, start_line: int
+    ) -> tuple[IndexRowTuple, str]:
+        scheduler_card = SchedulerCard()
+        card_id = str(scheduler_card.card_id)
+        self._write_card_file(card_id, parser_id, scheduler_card)
+        return (card_id, parser_id, start_line), self._card_path(card_id)
 
     def _rows_by_path(self, lines: list[str]) -> PathRows:
         rows_by_path: PathRows = {}
