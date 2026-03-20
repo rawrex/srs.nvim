@@ -67,6 +67,48 @@ def read_index_rows(index_path: Path):
 
 
 class HooksInstallIntegrationTest(unittest.TestCase):
+    def test_install_bootstraps_index_from_repeat_marked_directories(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            repo_dir = Path(tmp_dir)
+
+            init_git_repo(repo_dir)
+
+            notes_dir = repo_dir / "notes"
+            nested_dir = notes_dir / "nested"
+            other_dir = repo_dir / "other"
+            notes_dir.mkdir()
+            nested_dir.mkdir()
+            other_dir.mkdir()
+
+            (notes_dir / ".repeat").write_text("", encoding="utf-8")
+            (notes_dir / "top.md").write_text(
+                "One ~{card}\nTwo ~{card}\n", encoding="utf-8"
+            )
+            (nested_dir / "deep.md").write_text("Deep ~{card}\n", encoding="utf-8")
+            (other_dir / "skip.md").write_text("Skip ~{card}\n", encoding="utf-8")
+
+            install_hooks(repo_dir)
+
+            index_path = repo_dir / ".srs" / "index.txt"
+            rows = read_index_rows(index_path)
+
+            self.assertEqual(3, len(rows))
+            self.assertEqual(
+                ["/notes/nested/deep.md", "/notes/top.md", "/notes/top.md"],
+                sorted(path for _id, path, _parser_id, _start_line, _end_line in rows),
+            )
+            self.assertTrue(
+                all(parser_id == "cloze" for _id, _path, parser_id, *_ in rows)
+            )
+            self.assertTrue(all(note_id.isdigit() for note_id, *_ in rows))
+
+            srs_dir = repo_dir / ".srs"
+            for note_id, *_ in rows:
+                self.assertTrue((srs_dir / f"{note_id}.json").exists())
+
+            install_hooks(repo_dir)
+            self.assertEqual(rows, read_index_rows(index_path))
+
     def test_new_note_uses_highest_priority_parser(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             repo_dir = Path(tmp_dir)
