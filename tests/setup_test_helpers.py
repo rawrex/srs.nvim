@@ -4,8 +4,8 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-INSTALL_SCRIPT = REPO_ROOT / "install.py"
-UNINSTALL_SCRIPT = REPO_ROOT / "uninstall.py"
+INSTALL_SCRIPT = REPO_ROOT / "setup" / "install.py"
+UNINSTALL_SCRIPT = REPO_ROOT / "setup" / "uninstall.py"
 
 
 def run_command(args: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
