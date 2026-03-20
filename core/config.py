@@ -35,6 +35,7 @@ class ReviewConfig:
         default_factory=lambda: DEFAULT_RATING_BUTTONS.copy()
     )
     between_notes_timeout_ms: int = 0
+    auto_stage_reviewed_cards: bool = False
     show_context: bool = True
     context_dim_style: str = "dim"
     cloze: ClozeConfig = field(default_factory=ClozeConfig)
@@ -118,6 +119,11 @@ def load_review_config(repo_root: str) -> ReviewConfig:
     if isinstance(show_context_raw, bool):
         show_context = show_context_raw
 
+    auto_stage_reviewed_cards = defaults.auto_stage_reviewed_cards
+    auto_stage_reviewed_cards_raw = review_raw.get("auto_stage_reviewed_cards")
+    if isinstance(auto_stage_reviewed_cards_raw, bool):
+        auto_stage_reviewed_cards = auto_stage_reviewed_cards_raw
+
     context_dim_style = defaults.context_dim_style
     context_dim_style_raw = review_raw.get("context_dim_style")
     if isinstance(context_dim_style_raw, str) and context_dim_style_raw.strip():
@@ -146,6 +152,7 @@ def load_review_config(repo_root: str) -> ReviewConfig:
     return ReviewConfig(
         rating_buttons=rating_buttons,
         between_notes_timeout_ms=between_notes_timeout_ms,
+        auto_stage_reviewed_cards=auto_stage_reviewed_cards,
         show_context=show_context,
         context_dim_style=context_dim_style,
         cloze=ClozeConfig(

@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from fsrs import Scheduler
 
+from core import util
 from core.index.index import Index
 
 from card.card import Card
@@ -25,9 +26,11 @@ class ReviewSession:
         self.repo_root = repo_root
         self.ui = ui
         self.between_notes_timeout_ms = config.between_notes_timeout_ms
+        self.auto_stage_reviewed_cards = config.auto_stage_reviewed_cards
         self.scheduler = scheduler or config.build_scheduler()
         self.parser_registry = parser_registry
         self.index_path = os.path.join(repo_root, ".srs", "index.txt")
+        self._reviewed_card_paths: set[str] = set()
 
     def run(self) -> int:
         if not os.path.exists(self.index_path):
@@ -40,35 +43,39 @@ class ReviewSession:
             return 0
 
         total = len(cards)
-        for idx, card in enumerate(cards, start=1):
-            question_title = f"\n[{idx}/{total}] {card.note_filename}"
-            answer_title = f"\n[{idx}/{total}] {card.note_filename} — answer"
+        try:
+            for idx, card in enumerate(cards, start=1):
+                question_title = f"\n[{idx}/{total}] {card.note_filename}"
+                answer_title = f"\n[{idx}/{total}] {card.note_filename} — answer"
 
-            # Step 1: question + reveals.
-            question_started_ns = time.monotonic_ns()
-            answer_view = self.ui.run_question_step(question_title, card)
+                # Step 1: question + reveals.
+                question_started_ns = time.monotonic_ns()
+                answer_view = self.ui.run_question_step(question_title, card)
 
-            review_duration_ms = max(
-                0, (time.monotonic_ns() - question_started_ns) // 1_000_000
-            )
+                review_duration_ms = max(
+                    0, (time.monotonic_ns() - question_started_ns) // 1_000_000
+                )
 
-            # Step 2: answer view.
-            self.ui.show_answer_step(answer_title, answer_view)
+                # Step 2: answer view.
+                self.ui.show_answer_step(answer_title, answer_view)
 
-            # Step 3: rating.
-            self.ui.print_message("")
-            rating = self.ui.prompt_rating_step()
-            updated_card, review_log = self.scheduler.review_card(
-                card.metadata.scheduler_card,
-                rating,
-                review_duration=int(review_duration_ms),
-            )
-            card.metadata.scheduler_card = updated_card
-            card.metadata.review_logs.append(review_log)
-            self._save_reviewed_card(card)
-            self.ui.print_message("Saved")
-            if idx < total and self.between_notes_timeout_ms > 0:
-                time.sleep(self.between_notes_timeout_ms / 1000)
+                # Step 3: rating.
+                self.ui.print_message("")
+                rating = self.ui.prompt_rating_step()
+                updated_card, review_log = self.scheduler.review_card(
+                    card.metadata.scheduler_card,
+                    rating,
+                    review_duration=int(review_duration_ms),
+                )
+                card.metadata.scheduler_card = updated_card
+                card.metadata.review_logs.append(review_log)
+                self._save_reviewed_card(card)
+                self._stage_reviewed_card(card)
+                self.ui.print_message("Saved")
+                if idx < total and self.between_notes_timeout_ms > 0:
+                    time.sleep(self.between_notes_timeout_ms / 1000)
+        finally:
+            self._commit_reviewed_cards()
 
         return 0
 
@@ -150,6 +157,38 @@ class ReviewSession:
 
     def _save_reviewed_card(self, card: Card) -> None:
         card.save_storage_file()
+
+    def _stage_reviewed_card(self, card: Card) -> None:
+        if not self.auto_stage_reviewed_cards:
+            return
+        rel_card_path = os.path.relpath(card.card_path, self.repo_root).replace(
+            os.sep, "/"
+        )
+        code, _out, _err = util.run_git(
+            ["add", "--", rel_card_path],
+            cwd=self.repo_root,
+        )
+        if code == 0:
+            self._reviewed_card_paths.add(rel_card_path)
+
+    def _commit_reviewed_cards(self) -> None:
+        if not self.auto_stage_reviewed_cards or not self._reviewed_card_paths:
+            return
+        reviewed_paths = sorted(self._reviewed_card_paths)
+        code, _out, _err = util.run_git(
+            ["diff", "--cached", "--quiet", "--"] + reviewed_paths,
+            cwd=self.repo_root,
+        )
+        if code == 0:
+            return
+        if code != 1:
+            return
+        code, _out, _err = util.run_git(
+            ["commit", "-m", "Spaced repetition session", "--"] + reviewed_paths,
+            cwd=self.repo_root,
+        )
+        if code == 0:
+            self._reviewed_card_paths.clear()
 
     def _read_unclaimed_line_blocks(
         self, note_path: str, claimed_lines: set[int]

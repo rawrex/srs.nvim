@@ -17,8 +17,11 @@ class _DummyMetadata:
 
 
 class _DummyCard:
-    def __init__(self, note_filename: str, scheduler_card: object) -> None:
+    def __init__(
+        self, note_filename: str, scheduler_card: object, card_path: str
+    ) -> None:
         self.note_filename = note_filename
+        self.card_path = card_path
         self.metadata = _DummyMetadata(scheduler_card)
 
 
@@ -95,8 +98,12 @@ class ReviewSessionRunTest(unittest.TestCase):
             ]
             session.scheduler = scheduler
 
-            card_1 = _DummyCard("one.md", old_card_1)
-            card_2 = _DummyCard("two.md", old_card_2)
+            card_1 = _DummyCard(
+                "one.md", old_card_1, os.path.join(repo_root, ".srs", "1.json")
+            )
+            card_2 = _DummyCard(
+                "two.md", old_card_2, os.path.join(repo_root, ".srs", "2.json")
+            )
 
             with (
                 patch.object(session, "_load_due_cards", return_value=[card_1, card_2]),
@@ -120,6 +127,120 @@ class ReviewSessionRunTest(unittest.TestCase):
         self.assertEqual(2, save_card.call_count)
         sleep_mock.assert_called_once_with(0.2)
         self.assertEqual(2, scheduler.review_card.call_count)
+
+    def test_run_auto_stages_each_reviewed_card_and_commits_at_end(self) -> None:
+        with tempfile.TemporaryDirectory() as repo_root:
+            os.makedirs(os.path.join(repo_root, ".srs"), exist_ok=True)
+            with open(
+                os.path.join(repo_root, ".srs", "index.txt"), "w", encoding="utf-8"
+            ):
+                pass
+
+            config = ReviewConfig(auto_stage_reviewed_cards=True)
+            ui = Mock()
+            ui.prompt_rating_step.return_value = Rating.Good
+            ui.run_question_step.return_value = "answer"
+
+            session = ReviewSession(
+                repo_root=repo_root,
+                ui=ui,
+                config=config,
+                parser_registry=build_parser_registry(config),
+            )
+
+            scheduler = Mock()
+            scheduler.review_card.return_value = (object(), object())
+            session.scheduler = scheduler
+
+            card = _DummyCard(
+                "one.md",
+                object(),
+                os.path.join(repo_root, ".srs", "1.json"),
+            )
+
+            with (
+                patch.object(session, "_load_due_cards", return_value=[card]),
+                patch.object(session, "_save_reviewed_card"),
+                patch("core.session.time.monotonic_ns", side_effect=[0, 1_000_000]),
+                patch("core.session.util.run_git") as run_git,
+            ):
+                run_git.side_effect = [
+                    (0, "", ""),
+                    (1, "", ""),
+                    (0, "", ""),
+                ]
+                code = session.run()
+
+        self.assertEqual(0, code)
+        run_git.assert_any_call(
+            ["add", "--", ".srs/1.json"],
+            cwd=repo_root,
+        )
+        run_git.assert_any_call(
+            ["diff", "--cached", "--quiet", "--", ".srs/1.json"],
+            cwd=repo_root,
+        )
+        run_git.assert_any_call(
+            ["commit", "-m", "Spaced repetition session", "--", ".srs/1.json"],
+            cwd=repo_root,
+        )
+
+    def test_run_commits_reviewed_cards_on_interrupt(self) -> None:
+        with tempfile.TemporaryDirectory() as repo_root:
+            os.makedirs(os.path.join(repo_root, ".srs"), exist_ok=True)
+            with open(
+                os.path.join(repo_root, ".srs", "index.txt"), "w", encoding="utf-8"
+            ):
+                pass
+
+            config = ReviewConfig(auto_stage_reviewed_cards=True)
+            ui = Mock()
+            ui.run_question_step.return_value = "answer"
+            ui.prompt_rating_step.side_effect = [Rating.Good, KeyboardInterrupt]
+
+            session = ReviewSession(
+                repo_root=repo_root,
+                ui=ui,
+                config=config,
+                parser_registry=build_parser_registry(config),
+            )
+
+            scheduler = Mock()
+            scheduler.review_card.return_value = (object(), object())
+            session.scheduler = scheduler
+
+            card_1 = _DummyCard(
+                "one.md",
+                object(),
+                os.path.join(repo_root, ".srs", "1.json"),
+            )
+            card_2 = _DummyCard(
+                "two.md",
+                object(),
+                os.path.join(repo_root, ".srs", "2.json"),
+            )
+
+            with (
+                patch.object(session, "_load_due_cards", return_value=[card_1, card_2]),
+                patch.object(session, "_save_reviewed_card"),
+                patch(
+                    "core.session.time.monotonic_ns",
+                    side_effect=[0, 1_000_000, 2_000_000, 3_000_000],
+                ),
+                patch("core.session.util.run_git") as run_git,
+            ):
+                run_git.side_effect = [
+                    (0, "", ""),
+                    (1, "", ""),
+                    (0, "", ""),
+                ]
+                with self.assertRaises(KeyboardInterrupt):
+                    session.run()
+
+        run_git.assert_any_call(
+            ["commit", "-m", "Spaced repetition session", "--", ".srs/1.json"],
+            cwd=repo_root,
+        )
 
 
 if __name__ == "__main__":

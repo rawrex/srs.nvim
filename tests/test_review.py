@@ -20,6 +20,7 @@ class ReviewConfigTest(unittest.TestCase):
         self.assertEqual("~{", config.cloze.cloze_open)
         self.assertEqual("}", config.cloze.cloze_close)
         self.assertEqual(0, config.between_notes_timeout_ms)
+        self.assertFalse(config.auto_stage_reviewed_cards)
         self.assertTrue(config.show_context)
         self.assertEqual("dim", config.context_dim_style)
         self.assertEqual(Scheduler().to_dict(), config.build_scheduler().to_dict())
@@ -38,6 +39,7 @@ class ReviewConfigTest(unittest.TestCase):
                                 "Easy": "y",
                             },
                             "between_notes_timeout_ms": 250,
+                            "auto_stage_reviewed_cards": True,
                             "show_context": False,
                             "context_dim_style": "grey50",
                         },
@@ -94,6 +96,7 @@ class ReviewConfigTest(unittest.TestCase):
         self.assertEqual("}}", config.cloze.cloze_close)
         self.assertEqual("*", config.cloze.mask_char)
         self.assertEqual(250, config.between_notes_timeout_ms)
+        self.assertTrue(config.auto_stage_reviewed_cards)
         self.assertFalse(config.show_context)
         self.assertEqual("grey50", config.context_dim_style)
         scheduler = config.build_scheduler()
@@ -173,6 +176,7 @@ class ReviewConfigTest(unittest.TestCase):
                     {
                         "review": {
                             "between_notes_timeout_ms": -10,
+                            "auto_stage_reviewed_cards": "yes",
                             "show_context": "yes",
                             "context_dim_style": "   ",
                         },
@@ -192,6 +196,7 @@ class ReviewConfigTest(unittest.TestCase):
         self.assertEqual("}", config.cloze.cloze_close)
         self.assertEqual("▇", config.cloze.mask_char)
         self.assertEqual(0, config.between_notes_timeout_ms)
+        self.assertFalse(config.auto_stage_reviewed_cards)
         self.assertTrue(config.show_context)
         self.assertEqual("dim", config.context_dim_style)
 
