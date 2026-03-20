@@ -17,7 +17,7 @@
             "close": "}",
             "open": "~{"
         }
-    }
+    },
     "scheduler": {
         "desired_retention": 0.8
     }
