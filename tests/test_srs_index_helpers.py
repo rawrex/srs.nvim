@@ -34,6 +34,9 @@ class _StaticParser(NoteParser):
 
 
 class SrsIndexHelperTest(unittest.TestCase):
+    def _empty_registry(self) -> ParserRegistry:
+        return ParserRegistry(parsers={})
+
     def test_index_row_reader_parses_valid_row_and_rejects_invalid(self) -> None:
         reader = IndexRowReader()
 
@@ -54,7 +57,7 @@ class SrsIndexHelperTest(unittest.TestCase):
             os.makedirs(os.path.dirname(index_path), exist_ok=True)
             with open(index_path, "w", encoding="utf-8"):
                 pass
-            index = Index(index_path)
+            index = Index(index_path, self._empty_registry())
 
             patch_text = "\n".join(
                 [
@@ -79,7 +82,7 @@ class SrsIndexHelperTest(unittest.TestCase):
             os.makedirs(os.path.dirname(index_path), exist_ok=True)
             with open(index_path, "w", encoding="utf-8"):
                 pass
-            index = Index(index_path)
+            index = Index(index_path, self._empty_registry())
 
             shifted = index._remap_line_range(3, 3, [(1, 0, 1, 2)])
             overlapped = index._remap_line_range(3, 3, [(3, 1, 3, 1)])
@@ -98,7 +101,7 @@ class SrsIndexHelperTest(unittest.TestCase):
             with open(note_path, "w", encoding="utf-8") as handle:
                 handle.write("one\ntwo\nthree\n")
 
-            index = Index(index_path)
+            index = Index(index_path, self._empty_registry())
             high = _StaticParser(
                 parser_id="high",
                 priority=10,
@@ -123,7 +126,7 @@ class SrsIndexHelperTest(unittest.TestCase):
             os.makedirs(os.path.dirname(index_path), exist_ok=True)
             with open(index_path, "w", encoding="utf-8"):
                 pass
-            index = Index(index_path)
+            index = Index(index_path, self._empty_registry())
 
             self.assertIsNone(index._read_note_text("/missing.md"))
 
@@ -139,7 +142,7 @@ class SrsIndexHelperTest(unittest.TestCase):
             os.makedirs(os.path.dirname(index_path), exist_ok=True)
             with open(index_path, "w", encoding="utf-8"):
                 pass
-            index = Index(index_path)
+            index = Index(index_path, self._empty_registry())
 
             self.assertFalse(index._is_note_path("/.srs"))
             self.assertFalse(index._is_note_path("/.srs/1.json"))

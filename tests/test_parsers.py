@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from reviewing.api import NoteParser
+from reviewing.config import ReviewConfig
 from reviewing.parsers import (
     ParserRegistry,
     _build_parser_registry,
@@ -99,21 +100,21 @@ class ParsersTest(unittest.TestCase):
                 side_effect=[module_with_register, module_without_register],
             ),
         ):
-            _load_registered_packs(registry)
+            _load_registered_packs(registry, ReviewConfig())
 
-        register_pack.assert_called_once_with(registry)
+        register_pack.assert_called_once_with(registry, ReviewConfig())
 
     def test_build_parser_registry_raises_when_no_packs_register(self) -> None:
         with patch("reviewing.parsers._load_registered_packs"):
             with self.assertRaises(RuntimeError):
-                _build_parser_registry()
+                _build_parser_registry(ReviewConfig())
 
     def test_build_parser_registry_returns_registry_with_parsers(self) -> None:
-        def fake_load(registry: ParserRegistry) -> None:
+        def fake_load(registry: ParserRegistry, _config: ReviewConfig) -> None:
             registry.register(_LowParser())
 
         with patch("reviewing.parsers._load_registered_packs", side_effect=fake_load):
-            registry = _build_parser_registry()
+            registry = _build_parser_registry(ReviewConfig())
 
         self.assertIn("z_low", registry.parsers)
 

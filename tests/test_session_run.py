@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 from fsrs import Rating
 
 from reviewing.config import ReviewConfig
+from reviewing.parsers import build_parser_registry
 from reviewing.session import ReviewSession
 
 
@@ -25,7 +26,13 @@ class ReviewSessionRunTest(unittest.TestCase):
     def test_run_returns_1_when_index_missing(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
             ui = Mock()
-            session = ReviewSession(repo_root=repo_root, ui=ui, config=ReviewConfig())
+            config = ReviewConfig()
+            session = ReviewSession(
+                repo_root=repo_root,
+                ui=ui,
+                config=config,
+                parser_registry=build_parser_registry(config),
+            )
 
             code = session.run()
 
@@ -41,7 +48,13 @@ class ReviewSessionRunTest(unittest.TestCase):
                 pass
 
             ui = Mock()
-            session = ReviewSession(repo_root=repo_root, ui=ui, config=ReviewConfig())
+            config = ReviewConfig()
+            session = ReviewSession(
+                repo_root=repo_root,
+                ui=ui,
+                config=config,
+                parser_registry=build_parser_registry(config),
+            )
 
             with patch.object(session, "_load_due_cards", return_value=[]):
                 code = session.run()
@@ -62,7 +75,12 @@ class ReviewSessionRunTest(unittest.TestCase):
             ui.prompt_rating_step.return_value = Rating.Good
             ui.run_question_step.side_effect = ["answer1", "answer2"]
 
-            session = ReviewSession(repo_root=repo_root, ui=ui, config=config)
+            session = ReviewSession(
+                repo_root=repo_root,
+                ui=ui,
+                config=config,
+                parser_registry=build_parser_registry(config),
+            )
 
             scheduler = Mock()
             old_card_1 = object()

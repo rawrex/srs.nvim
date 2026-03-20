@@ -7,6 +7,7 @@ from unittest.mock import patch
 from fsrs import Scheduler
 
 from reviewing.config import ReviewConfig
+from reviewing.parsers import build_parser_registry
 from reviewing.packs.cloze import ClozeCard
 from reviewing.session import ReviewSession
 
@@ -52,6 +53,7 @@ class ReviewSessionTest(unittest.TestCase):
             repo_root="/tmp/repo",
             ui=_DummyUI(),  # type: ignore[arg-type]
             config=config,
+            parser_registry=build_parser_registry(config),
         )
 
         self.assertEqual(0.5, session.scheduler.parameters[0])
@@ -81,6 +83,7 @@ class ReviewSessionTest(unittest.TestCase):
                 repo_root=repo_root,
                 ui=_DummyUI(),  # type: ignore[arg-type]
                 config=ReviewConfig(),
+                parser_registry=build_parser_registry(ReviewConfig()),
             )
 
             with patch("reviewing.card.Card.is_due", return_value=True):

@@ -15,10 +15,10 @@ class ReviewConfigTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as repo_root:
             config = load_review_config(repo_root)
 
-        self.assertEqual(RevealMode.INCREMENTAL, config.reveal_mode)
+        self.assertEqual(RevealMode.INCREMENTAL, config.cloze.reveal_mode)
         self.assertEqual(DEFAULT_RATING_BUTTONS, config.rating_buttons)
-        self.assertEqual("~{", config.cloze_open)
-        self.assertEqual("}", config.cloze_close)
+        self.assertEqual("~{", config.cloze.cloze_open)
+        self.assertEqual("}", config.cloze.cloze_close)
         self.assertEqual(0, config.between_notes_timeout_ms)
         self.assertTrue(config.show_context)
         self.assertEqual("dim", config.context_dim_style)
@@ -30,21 +30,25 @@ class ReviewConfigTest(unittest.TestCase):
             with open(path, "w", encoding="utf-8") as handle:
                 json.dump(
                     {
-                        "reveal_mode": "whole",
-                        "rating_buttons": {
-                            "Again": "a",
-                            "Hard": "h",
-                            "Good": "g",
-                            "Easy": "y",
+                        "review": {
+                            "rating_buttons": {
+                                "Again": "a",
+                                "Hard": "h",
+                                "Good": "g",
+                                "Easy": "y",
+                            },
+                            "between_notes_timeout_ms": 250,
+                            "show_context": False,
+                            "context_dim_style": "grey50",
                         },
-                        "cloze_syntax": {
-                            "open": "{{",
-                            "close": "}}",
+                        "cloze": {
+                            "reveal_mode": "whole",
+                            "syntax": {
+                                "open": "{{",
+                                "close": "}}",
+                            },
+                            "mask_char": "*",
                         },
-                        "mask_char": "*",
-                        "between_notes_timeout_ms": 250,
-                        "show_context": False,
-                        "context_dim_style": "grey50",
                         "scheduler": {
                             "parameters": [
                                 0.5,
@@ -81,14 +85,14 @@ class ReviewConfigTest(unittest.TestCase):
 
             config = load_review_config(repo_root)
 
-        self.assertEqual(RevealMode.WHOLE, config.reveal_mode)
+        self.assertEqual(RevealMode.WHOLE, config.cloze.reveal_mode)
         self.assertEqual("a", config.rating_buttons[Rating.Again])
         self.assertEqual("h", config.rating_buttons[Rating.Hard])
         self.assertEqual("g", config.rating_buttons[Rating.Good])
         self.assertEqual("y", config.rating_buttons[Rating.Easy])
-        self.assertEqual("{{", config.cloze_open)
-        self.assertEqual("}}", config.cloze_close)
-        self.assertEqual("*", config.mask_char)
+        self.assertEqual("{{", config.cloze.cloze_open)
+        self.assertEqual("}}", config.cloze.cloze_close)
+        self.assertEqual("*", config.cloze.mask_char)
         self.assertEqual(250, config.between_notes_timeout_ms)
         self.assertFalse(config.show_context)
         self.assertEqual("grey50", config.context_dim_style)
@@ -112,7 +116,7 @@ class ReviewConfigTest(unittest.TestCase):
 
             config = load_review_config(repo_root)
 
-        self.assertEqual(RevealMode.INCREMENTAL, config.reveal_mode)
+        self.assertEqual(RevealMode.INCREMENTAL, config.cloze.reveal_mode)
         self.assertEqual(DEFAULT_RATING_BUTTONS, config.rating_buttons)
 
     def test_load_review_config_rejects_invalid_rating_button_map(self) -> None:
@@ -121,11 +125,13 @@ class ReviewConfigTest(unittest.TestCase):
             with open(path, "w", encoding="utf-8") as handle:
                 json.dump(
                     {
-                        "rating_buttons": {
-                            "Again": "a",
-                            "Hard": "a",
-                            "Good": "g",
-                            "Easy": "e",
+                        "review": {
+                            "rating_buttons": {
+                                "Again": "a",
+                                "Hard": "a",
+                                "Good": "g",
+                                "Easy": "e",
+                            }
                         }
                     },
                     handle,
@@ -141,22 +147,26 @@ class ReviewConfigTest(unittest.TestCase):
             with open(path, "w", encoding="utf-8") as handle:
                 json.dump(
                     {
-                        "reveal_mode": "bad-value",
-                        "cloze_syntax": {"open": "", "close": 1},
-                        "mask_char": "xx",
-                        "between_notes_timeout_ms": -10,
-                        "show_context": "yes",
-                        "context_dim_style": "   ",
+                        "review": {
+                            "between_notes_timeout_ms": -10,
+                            "show_context": "yes",
+                            "context_dim_style": "   ",
+                        },
+                        "cloze": {
+                            "reveal_mode": "bad-value",
+                            "syntax": {"open": "", "close": 1},
+                            "mask_char": "xx",
+                        },
                     },
                     handle,
                 )
 
             config = load_review_config(repo_root)
 
-        self.assertEqual(RevealMode.INCREMENTAL, config.reveal_mode)
-        self.assertEqual("~{", config.cloze_open)
-        self.assertEqual("}", config.cloze_close)
-        self.assertEqual("▇", config.mask_char)
+        self.assertEqual(RevealMode.INCREMENTAL, config.cloze.reveal_mode)
+        self.assertEqual("~{", config.cloze.cloze_open)
+        self.assertEqual("}", config.cloze.cloze_close)
+        self.assertEqual("▇", config.cloze.mask_char)
         self.assertEqual(0, config.between_notes_timeout_ms)
         self.assertTrue(config.show_context)
         self.assertEqual("dim", config.context_dim_style)
