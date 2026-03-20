@@ -1,104 +1,21 @@
 import os
 import json
-import re
 import subprocess
-import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-INSTALL_SCRIPT = REPO_ROOT / "install.py"
-UNINSTALL_SCRIPT = REPO_ROOT / "uninstall.py"
-HOOKS = ["pre-commit", "pre-merge-commit", "post-checkout", "post-rewrite"]
-
-
-def run_command(args, cwd):
-    result = subprocess.run(args, cwd=cwd, text=True, capture_output=True)
-    if result.returncode != 0:
-        raise AssertionError(
-            f"command failed: {' '.join(args)}\n"
-            f"cwd: {cwd}\n"
-            f"stdout:\n{result.stdout}\n"
-            f"stderr:\n{result.stderr}"
-        )
-    return result
-
-
-def init_git_repo(repo_dir: Path) -> None:
-    run_command(["git", "init"], cwd=repo_dir)
-    run_command(["git", "config", "user.email", "test@example.com"], cwd=repo_dir)
-    run_command(["git", "config", "user.name", "Test User"], cwd=repo_dir)
-
-
-def install_hooks(repo_dir: Path) -> None:
-    run_command([sys.executable, str(INSTALL_SCRIPT)], cwd=repo_dir)
-
-
-def uninstall_system(repo_dir: Path) -> None:
-    run_command([sys.executable, str(UNINSTALL_SCRIPT)], cwd=repo_dir)
-
-
-def tracked_head_files(repo_dir: Path) -> set[str]:
-    return set(
-        run_command(
-            ["git", "ls-tree", "-r", "--name-only", "HEAD"], cwd=repo_dir
-        ).stdout.splitlines()
-    )
-
-
-def read_index_rows(index_path: Path):
-    if not index_path.exists():
-        return []
-    row_re = re.compile(r"^'([^']*)','([^']*)','([^']*)','(\d+)','(\d+)'$")
-    rows = []
-    for raw_line in index_path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line:
-            continue
-        match = row_re.match(line)
-        if not match:
-            raise AssertionError(f"unexpected index row format: {line}")
-        rows.append(
-            (
-                match.group(1),
-                match.group(2),
-                match.group(3),
-                int(match.group(4)),
-                int(match.group(5)),
-            )
-        )
-    return rows
+from setup.common import HOOKS
+from tests.setup_test_helpers import (
+    init_git_repo,
+    install_system,
+    read_index_rows,
+    run_command,
+    tracked_head_files,
+)
 
 
 class HooksInstallIntegrationTest(unittest.TestCase):
-    def test_uninstall_removes_hooks_and_srs_directory(self):
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            repo_dir = Path(tmp_dir)
-
-            init_git_repo(repo_dir)
-            install_hooks(repo_dir)
-
-            note_path = repo_dir / "note.md"
-            note_path.write_text("~{A}\n", encoding="utf-8")
-            run_command(["git", "add", "note.md"], cwd=repo_dir)
-            run_command(["git", "commit", "-m", "seed srs data"], cwd=repo_dir)
-
-            hooks_dir = repo_dir / ".git" / "hooks"
-            srs_dir = repo_dir / ".srs"
-            self.assertTrue(srs_dir.exists())
-            for hook_name in HOOKS:
-                self.assertTrue((hooks_dir / hook_name).exists())
-
-            uninstall_system(repo_dir)
-
-            self.assertFalse(srs_dir.exists())
-            for hook_name in HOOKS:
-                self.assertFalse((hooks_dir / hook_name).exists())
-
-            uninstall_system(repo_dir)
-            self.assertFalse(srs_dir.exists())
-
     def test_install_bootstraps_index_from_repeat_marked_directories(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             repo_dir = Path(tmp_dir)
@@ -119,7 +36,7 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             (nested_dir / "deep.md").write_text("Deep ~{card}\n", encoding="utf-8")
             (other_dir / "skip.md").write_text("Skip ~{card}\n", encoding="utf-8")
 
-            install_hooks(repo_dir)
+            install_system(repo_dir)
 
             index_path = repo_dir / ".srs" / "index.txt"
             rows = read_index_rows(index_path)
@@ -138,7 +55,7 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             for note_id, *_ in rows:
                 self.assertTrue((srs_dir / f"{note_id}.json").exists())
 
-            install_hooks(repo_dir)
+            install_system(repo_dir)
             self.assertEqual(rows, read_index_rows(index_path))
 
     def test_new_note_uses_highest_priority_parser(self):
@@ -146,7 +63,7 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             repo_dir = Path(tmp_dir)
 
             init_git_repo(repo_dir)
-            install_hooks(repo_dir)
+            install_system(repo_dir)
 
             note_path = repo_dir / "note.md"
             index_path = repo_dir / ".srs" / "index.txt"
@@ -178,7 +95,7 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             repo_dir = Path(tmp_dir)
 
             init_git_repo(repo_dir)
-            install_hooks(repo_dir)
+            install_system(repo_dir)
 
             srs_dir = repo_dir / ".srs"
             index_path = srs_dir / "index.txt"
@@ -279,7 +196,7 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             repo_dir = Path(tmp_dir)
 
             init_git_repo(repo_dir)
-            install_hooks(repo_dir)
+            install_system(repo_dir)
 
             note_path = repo_dir / "note.md"
             index_path = repo_dir / ".srs" / "index.txt"
@@ -353,7 +270,7 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             repo_dir = Path(tmp_dir)
 
             init_git_repo(repo_dir)
-            install_hooks(repo_dir)
+            install_system(repo_dir)
 
             note_path = repo_dir / "note.md"
             index_path = repo_dir / ".srs" / "index.txt"
@@ -387,7 +304,7 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             repo_dir = Path(tmp_dir)
 
             init_git_repo(repo_dir)
-            install_hooks(repo_dir)
+            install_system(repo_dir)
 
             note_path = repo_dir / "note.md"
             index_path = repo_dir / ".srs" / "index.txt"

@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from install import find_repeat_tracked_paths
+from setup.install import find_repeat_tracked_paths
 
 
 class InstallDiscoveryTest(unittest.TestCase):
