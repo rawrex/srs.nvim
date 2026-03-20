@@ -28,7 +28,7 @@ class ReviewSession:
         self.cloze_close = config.cloze_close
         self.mask_char = config.mask_char
         self.between_notes_timeout_ms = config.between_notes_timeout_ms
-        self.scheduler = scheduler or Scheduler()
+        self.scheduler = scheduler or config.build_scheduler()
         self.parser_registry = PARSER_REGISTRY
         self.index_path = os.path.join(repo_root, ".srs", "index.txt")
 
