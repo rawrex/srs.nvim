@@ -3,15 +3,16 @@ import os
 import shlex
 import stat
 import sys
+from importlib import import_module
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from setup import common
-from srs_index import Index
-from tracking import find_repeat_tracked_paths
+common = import_module("setup.common")
+Index = import_module("srs_index").Index
+find_repeat_tracked_paths = import_module("tracking").find_repeat_tracked_paths
 
 
 def write_hook(hook_path: str, script_path: str, hook_name: str) -> None:
