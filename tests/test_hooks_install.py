@@ -24,6 +24,24 @@ def run_command(args, cwd):
     return result
 
 
+def init_git_repo(repo_dir: Path) -> None:
+    run_command(["git", "init"], cwd=repo_dir)
+    run_command(["git", "config", "user.email", "test@example.com"], cwd=repo_dir)
+    run_command(["git", "config", "user.name", "Test User"], cwd=repo_dir)
+
+
+def install_hooks(repo_dir: Path) -> None:
+    run_command([sys.executable, str(INSTALL_SCRIPT)], cwd=repo_dir)
+
+
+def tracked_head_files(repo_dir: Path) -> set[str]:
+    return set(
+        run_command(
+            ["git", "ls-tree", "-r", "--name-only", "HEAD"], cwd=repo_dir
+        ).stdout.splitlines()
+    )
+
+
 def read_index_rows(index_path: Path):
     if not index_path.exists():
         return []
@@ -53,12 +71,8 @@ class HooksInstallIntegrationTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             repo_dir = Path(tmp_dir)
 
-            run_command(["git", "init"], cwd=repo_dir)
-            run_command(
-                ["git", "config", "user.email", "test@example.com"], cwd=repo_dir
-            )
-            run_command(["git", "config", "user.name", "Test User"], cwd=repo_dir)
-            run_command([sys.executable, str(INSTALL_SCRIPT)], cwd=repo_dir)
+            init_git_repo(repo_dir)
+            install_hooks(repo_dir)
 
             note_path = repo_dir / "note.md"
             index_path = repo_dir / ".srs" / "index.txt"
@@ -89,13 +103,8 @@ class HooksInstallIntegrationTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             repo_dir = Path(tmp_dir)
 
-            run_command(["git", "init"], cwd=repo_dir)
-            run_command(
-                ["git", "config", "user.email", "test@example.com"], cwd=repo_dir
-            )
-            run_command(["git", "config", "user.name", "Test User"], cwd=repo_dir)
-
-            run_command([sys.executable, str(INSTALL_SCRIPT)], cwd=repo_dir)
+            init_git_repo(repo_dir)
+            install_hooks(repo_dir)
 
             srs_dir = repo_dir / ".srs"
             index_path = srs_dir / "index.txt"
@@ -135,11 +144,7 @@ class HooksInstallIntegrationTest(unittest.TestCase):
                 card_data = json.loads(card_path.read_text(encoding="utf-8"))
                 self.assertEqual(str(card_data["card_id"]), created_id)
 
-            tracked_files = set(
-                run_command(
-                    ["git", "ls-tree", "-r", "--name-only", "HEAD"], cwd=repo_dir
-                ).stdout.splitlines()
-            )
+            tracked_files = tracked_head_files(repo_dir)
             self.assertIn(".srs/index.txt", tracked_files)
             for created_id in created_ids:
                 self.assertIn(f".srs/{created_id}.json", tracked_files)
@@ -177,11 +182,7 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             } - set(created_ids)
             self.assertEqual(1, len(new_ids))
             new_id = next(iter(new_ids))
-            tracked_files = set(
-                run_command(
-                    ["git", "ls-tree", "-r", "--name-only", "HEAD"], cwd=repo_dir
-                ).stdout.splitlines()
-            )
+            tracked_files = tracked_head_files(repo_dir)
             self.assertIn(f".srs/{new_id}.json", tracked_files)
             self.assertTrue(
                 all(not path.startswith("/.srs/") for _, path, _, _, _ in rows)
@@ -203,12 +204,8 @@ class HooksInstallIntegrationTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             repo_dir = Path(tmp_dir)
 
-            run_command(["git", "init"], cwd=repo_dir)
-            run_command(
-                ["git", "config", "user.email", "test@example.com"], cwd=repo_dir
-            )
-            run_command(["git", "config", "user.name", "Test User"], cwd=repo_dir)
-            run_command([sys.executable, str(INSTALL_SCRIPT)], cwd=repo_dir)
+            init_git_repo(repo_dir)
+            install_hooks(repo_dir)
 
             note_path = repo_dir / "note.md"
             index_path = repo_dir / ".srs" / "index.txt"
@@ -281,12 +278,8 @@ class HooksInstallIntegrationTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             repo_dir = Path(tmp_dir)
 
-            run_command(["git", "init"], cwd=repo_dir)
-            run_command(
-                ["git", "config", "user.email", "test@example.com"], cwd=repo_dir
-            )
-            run_command(["git", "config", "user.name", "Test User"], cwd=repo_dir)
-            run_command([sys.executable, str(INSTALL_SCRIPT)], cwd=repo_dir)
+            init_git_repo(repo_dir)
+            install_hooks(repo_dir)
 
             note_path = repo_dir / "note.md"
             index_path = repo_dir / ".srs" / "index.txt"
@@ -319,12 +312,8 @@ class HooksInstallIntegrationTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             repo_dir = Path(tmp_dir)
 
-            run_command(["git", "init"], cwd=repo_dir)
-            run_command(
-                ["git", "config", "user.email", "test@example.com"], cwd=repo_dir
-            )
-            run_command(["git", "config", "user.name", "Test User"], cwd=repo_dir)
-            run_command([sys.executable, str(INSTALL_SCRIPT)], cwd=repo_dir)
+            init_git_repo(repo_dir)
+            install_hooks(repo_dir)
 
             note_path = repo_dir / "note.md"
             index_path = repo_dir / ".srs" / "index.txt"
