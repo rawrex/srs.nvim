@@ -172,41 +172,20 @@ def _parse_scheduler_config(
     ]
     | None
 ):
-    parameters = _parse_scheduler_parameters(raw.get("parameters"))
-    desired_retention = raw.get("desired_retention")
-    learning_steps = _parse_scheduler_steps(raw.get("learning_steps"))
-    relearning_steps = _parse_scheduler_steps(raw.get("relearning_steps"))
-    maximum_interval = raw.get("maximum_interval")
-    enable_fuzzing = raw.get("enable_fuzzing")
-
-    if parameters is None:
-        parameters = defaults.scheduler_parameters
-    if (
-        not isinstance(desired_retention, (int, float))
-        or not 0 < float(desired_retention) <= 1
+    scheduler_payload: dict[str, object] = dict(defaults.build_scheduler().to_dict())
+    for key in (
+        "parameters",
+        "desired_retention",
+        "learning_steps",
+        "relearning_steps",
+        "maximum_interval",
+        "enable_fuzzing",
     ):
-        desired_retention = defaults.scheduler_desired_retention
-    else:
-        desired_retention = float(desired_retention)
-    if learning_steps is None:
-        learning_steps = defaults.scheduler_learning_steps
-    if relearning_steps is None:
-        relearning_steps = defaults.scheduler_relearning_steps
-    if not isinstance(maximum_interval, int) or maximum_interval < 1:
-        maximum_interval = defaults.scheduler_maximum_interval
-    if not isinstance(enable_fuzzing, bool):
-        enable_fuzzing = defaults.scheduler_enable_fuzzing
-
+        if key in raw:
+            scheduler_payload[key] = raw[key]
     try:
-        scheduler = Scheduler(
-            parameters=parameters,
-            desired_retention=desired_retention,
-            learning_steps=learning_steps,
-            relearning_steps=relearning_steps,
-            maximum_interval=maximum_interval,
-            enable_fuzzing=enable_fuzzing,
-        )
-    except ValueError:
+        scheduler = Scheduler.from_json(json.dumps(scheduler_payload))
+    except (TypeError, ValueError, KeyError):
         return None
 
     return (
@@ -217,25 +196,3 @@ def _parse_scheduler_config(
         scheduler.maximum_interval,
         scheduler.enable_fuzzing,
     )
-
-
-def _parse_scheduler_parameters(raw: object) -> tuple[float, ...] | None:
-    if not isinstance(raw, list):
-        return None
-    parsed: list[float] = []
-    for item in raw:
-        if not isinstance(item, (int, float)):
-            return None
-        parsed.append(float(item))
-    return tuple(parsed)
-
-
-def _parse_scheduler_steps(raw: object) -> tuple[timedelta, ...] | None:
-    if not isinstance(raw, list):
-        return None
-    parsed: list[timedelta] = []
-    for item in raw:
-        if not isinstance(item, int) or item < 0:
-            return None
-        parsed.append(timedelta(seconds=item))
-    return tuple(parsed)
