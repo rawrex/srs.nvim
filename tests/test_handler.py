@@ -6,6 +6,28 @@ from hooks_runtime.handler import Handler
 
 
 class HandlerTest(unittest.TestCase):
+    def test_handle_pre_commit_applies_diff_and_syncs_tracked_paths(self) -> None:
+        handler = Handler("/repo")
+        index = Mock()
+
+        with (
+            patch.object(
+                handler, "diff_name_status_cached", return_value="M\tnote.md\n"
+            ),
+            patch.object(handler, "diff_patch_cached", return_value=""),
+            patch.object(
+                handler,
+                "_tracked_paths_from_git_index",
+                return_value={"/note.md"},
+            ),
+        ):
+            handler.handle_pre_commit(index)
+
+        index.apply_diff_and_stage.assert_called_once_with("/repo", "M\tnote.md\n", "")
+        index.sync_tracked_paths_and_stage.assert_called_once_with(
+            "/repo", {"/note.md"}
+        )
+
     def test_handle_post_checkout_ignores_short_args(self) -> None:
         handler = Handler("/repo")
         index = Mock()
@@ -50,6 +72,31 @@ class HandlerTest(unittest.TestCase):
         self.assertEqual(
             [call(index, "old1", "new1"), call(index, "old2", "new2")],
             apply_ref_diff.call_args_list,
+        )
+
+    def test_tracked_paths_from_git_index_respects_repeat_and_norepeat(self) -> None:
+        handler = Handler("/repo")
+
+        ls_files = "\n".join(
+            [
+                "notes/.repeat",
+                "notes/top.md",
+                "notes/sub/.norepeat",
+                "notes/sub/sub.md",
+                "notes/sub/deep/.repeat",
+                "notes/sub/deep/deep.md",
+                "outside.md",
+            ]
+        )
+
+        with patch(
+            "hooks_runtime.handler.util.run_git", return_value=(0, ls_files, "")
+        ):
+            tracked_paths = handler._tracked_paths_from_git_index()
+
+        self.assertEqual(
+            {"/notes/top.md", "/notes/sub/deep/deep.md"},
+            tracked_paths,
         )
 
 

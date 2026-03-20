@@ -16,6 +16,65 @@ from tests.setup_test_helpers import (
 
 
 class HooksInstallIntegrationTest(unittest.TestCase):
+    def test_marker_commits_start_and_stop_tracking_paths(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            repo_dir = Path(tmp_dir)
+
+            init_git_repo(repo_dir)
+            install_system(repo_dir)
+
+            notes_dir = repo_dir / "notes"
+            sub_dir = notes_dir / "sub"
+            deep_dir = sub_dir / "deep"
+            notes_dir.mkdir()
+            sub_dir.mkdir()
+            deep_dir.mkdir()
+
+            (notes_dir / "top.md").write_text("Top ~{card}\n", encoding="utf-8")
+            (sub_dir / "sub.md").write_text("Sub ~{card}\n", encoding="utf-8")
+            (deep_dir / "deep.md").write_text("Deep ~{card}\n", encoding="utf-8")
+
+            index_path = repo_dir / ".srs" / "index.txt"
+
+            run_command(["git", "add", "notes"], cwd=repo_dir)
+            run_command(
+                ["git", "commit", "-m", "seed notes without markers"], cwd=repo_dir
+            )
+            self.assertEqual([], read_index_rows(index_path))
+
+            (notes_dir / ".repeat").write_text("", encoding="utf-8")
+            run_command(["git", "add", "notes/.repeat"], cwd=repo_dir)
+            run_command(
+                ["git", "commit", "-m", "start tracking notes tree"], cwd=repo_dir
+            )
+            rows = read_index_rows(index_path)
+            self.assertEqual(
+                ["/notes/sub/deep/deep.md", "/notes/sub/sub.md", "/notes/top.md"],
+                sorted(path for _id, path, _parser_id, _start_line, _end_line in rows),
+            )
+
+            (sub_dir / ".norepeat").write_text("", encoding="utf-8")
+            run_command(["git", "add", "notes/sub/.norepeat"], cwd=repo_dir)
+            run_command(["git", "commit", "-m", "stop tracking sub tree"], cwd=repo_dir)
+            rows = read_index_rows(index_path)
+            self.assertEqual(["/notes/top.md"], [path for _id, path, *_ in rows])
+
+            (deep_dir / ".repeat").write_text("", encoding="utf-8")
+            run_command(["git", "add", "notes/sub/deep/.repeat"], cwd=repo_dir)
+            run_command(["git", "commit", "-m", "re-enable deep subtree"], cwd=repo_dir)
+            rows = read_index_rows(index_path)
+            self.assertEqual(
+                ["/notes/sub/deep/deep.md", "/notes/top.md"],
+                sorted(path for _id, path, _parser_id, _start_line, _end_line in rows),
+            )
+
+            run_command(["git", "rm", "notes/.repeat"], cwd=repo_dir)
+            run_command(["git", "commit", "-m", "remove top marker"], cwd=repo_dir)
+            rows = read_index_rows(index_path)
+            self.assertEqual(
+                ["/notes/sub/deep/deep.md"], [path for _id, path, *_ in rows]
+            )
+
     def test_install_bootstraps_index_from_repeat_marked_directories(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             repo_dir = Path(tmp_dir)
@@ -77,6 +136,7 @@ class HooksInstallIntegrationTest(unittest.TestCase):
 
             init_git_repo(repo_dir)
             install_system(repo_dir)
+            (repo_dir / ".repeat").write_text("", encoding="utf-8")
 
             note_path = repo_dir / "note.md"
             index_path = repo_dir / ".srs" / "index.txt"
@@ -85,7 +145,7 @@ class HooksInstallIntegrationTest(unittest.TestCase):
                 "Intro ~{overview}\n>[!code]- Example\n>```cpp\n>int x = 1;\n>```\n",
                 encoding="utf-8",
             )
-            run_command(["git", "add", "note.md"], cwd=repo_dir)
+            run_command(["git", "add", ".repeat", "note.md"], cwd=repo_dir)
             run_command(["git", "commit", "-m", "add quote block note"], cwd=repo_dir)
 
             rows = read_index_rows(index_path)
@@ -109,6 +169,7 @@ class HooksInstallIntegrationTest(unittest.TestCase):
 
             init_git_repo(repo_dir)
             install_system(repo_dir)
+            (repo_dir / ".repeat").write_text("", encoding="utf-8")
 
             srs_dir = repo_dir / ".srs"
             index_path = srs_dir / "index.txt"
@@ -129,7 +190,7 @@ class HooksInstallIntegrationTest(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            run_command(["git", "add", "note.md"], cwd=repo_dir)
+            run_command(["git", "add", ".repeat", "note.md"], cwd=repo_dir)
             run_command(["git", "commit", "-m", "add note"], cwd=repo_dir)
             rows = read_index_rows(index_path)
             self.assertEqual(len(rows), 3)
@@ -210,13 +271,14 @@ class HooksInstallIntegrationTest(unittest.TestCase):
 
             init_git_repo(repo_dir)
             install_system(repo_dir)
+            (repo_dir / ".repeat").write_text("", encoding="utf-8")
 
             note_path = repo_dir / "note.md"
             index_path = repo_dir / ".srs" / "index.txt"
             srs_dir = repo_dir / ".srs"
 
             note_path.write_text("~{A}\n~{B}\n~{C}\n", encoding="utf-8")
-            run_command(["git", "add", "note.md"], cwd=repo_dir)
+            run_command(["git", "add", ".repeat", "note.md"], cwd=repo_dir)
             run_command(["git", "commit", "-m", "seed note"], cwd=repo_dir)
 
             rows = read_index_rows(index_path)
@@ -284,12 +346,13 @@ class HooksInstallIntegrationTest(unittest.TestCase):
 
             init_git_repo(repo_dir)
             install_system(repo_dir)
+            (repo_dir / ".repeat").write_text("", encoding="utf-8")
 
             note_path = repo_dir / "note.md"
             index_path = repo_dir / ".srs" / "index.txt"
 
             note_path.write_text("~{A}\n~{B}\n~{C}\n", encoding="utf-8")
-            run_command(["git", "add", "note.md"], cwd=repo_dir)
+            run_command(["git", "add", ".repeat", "note.md"], cwd=repo_dir)
             run_command(["git", "commit", "-m", "seed note"], cwd=repo_dir)
 
             rows = read_index_rows(index_path)
@@ -318,6 +381,7 @@ class HooksInstallIntegrationTest(unittest.TestCase):
 
             init_git_repo(repo_dir)
             install_system(repo_dir)
+            (repo_dir / ".repeat").write_text("", encoding="utf-8")
 
             note_path = repo_dir / "note.md"
             index_path = repo_dir / ".srs" / "index.txt"
@@ -327,7 +391,7 @@ class HooksInstallIntegrationTest(unittest.TestCase):
                 "~{A}\n~{B}\n~{C}\n~{D}\n~{E}\n~{F}\n",
                 encoding="utf-8",
             )
-            run_command(["git", "add", "note.md"], cwd=repo_dir)
+            run_command(["git", "add", ".repeat", "note.md"], cwd=repo_dir)
             run_command(["git", "commit", "-m", "seed note"], cwd=repo_dir)
 
             rows = read_index_rows(index_path)
