@@ -13,6 +13,9 @@ from card.parsers import ParserRegistry
 from core.index.storage import parse_storage_json
 from ui.ui import ReviewUI
 
+IndexRow = tuple[str, str, str, int, int]
+LineRange = tuple[int, int]
+
 
 class ReviewSession:
     def __init__(
@@ -81,51 +84,98 @@ class ReviewSession:
 
     def _load_due_cards(self) -> list[Card]:
         now = datetime.now(timezone.utc)
-        index_rows = list(
+        index_rows = self._read_index_rows()
+        claimed_lines_by_note = self._collect_claimed_lines_by_note(index_rows)
+        cards_with_paths, note_question_blocks = self._build_cards_with_note_context(
+            index_rows
+        )
+        self._add_unclaimed_note_context(note_question_blocks, claimed_lines_by_note)
+        return self._filter_due_cards(cards_with_paths, note_question_blocks, now)
+
+    def _read_index_rows(self) -> list[IndexRow]:
+        return list(
             Index(self.index_path, parser_registry=self.parser_registry).read_rows()
         )
-        cards_with_paths: list[tuple[Card, str]] = []
-        note_question_blocks: dict[str, dict[tuple[int, int], str]] = {}
-        raw_blocks_cache: dict[tuple[str, str], dict[tuple[int, int], str]] = {}
-        claimed_lines_by_note: dict[str, set[int]] = {}
 
+    def _collect_claimed_lines_by_note(
+        self,
+        index_rows: list[IndexRow],
+    ) -> dict[str, set[int]]:
+        claimed_lines_by_note: dict[str, set[int]] = {}
         for _note_id, indexed_path, _parser_id, start_line, end_line in index_rows:
             note_path = self._note_abs_path(indexed_path)
             claimed_lines_by_note.setdefault(note_path, set()).update(
                 range(start_line, end_line + 1)
             )
+        return claimed_lines_by_note
+
+    def _build_cards_with_note_context(
+        self,
+        index_rows: list[IndexRow],
+    ) -> tuple[list[tuple[Card, str]], dict[str, dict[LineRange, str]]]:
+        cards_with_paths: list[tuple[Card, str]] = []
+        note_question_blocks: dict[str, dict[LineRange, str]] = {}
+        raw_blocks_cache: dict[tuple[str, str], dict[LineRange, str]] = {}
 
         for note_id, indexed_path, parser_id, start_line, end_line in index_rows:
             note_path = self._note_abs_path(indexed_path)
             cache_key = (note_path, parser_id)
-            if cache_key not in raw_blocks_cache:
-                raw_blocks_cache[cache_key] = self._read_note_blocks(
-                    note_path,
-                    parser_id,
-                )
-            note_text = raw_blocks_cache[cache_key].get((start_line, end_line))
+            blocks_for_parser = raw_blocks_cache.get(cache_key)
+            if blocks_for_parser is None:
+                blocks_for_parser = self._read_note_blocks(note_path, parser_id)
+                raw_blocks_cache[cache_key] = blocks_for_parser
+
+            note_text = blocks_for_parser.get((start_line, end_line))
             if note_text is None:
                 continue
-            card_path = os.path.join(self.repo_root, ".srs", f"{note_id}.json")
-            with open(card_path, "r", encoding="utf-8") as handle:
-                raw_text = handle.read()
-            metadata = parse_storage_json(raw_text)
-            parser = self.parser_registry.get(parser_id)
-            card = parser.build_card(
+
+            card = self._build_card(
                 note_id=note_id,
                 note_path=note_path,
-                note_text=note_text,
+                parser_id=parser_id,
                 start_line=start_line,
                 end_line=end_line,
-                note_blocks=raw_blocks_cache[cache_key],
-                card_path=card_path,
-                metadata=metadata,
+                note_text=note_text,
+                note_blocks=blocks_for_parser,
             )
             note_question_blocks.setdefault(note_path, {})[(start_line, end_line)] = (
                 card.question_view().primary_block().text
             )
             cards_with_paths.append((card, note_path))
 
+        return cards_with_paths, note_question_blocks
+
+    def _build_card(
+        self,
+        note_id: str,
+        note_path: str,
+        parser_id: str,
+        start_line: int,
+        end_line: int,
+        note_text: str,
+        note_blocks: dict[LineRange, str],
+    ) -> Card:
+        card_path = os.path.join(self.repo_root, ".srs", f"{note_id}.json")
+        with open(card_path, "r", encoding="utf-8") as handle:
+            raw_text = handle.read()
+        metadata = parse_storage_json(raw_text)
+        parser = self.parser_registry.get(parser_id)
+        return parser.build_card(
+            note_id=note_id,
+            note_path=note_path,
+            note_text=note_text,
+            start_line=start_line,
+            end_line=end_line,
+            note_blocks=note_blocks,
+            card_path=card_path,
+            metadata=metadata,
+        )
+
+    def _add_unclaimed_note_context(
+        self,
+        note_question_blocks: dict[str, dict[LineRange, str]],
+        claimed_lines_by_note: dict[str, set[int]],
+    ) -> None:
         for note_path, claimed_lines in claimed_lines_by_note.items():
             fallback_blocks = self._read_unclaimed_line_blocks(note_path, claimed_lines)
             if not fallback_blocks:
@@ -134,6 +184,12 @@ class ReviewSession:
             for line_range, block in fallback_blocks.items():
                 note_blocks.setdefault(line_range, block)
 
+    def _filter_due_cards(
+        self,
+        cards_with_paths: list[tuple[Card, str]],
+        note_question_blocks: dict[str, dict[LineRange, str]],
+        now: datetime,
+    ) -> list[Card]:
         due_cards: list[Card] = []
         for card, note_path in cards_with_paths:
             card.note_blocks = note_question_blocks.get(note_path, {})
@@ -144,9 +200,7 @@ class ReviewSession:
     def _note_abs_path(self, indexed_path: str) -> str:
         return os.path.join(self.repo_root, indexed_path.lstrip("/"))
 
-    def _read_note_blocks(
-        self, path: str, parser_id: str
-    ) -> dict[tuple[int, int], str]:
+    def _read_note_blocks(self, path: str, parser_id: str) -> dict[LineRange, str]:
         with open(path, "r", encoding="utf-8") as handle:
             note_text = handle.read()
         parser = self.parser_registry.get(parser_id)
@@ -192,7 +246,7 @@ class ReviewSession:
 
     def _read_unclaimed_line_blocks(
         self, note_path: str, claimed_lines: set[int]
-    ) -> dict[tuple[int, int], str]:
+    ) -> dict[LineRange, str]:
         with open(note_path, "r", encoding="utf-8") as handle:
             lines = handle.readlines()
         return {
