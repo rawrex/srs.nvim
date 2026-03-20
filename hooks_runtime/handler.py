@@ -3,6 +3,7 @@ import sys
 
 import util
 from srs_index import Index
+from tracking import find_repeat_tracked_paths, tracked_paths_from_repo_paths
 
 
 class Handler:
@@ -61,6 +62,8 @@ class Handler:
         diff_text = self.diff_name_status_cached()
         patch_text = self.diff_patch_cached()
         index.apply_diff_and_stage(self.repository_root, diff_text, patch_text)
+        tracked_paths = self._tracked_paths_from_git_index()
+        index.sync_tracked_paths_and_stage(self.repository_root, tracked_paths)
 
     def handle_post_checkout(self, index: Index, args: list[str]) -> None:
         if len(args) < 2:
@@ -83,3 +86,12 @@ class Handler:
         diff_text = self.diff_name_status(old_ref, new_ref)
         patch_text = self.diff_patch(old_ref, new_ref)
         index.apply_diff(diff_text, patch_text)
+        index.sync_tracked_paths(set(find_repeat_tracked_paths(self.repository_root)))
+
+    def _tracked_paths_from_git_index(self) -> set[str]:
+        code, out, _err = util.run_git(["ls-files"], cwd=self.repository_root)
+        if code != 0:
+            return set(find_repeat_tracked_paths(self.repository_root))
+
+        repo_paths = [line.strip() for line in out.splitlines() if line.strip()]
+        return tracked_paths_from_repo_paths(repo_paths)

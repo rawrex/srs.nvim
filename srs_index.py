@@ -116,6 +116,61 @@ class Index:
         changed, _staged_paths = self._apply_diff(diff_text, patch_text)
         return changed
 
+    def sync_tracked_paths_and_stage(
+        self,
+        repo_root: str,
+        tracked_paths: set[str],
+    ) -> bool:
+        changed, touched_paths = self._sync_tracked_paths(tracked_paths)
+        if changed:
+            self._stage_paths(repo_root, touched_paths)
+        return changed
+
+    def sync_tracked_paths(self, tracked_paths: set[str]) -> bool:
+        changed, _touched_paths = self._sync_tracked_paths(tracked_paths)
+        return changed
+
+    def _sync_tracked_paths(self, tracked_paths: set[str]) -> tuple[bool, set[str]]:
+        lines = self._read()
+        updated: list[str] = []
+        changed = False
+        touched_paths: set[str] = set()
+
+        for line in lines:
+            row = self.row_reader.parse(line)
+            if row is None:
+                updated.append(line)
+                continue
+            if not self._is_note_path(row.path):
+                updated.append(line)
+                continue
+            if row.path in tracked_paths:
+                updated.append(line)
+                continue
+
+            changed = True
+            removed_path = self._remove_card_file(row.note_id)
+            if removed_path is not None:
+                touched_paths.add(removed_path)
+
+        rows_by_path = self._rows_by_path(updated)
+        for tracked_path in sorted(tracked_paths):
+            if not self._is_note_path(tracked_path):
+                continue
+            if tracked_path in rows_by_path:
+                continue
+
+            before_count = len(updated)
+            touched_paths.update(self._add_new(tracked_path, updated))
+            if len(updated) != before_count:
+                changed = True
+                rows_by_path[tracked_path] = [("", "", 0, 0)]
+
+        if changed:
+            self._write(updated)
+            touched_paths.add(self._index_file_path())
+        return changed, touched_paths
+
     def _apply_diff(self, diff_text: str, patch_text: str) -> tuple[bool, set[str]]:
         changes = DiffChangeSet.from_diff_text(diff_text)
         if not changes.has_changes():

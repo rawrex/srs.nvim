@@ -4,16 +4,9 @@ import shlex
 import stat
 import sys
 
-import util
-from setup.common import (
-    HOOKS,
-    INDEX_FILE_NAME,
-    NOREPEAT_MARKER_NAME,
-    REPEAT_MARKER_NAME,
-    SRS_DIR_NAME,
-    resolve_repo_context,
-)
+from setup import common
 from srs_index import Index
+from tracking import find_repeat_tracked_paths
 
 
 def write_hook(hook_path: str, script_path: str, hook_name: str) -> None:
@@ -35,57 +28,16 @@ def write_hook(hook_path: str, script_path: str, hook_name: str) -> None:
 
 
 def ensure_srs_index(repo_root: str) -> bool:
-    srs_dir = os.path.join(repo_root, SRS_DIR_NAME)
+    srs_dir = os.path.join(repo_root, common.SRS_DIR_NAME)
     os.makedirs(srs_dir, exist_ok=True)
 
-    index_path = os.path.join(srs_dir, INDEX_FILE_NAME)
+    index_path = os.path.join(srs_dir, common.INDEX_FILE_NAME)
     if os.path.isdir(index_path):
         return False
     if not os.path.exists(index_path):
         with open(index_path, "w", encoding="utf-8"):
             pass
     return True
-
-
-def _to_indexed_path(repo_root: str, abs_path: str) -> str:
-    rel_path = os.path.relpath(abs_path, repo_root)
-    return util.normalize_path(rel_path.replace(os.sep, "/"))
-
-
-def find_repeat_tracked_paths(repo_root: str) -> list[str]:
-    tracked_paths: set[str] = set()
-
-    def walk(current_dir: str, tracked_parent: bool) -> None:
-        entries = sorted(
-            os.scandir(current_dir),
-            key=lambda entry: entry.name,
-        )
-
-        has_marker = any(
-            entry.name == REPEAT_MARKER_NAME and entry.is_file(follow_symlinks=False)
-            for entry in entries
-        )
-        has_norepeat_marker = any(
-            entry.name == NOREPEAT_MARKER_NAME and entry.is_file(follow_symlinks=False)
-            for entry in entries
-        )
-        tracked_here = has_marker or (tracked_parent and not has_norepeat_marker)
-
-        for entry in entries:
-            if entry.is_dir(follow_symlinks=False):
-                if entry.name in {".git", SRS_DIR_NAME}:
-                    continue
-                walk(entry.path, tracked_here)
-                continue
-            if not tracked_here:
-                continue
-            if entry.name in {REPEAT_MARKER_NAME, NOREPEAT_MARKER_NAME}:
-                continue
-            if entry.is_file(follow_symlinks=False):
-                tracked_paths.add(_to_indexed_path(repo_root, entry.path))
-
-    walk(repo_root, tracked_parent=False)
-    return sorted(tracked_paths)
 
 
 def initialize_index_from_repeat_markers(repo_root: str, index_path: str) -> int:
@@ -109,7 +61,7 @@ def initialize_index_from_repeat_markers(repo_root: str, index_path: str) -> int
 
 
 def main() -> int:
-    context = resolve_repo_context()
+    context = common.resolve_repo_context()
     if context is None:
         print("Not inside a git repository.")
         return 1
@@ -134,13 +86,19 @@ def main() -> int:
         repo_root, context.index_path
     )
 
-    for hook in HOOKS:
+    for hook in common.HOOKS:
         hook_path = os.path.join(hooks_dir, hook)
         write_hook(hook_path, hooks_path, hook)
 
-    print("Installed hooks:", ", ".join(HOOKS))
-    print("Ensured index:", os.path.join(SRS_DIR_NAME, INDEX_FILE_NAME))
-    print(f"Initialized cards from {REPEAT_MARKER_NAME} markers:", initialized_count)
+    print("Installed hooks:", ", ".join(common.HOOKS))
+    print(
+        "Ensured index:",
+        os.path.join(common.SRS_DIR_NAME, common.INDEX_FILE_NAME),
+    )
+    print(
+        f"Initialized cards from {common.REPEAT_MARKER_NAME} markers:",
+        initialized_count,
+    )
     return 0
 
 
