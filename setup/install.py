@@ -8,6 +8,7 @@ import util
 from setup.common import (
     HOOKS,
     INDEX_FILE_NAME,
+    NOREPEAT_MARKER_NAME,
     REPEAT_MARKER_NAME,
     SRS_DIR_NAME,
     resolve_repo_context,
@@ -64,7 +65,11 @@ def find_repeat_tracked_paths(repo_root: str) -> list[str]:
             entry.name == REPEAT_MARKER_NAME and entry.is_file(follow_symlinks=False)
             for entry in entries
         )
-        tracked_here = tracked_parent or has_marker
+        has_norepeat_marker = any(
+            entry.name == NOREPEAT_MARKER_NAME and entry.is_file(follow_symlinks=False)
+            for entry in entries
+        )
+        tracked_here = has_marker or (tracked_parent and not has_norepeat_marker)
 
         for entry in entries:
             if entry.is_dir(follow_symlinks=False):
@@ -74,7 +79,7 @@ def find_repeat_tracked_paths(repo_root: str) -> list[str]:
                 continue
             if not tracked_here:
                 continue
-            if entry.name == REPEAT_MARKER_NAME:
+            if entry.name in {REPEAT_MARKER_NAME, NOREPEAT_MARKER_NAME}:
                 continue
             if entry.is_file(follow_symlinks=False):
                 tracked_paths.add(_to_indexed_path(repo_root, entry.path))

@@ -65,6 +65,45 @@ class InstallDiscoveryTest(unittest.TestCase):
 
             self.assertEqual(["/notes/ok.md"], find_repeat_tracked_paths(str(repo_dir)))
 
+    def test_find_repeat_tracked_paths_honors_norepeat_subtree_cutoff(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            repo_dir = Path(tmp_dir)
+            notes_dir = repo_dir / "notes"
+            skip_dir = notes_dir / "skip"
+            notes_dir.mkdir()
+            skip_dir.mkdir()
+
+            (notes_dir / ".repeat").write_text("", encoding="utf-8")
+            (skip_dir / ".norepeat").write_text("", encoding="utf-8")
+            (notes_dir / "keep.md").write_text("~{ok}\n", encoding="utf-8")
+            (skip_dir / "drop.md").write_text("~{no}\n", encoding="utf-8")
+
+            self.assertEqual(
+                ["/notes/keep.md"], find_repeat_tracked_paths(str(repo_dir))
+            )
+
+    def test_find_repeat_tracked_paths_allows_repeat_inside_norepeat(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            repo_dir = Path(tmp_dir)
+            notes_dir = repo_dir / "notes"
+            skip_dir = notes_dir / "skip"
+            reenabled_dir = skip_dir / "reenabled"
+            notes_dir.mkdir()
+            skip_dir.mkdir()
+            reenabled_dir.mkdir()
+
+            (notes_dir / ".repeat").write_text("", encoding="utf-8")
+            (skip_dir / ".norepeat").write_text("", encoding="utf-8")
+            (reenabled_dir / ".repeat").write_text("", encoding="utf-8")
+            (notes_dir / "keep.md").write_text("~{ok}\n", encoding="utf-8")
+            (skip_dir / "drop.md").write_text("~{no}\n", encoding="utf-8")
+            (reenabled_dir / "again.md").write_text("~{yes}\n", encoding="utf-8")
+
+            self.assertEqual(
+                ["/notes/keep.md", "/notes/skip/reenabled/again.md"],
+                find_repeat_tracked_paths(str(repo_dir)),
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

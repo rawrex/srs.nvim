@@ -24,16 +24,24 @@ class HooksInstallIntegrationTest(unittest.TestCase):
 
             notes_dir = repo_dir / "notes"
             nested_dir = notes_dir / "nested"
+            excluded_dir = notes_dir / "excluded"
+            reenabled_dir = excluded_dir / "reenabled"
             other_dir = repo_dir / "other"
             notes_dir.mkdir()
             nested_dir.mkdir()
+            excluded_dir.mkdir()
+            reenabled_dir.mkdir()
             other_dir.mkdir()
 
             (notes_dir / ".repeat").write_text("", encoding="utf-8")
+            (excluded_dir / ".norepeat").write_text("", encoding="utf-8")
+            (reenabled_dir / ".repeat").write_text("", encoding="utf-8")
             (notes_dir / "top.md").write_text(
                 "One ~{card}\nTwo ~{card}\n", encoding="utf-8"
             )
             (nested_dir / "deep.md").write_text("Deep ~{card}\n", encoding="utf-8")
+            (excluded_dir / "skip.md").write_text("Skip ~{card}\n", encoding="utf-8")
+            (reenabled_dir / "again.md").write_text("Again ~{card}\n", encoding="utf-8")
             (other_dir / "skip.md").write_text("Skip ~{card}\n", encoding="utf-8")
 
             install_system(repo_dir)
@@ -41,9 +49,14 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             index_path = repo_dir / ".srs" / "index.txt"
             rows = read_index_rows(index_path)
 
-            self.assertEqual(3, len(rows))
+            self.assertEqual(4, len(rows))
             self.assertEqual(
-                ["/notes/nested/deep.md", "/notes/top.md", "/notes/top.md"],
+                [
+                    "/notes/excluded/reenabled/again.md",
+                    "/notes/nested/deep.md",
+                    "/notes/top.md",
+                    "/notes/top.md",
+                ],
                 sorted(path for _id, path, _parser_id, _start_line, _end_line in rows),
             )
             self.assertTrue(
