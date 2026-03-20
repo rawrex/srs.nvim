@@ -4,6 +4,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+from fsrs import Scheduler
+
 from reviewing.config import ReviewConfig
 from reviewing.packs.cloze import ClozeCard
 from reviewing.session import ReviewSession
@@ -14,6 +16,50 @@ class _DummyUI:
 
 
 class ReviewSessionTest(unittest.TestCase):
+    def test_init_builds_scheduler_from_config(self) -> None:
+        config = ReviewConfig(
+            scheduler_parameters=(
+                0.5,
+                1.2931,
+                2.3065,
+                8.2956,
+                6.4133,
+                0.8334,
+                3.0194,
+                0.001,
+                1.8722,
+                0.1666,
+                0.796,
+                1.4835,
+                0.0614,
+                0.2629,
+                1.6483,
+                0.6014,
+                1.8729,
+                0.5425,
+                0.0912,
+                0.0658,
+                0.1542,
+            ),
+            scheduler_desired_retention=0.88,
+            scheduler_learning_steps=(),
+            scheduler_relearning_steps=(Scheduler().relearning_steps[0],),
+            scheduler_maximum_interval=123,
+            scheduler_enable_fuzzing=False,
+        )
+
+        session = ReviewSession(
+            repo_root="/tmp/repo",
+            ui=_DummyUI(),  # type: ignore[arg-type]
+            config=config,
+        )
+
+        self.assertEqual(0.5, session.scheduler.parameters[0])
+        self.assertEqual(0.88, session.scheduler.desired_retention)
+        self.assertEqual((), session.scheduler.learning_steps)
+        self.assertEqual(123, session.scheduler.maximum_interval)
+        self.assertFalse(session.scheduler.enable_fuzzing)
+
     def test_load_due_cards_keeps_unclaimed_lines_as_context(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
             note_path = os.path.join(repo_root, "note.md")
