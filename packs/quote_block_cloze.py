@@ -45,7 +45,7 @@ class QuoteBlockClozeCard(ClozeCard, QuoteBlockCard):
         lines = self._question_block().splitlines(keepends=True)
         first_line = lines[0] if lines else self._question_block()
         return self._build_view(
-            current_block=f"[{self.block_open_label}]{first_line}",
+            current_block=f"block[{self.block_open_label}]\n{first_line}",
             mask_context=False,
         )
 

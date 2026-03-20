@@ -48,7 +48,7 @@ class QuoteBlockClozePackTest(unittest.TestCase):
         )
 
         question = card.question_view().primary_block().text
-        self.assertEqual("[a]>[!code]- Example\n", question)
+        self.assertEqual("block[a]\n>[!code]- Example\n", question)
 
         opened = card.reveal_for_label("a")
         self.assertIsNotNone(opened)
