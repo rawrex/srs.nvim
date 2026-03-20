@@ -108,6 +108,30 @@ class ReviewConfigTest(unittest.TestCase):
         self.assertEqual(12345, scheduler.maximum_interval)
         self.assertFalse(scheduler.enable_fuzzing)
 
+    def test_load_review_config_uses_default_scheduler_when_section_is_absent(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as repo_root:
+            path = os.path.join(repo_root, "config.json")
+            with open(path, "w", encoding="utf-8") as handle:
+                json.dump(
+                    {
+                        "review": {
+                            "between_notes_timeout_ms": 250,
+                        },
+                        "cloze": {
+                            "reveal_mode": "whole",
+                        },
+                    },
+                    handle,
+                )
+
+            config = load_review_config(repo_root)
+
+        self.assertEqual(250, config.between_notes_timeout_ms)
+        self.assertEqual(RevealMode.WHOLE, config.cloze.reveal_mode)
+        self.assertEqual(Scheduler().to_dict(), config.build_scheduler().to_dict())
+
     def test_load_review_config_falls_back_to_defaults_on_invalid_json(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
             path = os.path.join(repo_root, "config.json")

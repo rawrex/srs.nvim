@@ -74,21 +74,16 @@ def load_review_config(repo_root: str) -> ReviewConfig:
 
     review_raw = raw.get("review")
     if not isinstance(review_raw, dict):
-        review_raw = raw.get("review.config")
-    if not isinstance(review_raw, dict):
         review_raw = {}
 
     cloze_raw = raw.get("cloze")
     if not isinstance(cloze_raw, dict):
-        cloze_raw = raw.get("cloze.config")
-    if not isinstance(cloze_raw, dict):
         cloze_raw = {}
 
-    scheduler_raw = raw.get("scheduler")
-    if not isinstance(scheduler_raw, dict):
-        scheduler_raw = raw.get("scheduler.config")
-    if not isinstance(scheduler_raw, dict):
-        scheduler_raw = {}
+    scheduler_raw: dict[str, object] | None = None
+    maybe_scheduler_raw = raw.get("scheduler")
+    if isinstance(maybe_scheduler_raw, dict):
+        scheduler_raw = maybe_scheduler_raw
 
     reveal_raw = cloze_raw.get("reveal_mode")
     try:
@@ -134,7 +129,10 @@ def load_review_config(repo_root: str) -> ReviewConfig:
     scheduler_relearning_steps = defaults.scheduler_relearning_steps
     scheduler_maximum_interval = defaults.scheduler_maximum_interval
     scheduler_enable_fuzzing = defaults.scheduler_enable_fuzzing
-    parsed_scheduler = _parse_scheduler_config(scheduler_raw, defaults)
+    if scheduler_raw is not None:
+        parsed_scheduler = _parse_scheduler_config(scheduler_raw, defaults)
+    else:
+        parsed_scheduler = None
     if parsed_scheduler is not None:
         (
             scheduler_parameters,
