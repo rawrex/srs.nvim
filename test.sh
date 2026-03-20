@@ -6,9 +6,10 @@ cd test &&\
 git init &&\
 echo 'Inited new git repo' &&\
 git branch -m TEST &&\
-python3 ../install.py &&\
+python3 ../setup/install.py &&\
 echo 'Installed SRS' &&\
-git add .srs/index.txt &&\
+touch .repeat &&\
+git add .srs/index.txt .repeat &&\
 git commit -m 'Inited srs' &&\
 echo 'Added SRS to git' &&\
 cp ../test_data/* . &&\
