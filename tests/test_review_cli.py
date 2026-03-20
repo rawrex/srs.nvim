@@ -1,14 +1,14 @@
 import unittest
 from unittest.mock import Mock, patch
 
-import review
-from reviewing.config import ReviewConfig
+import core.review as review
+from core.config import ReviewConfig
 
 
 class ReviewCliTest(unittest.TestCase):
     def test_main_returns_1_outside_git_repo(self) -> None:
         with (
-            patch("review.util.get_repo_root", return_value=""),
+            patch("core.review.util.get_repo_root", return_value=""),
             patch("builtins.print") as print_mock,
         ):
             code = review.main()
@@ -24,11 +24,11 @@ class ReviewCliTest(unittest.TestCase):
         session.run.return_value = 7
 
         with (
-            patch("review.util.get_repo_root", return_value="/repo"),
-            patch("review.load_review_config", return_value=config),
-            patch("review.build_parser_registry", return_value=parser_registry),
-            patch("review.ReviewUI", return_value=ui) as ui_cls,
-            patch("review.ReviewSession", return_value=session) as session_cls,
+            patch("core.review.util.get_repo_root", return_value="/repo"),
+            patch("core.review.load_review_config", return_value=config),
+            patch("core.review.build_parser_registry", return_value=parser_registry),
+            patch("core.review.ReviewUI", return_value=ui) as ui_cls,
+            patch("core.review.ReviewSession", return_value=session) as session_cls,
         ):
             code = review.main()
 
@@ -46,11 +46,11 @@ class ReviewCliTest(unittest.TestCase):
         ui = Mock()
 
         with (
-            patch("review.util.get_repo_root", return_value="/repo"),
-            patch("review.load_review_config", return_value=ReviewConfig()),
-            patch("review.build_parser_registry", return_value=Mock()),
-            patch("review.ReviewUI", return_value=ui),
-            patch("review.ReviewSession", side_effect=KeyboardInterrupt),
+            patch("core.review.util.get_repo_root", return_value="/repo"),
+            patch("core.review.load_review_config", return_value=ReviewConfig()),
+            patch("core.review.build_parser_registry", return_value=Mock()),
+            patch("core.review.ReviewUI", return_value=ui),
+            patch("core.review.ReviewSession", side_effect=KeyboardInterrupt),
         ):
             code = review.main()
 

@@ -3,16 +3,16 @@ from unittest.mock import patch
 
 from rich.markdown import Markdown
 
-from reviewing.card import REVEAL_ALL_LABEL, RevealMode, SchedulerCard
-from reviewing.config import ReviewConfig
-from reviewing.packs.cloze import (
+from card.card import REVEAL_ALL_LABEL, RevealMode, SchedulerCard
+from core.config import ReviewConfig
+from packs.cloze import (
     ClozeCard,
     ClozeParser,
     mask_hidden_text,
     parse_note_clozes,
 )
-from reviewing.storage import Metadata
-from reviewing.ui import ReviewUI
+from core.index.storage import Metadata
+from ui.ui import ReviewUI
 
 
 class FakeConsole:
@@ -79,8 +79,8 @@ class ClozePackTest(unittest.TestCase):
         ui = ReviewUI(config=ReviewConfig(), console=console)  # type: ignore[arg-type]
 
         with (
-            patch("reviewing.ui.os.system", return_value=0),
-            patch("reviewing.ui.read_single_key", side_effect=["A", "\n"]),
+            patch("ui.ui.os.system", return_value=0),
+            patch("ui.ui.read_single_key", side_effect=["A", "\n"]),
         ):
             ui.prompt_cloze_reveal("title", card)
 
@@ -120,8 +120,8 @@ class ClozePackTest(unittest.TestCase):
         )
 
         with (
-            patch("reviewing.ui.os.system", return_value=0),
-            patch("reviewing.ui.read_single_key", side_effect=["\n"]),
+            patch("ui.ui.os.system", return_value=0),
+            patch("ui.ui.read_single_key", side_effect=["\n"]),
         ):
             ui.prompt_cloze_reveal("title", card)
 
@@ -165,8 +165,8 @@ class ClozePackTest(unittest.TestCase):
         )
 
         with (
-            patch("reviewing.ui.os.system", return_value=0),
-            patch("reviewing.ui.read_single_key", side_effect=["\n"]),
+            patch("ui.ui.os.system", return_value=0),
+            patch("ui.ui.read_single_key", side_effect=["\n"]),
         ):
             ui.prompt_cloze_reveal("title", card)
 

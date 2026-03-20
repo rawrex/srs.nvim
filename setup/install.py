@@ -11,10 +11,12 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 common = import_module("setup.common")
-build_parser_registry = import_module("reviewing.parsers").build_parser_registry
-load_review_config = import_module("reviewing.config").load_review_config
-Index = import_module("srs_index").Index
-find_repeat_tracked_paths = import_module("tracking").find_repeat_tracked_paths
+build_parser_registry = import_module("card.parsers").build_parser_registry
+load_review_config = import_module("core.config").load_review_config
+Index = import_module("core.index.index").Index
+find_repeat_tracked_paths = import_module(
+    "core.index.tracking"
+).find_repeat_tracked_paths
 
 
 def write_hook(hook_path: str, script_path: str, hook_name: str) -> None:
@@ -81,7 +83,7 @@ def main() -> int:
     os.makedirs(hooks_dir, exist_ok=True)
 
     hooks_path = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "..", "hooks.py")
+        os.path.join(os.path.dirname(__file__), "..", "hooks", "hooks.py")
     )
 
     if not os.path.exists(hooks_path):

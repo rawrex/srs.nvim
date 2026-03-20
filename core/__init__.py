@@ -1,4 +1,4 @@
-__all__ = ["ReviewSession", "ReviewUI"]
+__all__ = ["ReviewSession", "util", "ReviewUI"]
 
 
 def __getattr__(name: str):
@@ -7,7 +7,7 @@ def __getattr__(name: str):
 
         return ReviewSession
     if name == "ReviewUI":
-        from .ui import ReviewUI
+        from ui.ui import ReviewUI
 
         return ReviewUI
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

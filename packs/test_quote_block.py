@@ -1,8 +1,8 @@
 import unittest
 
-from reviewing.card import REVEAL_ALL_LABEL, SchedulerCard
-from reviewing.packs.quote_block import QuoteBlockCard, QuoteBlockParser
-from reviewing.storage import Metadata
+from card.card import REVEAL_ALL_LABEL, SchedulerCard
+from packs.quote_block import QuoteBlockCard, QuoteBlockParser
+from core.index.storage import Metadata
 
 
 class QuoteBlockPackTest(unittest.TestCase):

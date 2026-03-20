@@ -6,7 +6,7 @@ from typing import Dict, List, Tuple
 
 from fsrs import Card as SchedulerCard
 
-from .storage import Metadata, write_metadata_file
+from core.index.storage import Metadata, write_metadata_file
 
 
 __all__ = [

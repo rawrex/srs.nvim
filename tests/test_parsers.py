@@ -4,9 +4,9 @@ import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from reviewing.api import NoteParser
-from reviewing.config import ReviewConfig
-from reviewing.parsers import (
+from card.api import NoteParser
+from core.config import ReviewConfig
+from card.parsers import (
     ParserRegistry,
     _build_parser_registry,
     _load_pack_module,
@@ -76,7 +76,7 @@ class ParsersTest(unittest.TestCase):
             for name in ["__init__.py", "_private.py", "alpha.py", "beta.py"]:
                 (packs_dir / name).write_text("", encoding="utf-8")
 
-            with patch("reviewing.parsers._pack_modules_dir", return_value=packs_dir):
+            with patch("card.parsers._pack_modules_dir", return_value=packs_dir):
                 names = _pack_module_names()
 
         self.assertEqual(["alpha", "beta"], names)
@@ -84,7 +84,7 @@ class ParsersTest(unittest.TestCase):
     def test_load_pack_module_returns_none_when_missing(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             packs_dir = Path(temp_dir)
-            with patch("reviewing.parsers._pack_modules_dir", return_value=packs_dir):
+            with patch("card.parsers._pack_modules_dir", return_value=packs_dir):
                 self.assertIsNone(_load_pack_module("missing"))
 
     def test_load_registered_packs_calls_register_pack_when_callable(self) -> None:
@@ -94,9 +94,9 @@ class ParsersTest(unittest.TestCase):
         module_without_register = types.SimpleNamespace(register_pack=1)
 
         with (
-            patch("reviewing.parsers._pack_module_names", return_value=["a", "b"]),
+            patch("card.parsers._pack_module_names", return_value=["a", "b"]),
             patch(
-                "reviewing.parsers._load_pack_module",
+                "card.parsers._load_pack_module",
                 side_effect=[module_with_register, module_without_register],
             ),
         ):
@@ -105,7 +105,7 @@ class ParsersTest(unittest.TestCase):
         register_pack.assert_called_once_with(registry, ReviewConfig())
 
     def test_build_parser_registry_raises_when_no_packs_register(self) -> None:
-        with patch("reviewing.parsers._load_registered_packs"):
+        with patch("card.parsers._load_registered_packs"):
             with self.assertRaises(RuntimeError):
                 _build_parser_registry(ReviewConfig())
 
@@ -113,7 +113,7 @@ class ParsersTest(unittest.TestCase):
         def fake_load(registry: ParserRegistry, _config: ReviewConfig) -> None:
             registry.register(_LowParser())
 
-        with patch("reviewing.parsers._load_registered_packs", side_effect=fake_load):
+        with patch("card.parsers._load_registered_packs", side_effect=fake_load):
             registry = _build_parser_registry(ReviewConfig())
 
         self.assertIn("z_low", registry.parsers)

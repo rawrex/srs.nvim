@@ -1,12 +1,12 @@
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar, Dict, List, Tuple
 
-from reviewing.api import NoteParser
-from reviewing.card import Card, CardView, REVEAL_ALL_LABEL, ViewBlock
-from reviewing.storage import Metadata
+from card.api import NoteParser
+from card.card import Card, CardView, REVEAL_ALL_LABEL, ViewBlock
+from core.index.storage import Metadata
 
 if TYPE_CHECKING:
-    from reviewing.parsers import ParserRegistry
+    from card.parsers import ParserRegistry
 
 
 QUOTE_BLOCK_PARSER_ID = "quote_block"

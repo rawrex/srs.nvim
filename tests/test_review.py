@@ -6,8 +6,8 @@ import unittest
 from fsrs import Rating
 from fsrs import Scheduler
 
-from reviewing.card import RevealMode
-from reviewing.config import DEFAULT_RATING_BUTTONS, load_review_config
+from card.card import RevealMode
+from core.config import DEFAULT_RATING_BUTTONS, load_review_config
 
 
 class ReviewConfigTest(unittest.TestCase):

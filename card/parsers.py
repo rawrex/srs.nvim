@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Dict
 
 from .api import NoteParser
-from .config import ReviewConfig
+from core.config import ReviewConfig
 
 
 @dataclass
@@ -31,7 +31,7 @@ class ParserRegistry:
 
 
 def _pack_modules_dir() -> Path:
-    return Path(__file__).resolve().parent / "packs"
+    return Path(__file__).resolve().parents[1] / "packs"
 
 
 def _pack_module_names() -> list[str]:
@@ -50,7 +50,7 @@ def _load_pack_module(module_name: str):
     module_path = _pack_modules_dir() / f"{module_name}.py"
     if not module_path.exists():
         return None
-    import_name = f"reviewing.packs.{module_name}"
+    import_name = f"packs.{module_name}"
     return importlib.import_module(import_name)
 
 
@@ -68,7 +68,7 @@ def build_parser_registry(config: ReviewConfig) -> ParserRegistry:
     registry = ParserRegistry(parsers={})
     _load_registered_packs(registry, config)
     if not registry.parsers:
-        raise RuntimeError("No parser packs found in reviewing/packs")
+        raise RuntimeError("No parser packs found in packs/")
     return registry
 
 

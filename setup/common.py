@@ -2,7 +2,7 @@
 import os
 from dataclasses import dataclass
 
-import util
+from core import util
 
 HOOKS = ["pre-commit", "pre-merge-commit", "post-checkout", "post-rewrite"]
 SRS_DIR_NAME = ".srs"

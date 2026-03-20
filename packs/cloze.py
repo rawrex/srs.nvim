@@ -6,13 +6,13 @@ from typing import TYPE_CHECKING, ClassVar, Dict, List, Tuple
 
 from fsrs import Card as SchedulerCard
 
-from reviewing.card import Card, CardView, REVEAL_ALL_LABEL, RevealMode, ViewBlock
-from reviewing.api import NoteParser
-from reviewing.storage import Metadata
-from reviewing.config import ReviewConfig
+from card.card import Card, CardView, REVEAL_ALL_LABEL, RevealMode, ViewBlock
+from card.api import NoteParser
+from core.index.storage import Metadata
+from core.config import ReviewConfig
 
 if TYPE_CHECKING:
-    from reviewing.parsers import ParserRegistry
+    from card.parsers import ParserRegistry
 
 
 CLOZE_PARSER_ID = "cloze"

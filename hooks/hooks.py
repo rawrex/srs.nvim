@@ -1,12 +1,18 @@
 #!/usr/bin/env python3
+# ruff: noqa: E402
 import os
 import sys
+from pathlib import Path
 
-import util
-from hooks_runtime.handler import Handler
-from reviewing.config import load_review_config
-from reviewing.parsers import build_parser_registry
-from srs_index import Index, IndexUpdateAbortError
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from core import util
+from hooks.handler import Handler
+from core.config import load_review_config
+from card.parsers import build_parser_registry
+from core.index.index import Index, IndexUpdateAbortError
 
 
 def main() -> int:

@@ -3,11 +3,11 @@ import os
 import re
 from dataclasses import dataclass
 
-from reviewing.card import SchedulerCard
-from reviewing.parsers import ParserRegistry
-from reviewing.storage import Metadata, write_metadata_file
+from card.card import SchedulerCard
+from card.parsers import ParserRegistry
+from core.index.storage import Metadata, write_metadata_file
 
-import util
+from core import util
 
 
 Hunk = tuple[int, int, int, int]

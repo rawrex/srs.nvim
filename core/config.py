@@ -7,7 +7,7 @@ from datetime import timedelta
 from fsrs import Rating
 from fsrs import Scheduler
 
-from .card import RevealMode
+from card.card import RevealMode
 
 
 DEFAULT_RATING_BUTTONS: dict[Rating, str] = {

@@ -6,10 +6,10 @@ from unittest.mock import patch
 
 from fsrs import Scheduler
 
-from reviewing.config import ReviewConfig
-from reviewing.parsers import build_parser_registry
-from reviewing.packs.cloze import ClozeCard
-from reviewing.session import ReviewSession
+from core.config import ReviewConfig
+from card.parsers import build_parser_registry
+from packs.cloze import ClozeCard
+from core.session import ReviewSession
 
 
 class _DummyUI:
@@ -86,7 +86,7 @@ class ReviewSessionTest(unittest.TestCase):
                 parser_registry=build_parser_registry(ReviewConfig()),
             )
 
-            with patch("reviewing.card.Card.is_due", return_value=True):
+            with patch("card.card.Card.is_due", return_value=True):
                 cards = session._load_due_cards()
 
             self.assertEqual(1, len(cards))

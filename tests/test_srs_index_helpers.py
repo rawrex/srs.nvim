@@ -2,9 +2,9 @@ import os
 import tempfile
 import unittest
 
-from reviewing.api import NoteParser
-from reviewing.parsers import ParserRegistry
-from srs_index import Index, IndexRowReader
+from card.api import NoteParser
+from card.parsers import ParserRegistry
+from core.index.index import Index, IndexRowReader
 
 
 class _StaticParser(NoteParser):

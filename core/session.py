@@ -4,13 +4,13 @@ from datetime import datetime, timezone
 
 from fsrs import Scheduler
 
-from srs_index import Index
+from core.index.index import Index
 
-from .card import Card
-from .config import ReviewConfig
-from .parsers import ParserRegistry
-from .storage import parse_storage_json
-from .ui import ReviewUI
+from card.card import Card
+from core.config import ReviewConfig
+from card.parsers import ParserRegistry
+from core.index.storage import parse_storage_json
+from ui.ui import ReviewUI
 
 
 class ReviewSession:
@@ -74,7 +74,9 @@ class ReviewSession:
 
     def _load_due_cards(self) -> list[Card]:
         now = datetime.now(timezone.utc)
-        index_rows = list(Index(self.index_path, parser_registry=self.parser_registry).read_rows())
+        index_rows = list(
+            Index(self.index_path, parser_registry=self.parser_registry).read_rows()
+        )
         cards_with_paths: list[tuple[Card, str]] = []
         note_question_blocks: dict[str, dict[tuple[int, int], str]] = {}
         raw_blocks_cache: dict[tuple[str, str], dict[tuple[int, int], str]] = {}

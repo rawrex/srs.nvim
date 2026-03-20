@@ -6,8 +6,8 @@ from fsrs import Rating
 from rich.console import Console
 from rich.markdown import Markdown
 
-from .card import REVEAL_ALL_LABEL, Card, CardView
-from .config import ReviewConfig
+from card.card import REVEAL_ALL_LABEL, Card, CardView
+from core.config import ReviewConfig
 
 
 class ReviewUI:

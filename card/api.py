@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import ClassVar, Dict, List, Tuple
 
-from .card import Card
-from .storage import Metadata
+from card.card import Card
+from core.index.storage import Metadata
 
 
 class NoteParser(ABC):

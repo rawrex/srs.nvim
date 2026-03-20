@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-import util
+from core import util
 
-from reviewing.config import load_review_config
-from reviewing.parsers import build_parser_registry
-from reviewing.session import ReviewSession
-from reviewing.ui import ReviewUI
+from core.config import load_review_config
+from card.parsers import build_parser_registry
+from core.session import ReviewSession
+from ui.ui import ReviewUI
 
 
 def main() -> int:

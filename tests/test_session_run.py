@@ -5,9 +5,9 @@ from unittest.mock import Mock, patch
 
 from fsrs import Rating
 
-from reviewing.config import ReviewConfig
-from reviewing.parsers import build_parser_registry
-from reviewing.session import ReviewSession
+from core.config import ReviewConfig
+from card.parsers import build_parser_registry
+from core.session import ReviewSession
 
 
 class _DummyMetadata:
@@ -101,8 +101,8 @@ class ReviewSessionRunTest(unittest.TestCase):
             with (
                 patch.object(session, "_load_due_cards", return_value=[card_1, card_2]),
                 patch.object(session, "_save_reviewed_card") as save_card,
-                patch("reviewing.session.time.monotonic_ns") as monotonic_ns,
-                patch("reviewing.session.time.sleep") as sleep_mock,
+                patch("core.session.time.monotonic_ns") as monotonic_ns,
+                patch("core.session.time.sleep") as sleep_mock,
             ):
                 monotonic_ns.side_effect = [
                     0,

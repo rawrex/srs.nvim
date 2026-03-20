@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import os
 
-import util
+from core import util
 from setup.common import NOREPEAT_MARKER_NAME, REPEAT_MARKER_NAME, SRS_DIR_NAME
 
 

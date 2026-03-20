@@ -2,7 +2,7 @@ import io
 import unittest
 from unittest.mock import Mock, call, patch
 
-from hooks_runtime.handler import Handler
+from hooks.handler import Handler
 
 
 class HandlerTest(unittest.TestCase):
@@ -51,7 +51,7 @@ class HandlerTest(unittest.TestCase):
         index = Mock()
 
         with (
-            patch("hooks_runtime.handler.sys.stdin", io.StringIO("")),
+            patch("hooks.handler.sys.stdin", io.StringIO("")),
             patch.object(handler, "_apply_ref_diff") as apply_ref_diff,
         ):
             handler.handle_post_rewrite(index)
@@ -64,7 +64,7 @@ class HandlerTest(unittest.TestCase):
         stdin = io.StringIO("old1 new1\nignored\nold2 new2 extra\n")
 
         with (
-            patch("hooks_runtime.handler.sys.stdin", stdin),
+            patch("hooks.handler.sys.stdin", stdin),
             patch.object(handler, "_apply_ref_diff") as apply_ref_diff,
         ):
             handler.handle_post_rewrite(index)
@@ -90,7 +90,7 @@ class HandlerTest(unittest.TestCase):
         )
 
         with patch(
-            "hooks_runtime.handler.util.run_git", return_value=(0, ls_files, "")
+            "hooks.handler.util.run_git", return_value=(0, ls_files, "")
         ):
             tracked_paths = handler._tracked_paths_from_git_index()
 

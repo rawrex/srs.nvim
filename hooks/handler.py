@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import sys
 
-import util
-from srs_index import Index
-from tracking import find_repeat_tracked_paths, tracked_paths_from_repo_paths
+from core import util
+from core.index.index import Index
+from core.index.tracking import find_repeat_tracked_paths, tracked_paths_from_repo_paths
 
 
 class Handler:

@@ -6,7 +6,7 @@ import unittest
 from fsrs import Card as SchedulerCard
 from fsrs import Rating, Scheduler
 
-from reviewing.storage import (
+from core.index.storage import (
     REVIEW_LOGS_KEY,
     Metadata,
     parse_storage_json,
