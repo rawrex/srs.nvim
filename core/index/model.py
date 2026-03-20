@@ -1,0 +1,56 @@
+from dataclasses import dataclass
+
+from core import util
+
+Hunk = tuple[int, int, int, int]
+IndexRowTuple = tuple[str, str, int, int]
+PathRows = dict[str, list[IndexRowTuple]]
+
+
+@dataclass(frozen=True)
+class DiffChangeSet:
+    renames: dict[str, str]
+    deletes: set[str]
+    adds: set[str]
+    modifies: set[str]
+
+    @classmethod
+    def from_diff_text(cls, diff_text: str) -> "DiffChangeSet":
+        renames, deletes, adds, modifies = util.parse_diff(diff_text)
+        return cls(
+            renames=renames,
+            deletes=deletes,
+            adds=adds,
+            modifies=modifies,
+        )
+
+    def has_changes(self) -> bool:
+        return bool(self.renames or self.deletes or self.adds or self.modifies)
+
+
+@dataclass(frozen=True)
+class PathRemapResult:
+    rows: list[IndexRowTuple]
+    changed: bool
+    touched_paths: set[str]
+    error_message: str | None = None
+
+
+@dataclass(frozen=True)
+class IndexUpdateResult:
+    lines: list[str]
+    changed: bool
+    touched_paths: set[str]
+
+
+@dataclass(frozen=True)
+class IndexRow:
+    note_id: str
+    path: str
+    parser_id: str
+    start_line: int
+    end_line: int
+
+
+class IndexUpdateAbortError(Exception):
+    pass

@@ -54,22 +54,8 @@ def initialize_index_from_repeat_markers(repo_root: str, index_path: str) -> int
     config = load_review_config(repo_root)
     parser_registry = build_parser_registry(config)
     index = Index(index_path, parser_registry)
-    lines = index._read()
-    original_lines = list(lines)
-    existing_paths = set(index._rows_by_path(lines))
-
-    for tracked_path in find_repeat_tracked_paths(repo_root):
-        if tracked_path in existing_paths:
-            continue
-        if not index._is_note_path(tracked_path):
-            continue
-        index._add_new(tracked_path, lines)
-        existing_paths.add(tracked_path)
-
-    if lines != original_lines:
-        index._write(lines)
-
-    return len(lines) - len(original_lines)
+    tracked_paths = set(find_repeat_tracked_paths(repo_root))
+    return index.add_missing_tracked_paths(tracked_paths)
 
 
 def main() -> int:
