@@ -9,6 +9,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 INSTALL_SCRIPT = REPO_ROOT / "install.py"
+UNINSTALL_SCRIPT = REPO_ROOT / "uninstall.py"
 HOOKS = ["pre-commit", "pre-merge-commit", "post-checkout", "post-rewrite"]
 
 
@@ -32,6 +33,10 @@ def init_git_repo(repo_dir: Path) -> None:
 
 def install_hooks(repo_dir: Path) -> None:
     run_command([sys.executable, str(INSTALL_SCRIPT)], cwd=repo_dir)
+
+
+def uninstall_system(repo_dir: Path) -> None:
+    run_command([sys.executable, str(UNINSTALL_SCRIPT)], cwd=repo_dir)
 
 
 def tracked_head_files(repo_dir: Path) -> set[str]:
@@ -67,6 +72,33 @@ def read_index_rows(index_path: Path):
 
 
 class HooksInstallIntegrationTest(unittest.TestCase):
+    def test_uninstall_removes_hooks_and_srs_directory(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            repo_dir = Path(tmp_dir)
+
+            init_git_repo(repo_dir)
+            install_hooks(repo_dir)
+
+            note_path = repo_dir / "note.md"
+            note_path.write_text("~{A}\n", encoding="utf-8")
+            run_command(["git", "add", "note.md"], cwd=repo_dir)
+            run_command(["git", "commit", "-m", "seed srs data"], cwd=repo_dir)
+
+            hooks_dir = repo_dir / ".git" / "hooks"
+            srs_dir = repo_dir / ".srs"
+            self.assertTrue(srs_dir.exists())
+            for hook_name in HOOKS:
+                self.assertTrue((hooks_dir / hook_name).exists())
+
+            uninstall_system(repo_dir)
+
+            self.assertFalse(srs_dir.exists())
+            for hook_name in HOOKS:
+                self.assertFalse((hooks_dir / hook_name).exists())
+
+            uninstall_system(repo_dir)
+            self.assertFalse(srs_dir.exists())
+
     def test_install_bootstraps_index_from_repeat_marked_directories(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             repo_dir = Path(tmp_dir)
