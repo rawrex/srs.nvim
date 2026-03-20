@@ -8,7 +8,7 @@ from srs_index import Index
 
 from .card import Card
 from .config import ReviewConfig
-from .parsers import PARSER_REGISTRY
+from .parsers import ParserRegistry
 from .storage import parse_storage_json
 from .ui import ReviewUI
 
@@ -19,17 +19,14 @@ class ReviewSession:
         repo_root: str,
         ui: ReviewUI,
         config: ReviewConfig,
+        parser_registry: ParserRegistry,
         scheduler: Scheduler | None = None,
     ) -> None:
         self.repo_root = repo_root
         self.ui = ui
-        self.reveal_mode = config.reveal_mode
-        self.cloze_open = config.cloze_open
-        self.cloze_close = config.cloze_close
-        self.mask_char = config.mask_char
         self.between_notes_timeout_ms = config.between_notes_timeout_ms
         self.scheduler = scheduler or config.build_scheduler()
-        self.parser_registry = PARSER_REGISTRY
+        self.parser_registry = parser_registry
         self.index_path = os.path.join(repo_root, ".srs", "index.txt")
 
     def run(self) -> int:
@@ -77,7 +74,7 @@ class ReviewSession:
 
     def _load_due_cards(self) -> list[Card]:
         now = datetime.now(timezone.utc)
-        index_rows = list(Index(self.index_path).read_rows())
+        index_rows = list(Index(self.index_path, parser_registry=self.parser_registry).read_rows())
         cards_with_paths: list[tuple[Card, str]] = []
         note_question_blocks: dict[str, dict[tuple[int, int], str]] = {}
         raw_blocks_cache: dict[tuple[str, str], dict[tuple[int, int], str]] = {}

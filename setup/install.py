@@ -11,6 +11,8 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 common = import_module("setup.common")
+build_parser_registry = import_module("reviewing.parsers").build_parser_registry
+load_review_config = import_module("reviewing.config").load_review_config
 Index = import_module("srs_index").Index
 find_repeat_tracked_paths = import_module("tracking").find_repeat_tracked_paths
 
@@ -47,7 +49,9 @@ def ensure_srs_index(repo_root: str) -> bool:
 
 
 def initialize_index_from_repeat_markers(repo_root: str, index_path: str) -> int:
-    index = Index(index_path)
+    config = load_review_config(repo_root)
+    parser_registry = build_parser_registry(config)
+    index = Index(index_path, parser_registry)
     lines = index._read()
     original_lines = list(lines)
     existing_paths = set(index._rows_by_path(lines))

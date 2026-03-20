@@ -104,5 +104,5 @@ class QuoteBlockParser(NoteParser):
         )
 
 
-def register_pack(registry: "ParserRegistry") -> None:
+def register_pack(registry: "ParserRegistry", _config: object) -> None:
     registry.register(QuoteBlockParser())

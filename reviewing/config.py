@@ -22,17 +22,22 @@ DEFAULT_SCHEDULER = Scheduler()
 
 
 @dataclass(frozen=True)
-class ReviewConfig:
+class ClozeConfig:
     reveal_mode: RevealMode = RevealMode.INCREMENTAL
-    rating_buttons: dict[Rating, str] = field(
-        default_factory=lambda: DEFAULT_RATING_BUTTONS.copy()
-    )
     cloze_open: str = "~{"
     cloze_close: str = "}"
     mask_char: str = "▇"
+
+
+@dataclass(frozen=True)
+class ReviewConfig:
+    rating_buttons: dict[Rating, str] = field(
+        default_factory=lambda: DEFAULT_RATING_BUTTONS.copy()
+    )
     between_notes_timeout_ms: int = 0
     show_context: bool = True
     context_dim_style: str = "dim"
+    cloze: ClozeConfig = field(default_factory=ClozeConfig)
     scheduler_parameters: tuple[float, ...] = DEFAULT_SCHEDULER.parameters
     scheduler_desired_retention: float = DEFAULT_SCHEDULER.desired_retention
     scheduler_learning_steps: tuple[timedelta, ...] = DEFAULT_SCHEDULER.learning_steps
@@ -67,72 +72,90 @@ def load_review_config(repo_root: str) -> ReviewConfig:
     if not isinstance(raw, dict):
         return defaults
 
-    reveal_raw = raw.get("reveal_mode")
+    review_raw = raw.get("review")
+    if not isinstance(review_raw, dict):
+        review_raw = raw.get("review.config")
+    if not isinstance(review_raw, dict):
+        review_raw = {}
+
+    cloze_raw = raw.get("cloze")
+    if not isinstance(cloze_raw, dict):
+        cloze_raw = raw.get("cloze.config")
+    if not isinstance(cloze_raw, dict):
+        cloze_raw = {}
+
+    scheduler_raw = raw.get("scheduler")
+    if not isinstance(scheduler_raw, dict):
+        scheduler_raw = raw.get("scheduler.config")
+    if not isinstance(scheduler_raw, dict):
+        scheduler_raw = {}
+
+    reveal_raw = cloze_raw.get("reveal_mode")
     try:
         reveal_mode = RevealMode(reveal_raw)
     except (TypeError, ValueError):
-        reveal_mode = defaults.reveal_mode
-    rating_buttons = _parse_rating_buttons(raw.get("rating_buttons"))
+        reveal_mode = defaults.cloze.reveal_mode
+    rating_buttons = _parse_rating_buttons(review_raw.get("rating_buttons"))
 
-    cloze_raw = raw.get("cloze_syntax")
-    cloze_open = defaults.cloze_open
-    cloze_close = defaults.cloze_close
-    if isinstance(cloze_raw, dict):
-        maybe_open = cloze_raw.get("open")
-        maybe_close = cloze_raw.get("close")
+    syntax_raw = cloze_raw.get("syntax")
+    cloze_open = defaults.cloze.cloze_open
+    cloze_close = defaults.cloze.cloze_close
+    if isinstance(syntax_raw, dict):
+        maybe_open = syntax_raw.get("open")
+        maybe_close = syntax_raw.get("close")
         if isinstance(maybe_open, str) and maybe_open:
             cloze_open = maybe_open
         if isinstance(maybe_close, str) and maybe_close:
             cloze_close = maybe_close
 
-    mask_char = defaults.mask_char
-    mask_char_raw = raw.get("mask_char")
+    mask_char = defaults.cloze.mask_char
+    mask_char_raw = cloze_raw.get("mask_char")
     if isinstance(mask_char_raw, str) and len(mask_char_raw) == 1:
         mask_char = mask_char_raw
 
     between_notes_timeout_ms = defaults.between_notes_timeout_ms
-    timeout_raw = raw.get("between_notes_timeout_ms")
+    timeout_raw = review_raw.get("between_notes_timeout_ms")
     if isinstance(timeout_raw, int) and timeout_raw >= 0:
         between_notes_timeout_ms = timeout_raw
 
     show_context = defaults.show_context
-    show_context_raw = raw.get("show_context")
+    show_context_raw = review_raw.get("show_context")
     if isinstance(show_context_raw, bool):
         show_context = show_context_raw
 
     context_dim_style = defaults.context_dim_style
-    context_dim_style_raw = raw.get("context_dim_style")
+    context_dim_style_raw = review_raw.get("context_dim_style")
     if isinstance(context_dim_style_raw, str) and context_dim_style_raw.strip():
         context_dim_style = context_dim_style_raw
 
-    scheduler_raw = raw.get("scheduler")
     scheduler_parameters = defaults.scheduler_parameters
     scheduler_desired_retention = defaults.scheduler_desired_retention
     scheduler_learning_steps = defaults.scheduler_learning_steps
     scheduler_relearning_steps = defaults.scheduler_relearning_steps
     scheduler_maximum_interval = defaults.scheduler_maximum_interval
     scheduler_enable_fuzzing = defaults.scheduler_enable_fuzzing
-    if isinstance(scheduler_raw, dict):
-        parsed_scheduler = _parse_scheduler_config(scheduler_raw, defaults)
-        if parsed_scheduler is not None:
-            (
-                scheduler_parameters,
-                scheduler_desired_retention,
-                scheduler_learning_steps,
-                scheduler_relearning_steps,
-                scheduler_maximum_interval,
-                scheduler_enable_fuzzing,
-            ) = parsed_scheduler
+    parsed_scheduler = _parse_scheduler_config(scheduler_raw, defaults)
+    if parsed_scheduler is not None:
+        (
+            scheduler_parameters,
+            scheduler_desired_retention,
+            scheduler_learning_steps,
+            scheduler_relearning_steps,
+            scheduler_maximum_interval,
+            scheduler_enable_fuzzing,
+        ) = parsed_scheduler
 
     return ReviewConfig(
-        reveal_mode=reveal_mode,
         rating_buttons=rating_buttons,
-        cloze_open=cloze_open,
-        cloze_close=cloze_close,
-        mask_char=mask_char,
         between_notes_timeout_ms=between_notes_timeout_ms,
         show_context=show_context,
         context_dim_style=context_dim_style,
+        cloze=ClozeConfig(
+            reveal_mode=reveal_mode,
+            cloze_open=cloze_open,
+            cloze_close=cloze_close,
+            mask_char=mask_char,
+        ),
         scheduler_parameters=scheduler_parameters,
         scheduler_desired_retention=scheduler_desired_retention,
         scheduler_learning_steps=scheduler_learning_steps,

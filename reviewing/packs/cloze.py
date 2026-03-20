@@ -9,6 +9,7 @@ from fsrs import Card as SchedulerCard
 from reviewing.card import Card, CardView, REVEAL_ALL_LABEL, RevealMode, ViewBlock
 from reviewing.api import NoteParser
 from reviewing.storage import Metadata
+from reviewing.config import ReviewConfig
 
 if TYPE_CHECKING:
     from reviewing.parsers import ParserRegistry
@@ -266,12 +267,12 @@ class ClozeParser(NoteParser):
         )
 
 
-def register_pack(registry: "ParserRegistry") -> None:
+def register_pack(registry: "ParserRegistry", config: ReviewConfig) -> None:
     registry.register(
         ClozeParser(
-            reveal_mode=RevealMode.INCREMENTAL,
-            cloze_open="~{",
-            cloze_close="}",
-            mask_char="▇",
+            reveal_mode=config.cloze.reveal_mode,
+            cloze_open=config.cloze.cloze_open,
+            cloze_close=config.cloze.cloze_close,
+            mask_char=config.cloze.mask_char,
         )
     )

@@ -1,18 +1,23 @@
 {
-    "between_notes_timeout_ms": 0,
-    "cloze_syntax": {
-        "close": "}",
-        "open": "~{"
+    "review": {
+        "between_notes_timeout_ms": 0,
+        "context_dim_style": "grey50",
+        "rating_buttons": {
+            "Again": "n",
+            "Easy": "o",
+            "Good": "i",
+            "Hard": "e"
+        },
+        "show_context": true
     },
-    "context_dim_style": "grey50",
-    "mask_char": "_",
-    "rating_buttons": {
-        "Again": "n",
-        "Easy": "o",
-        "Good": "i",
-        "Hard": "e"
+    "cloze": {
+        "mask_char": "_",
+        "reveal_mode": "incremental",
+        "syntax": {
+            "close": "}",
+            "open": "~{"
+        }
     },
-    "reveal_mode": "incremental",
     "scheduler": {
         "desired_retention": 0.9,
         "enable_fuzzing": true,
@@ -20,6 +25,5 @@
         "maximum_interval": 36500,
         "parameters": [0.212, 1.2931, 2.3065, 8.2956, 6.4133, 0.8334, 3.0194, 0.001, 1.8722, 0.1666, 0.796, 1.4835, 0.0614, 0.2629, 1.6483, 0.6014, 1.8729, 0.5425, 0.0912, 0.0658, 0.1542],
         "relearning_steps": [600]
-    },
-    "show_context": true
+    }
 }

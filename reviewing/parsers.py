@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Dict
 
 from .api import NoteParser
+from .config import ReviewConfig
 
 
 @dataclass
@@ -53,31 +54,29 @@ def _load_pack_module(module_name: str):
     return importlib.import_module(import_name)
 
 
-def _load_registered_packs(registry: ParserRegistry) -> None:
+def _load_registered_packs(registry: ParserRegistry, config: ReviewConfig) -> None:
     for module_name in _pack_module_names():
         module = _load_pack_module(module_name)
         if module is None:
             continue
         register_pack = getattr(module, "register_pack", None)
         if callable(register_pack):
-            register_pack(registry)
+            register_pack(registry, config)
 
 
-def _build_parser_registry() -> ParserRegistry:
+def build_parser_registry(config: ReviewConfig) -> ParserRegistry:
     registry = ParserRegistry(parsers={})
-    _load_registered_packs(registry)
+    _load_registered_packs(registry, config)
     if not registry.parsers:
         raise RuntimeError("No parser packs found in reviewing/packs")
     return registry
 
 
-PARSER_REGISTRY: ParserRegistry = _build_parser_registry()
-
-
-from .packs.cloze import ClozeParser  # noqa: E402
+def _build_parser_registry(config: ReviewConfig) -> ParserRegistry:
+    return build_parser_registry(config)
 
 
 __all__ = [
-    "PARSER_REGISTRY",
-    "ClozeParser",
+    "ParserRegistry",
+    "build_parser_registry",
 ]

@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 import util
 
-from reviewing import ReviewSession, ReviewUI
 from reviewing.config import load_review_config
+from reviewing.parsers import build_parser_registry
+from reviewing.session import ReviewSession
+from reviewing.ui import ReviewUI
 
 
 def main() -> int:
@@ -14,11 +16,13 @@ def main() -> int:
             return 1
 
         config = load_review_config(repo_root)
+        parser_registry = build_parser_registry(config)
         ui = ReviewUI(config=config)
         session = ReviewSession(
             repo_root=repo_root,
             ui=ui,
             config=config,
+            parser_registry=parser_registry,
         )
         return session.run()
     except KeyboardInterrupt:

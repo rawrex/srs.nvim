@@ -3,10 +3,8 @@ import os
 import re
 from dataclasses import dataclass
 
-from reviewing.card import (
-    SchedulerCard,
-)
-from reviewing.parsers import PARSER_REGISTRY
+from reviewing.card import SchedulerCard
+from reviewing.parsers import ParserRegistry
 from reviewing.storage import Metadata, write_metadata_file
 
 import util
@@ -84,9 +82,9 @@ class IndexRowReader:
 
 
 class Index:
-    def __init__(self, path: str) -> None:
+    def __init__(self, path: str, parser_registry: ParserRegistry) -> None:
         self.path = path
-        self.parser_registry = PARSER_REGISTRY
+        self.parser_registry = parser_registry
         self.row_reader = IndexRowReader()
         self.hunk_re = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
 

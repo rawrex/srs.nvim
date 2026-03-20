@@ -4,6 +4,8 @@ import sys
 
 import util
 from hooks_runtime.handler import Handler
+from reviewing.config import load_review_config
+from reviewing.parsers import build_parser_registry
 from srs_index import Index, IndexUpdateAbortError
 
 
@@ -20,7 +22,9 @@ def main() -> int:
     if not os.path.exists(index_path):
         return 0
 
-    index = Index(index_path)
+    config = load_review_config(repo_root)
+    parser_registry = build_parser_registry(config)
+    index = Index(index_path, parser_registry=parser_registry)
     handler = Handler(repo_root)
 
     try:
