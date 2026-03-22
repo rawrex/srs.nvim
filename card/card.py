@@ -5,6 +5,7 @@ from enum import Enum
 from typing import Dict, List, Tuple
 
 from fsrs import Card as SchedulerCard
+from fsrs import Rating
 
 from core.index.storage import Metadata, write_metadata_file
 
@@ -81,3 +82,6 @@ class Card(ABC):
     @abstractmethod
     def question_view(self) -> CardView:
         raise NotImplementedError
+
+    def suggested_rating(self) -> Rating | None:
+        return None

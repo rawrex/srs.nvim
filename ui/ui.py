@@ -6,7 +6,7 @@ from fsrs import Rating
 from rich.console import Console
 from rich.markdown import Markdown
 
-from card.card import REVEAL_ALL_LABEL, Card, CardView
+from card.card import Card, CardView
 from core.config import ReviewConfig
 
 
@@ -39,7 +39,7 @@ class ReviewUI:
             if maybe_suspend_for_key(key):
                 continue
             if key in {"\r", "\n"}:
-                return card.reveal_for_label(REVEAL_ALL_LABEL) or current_view
+                return current_view
             maybe_view = card.reveal_for_label(key)
             if maybe_view is not None:
                 current_view = maybe_view
@@ -49,14 +49,18 @@ class ReviewUI:
         self.console.print(title)
         self._print_view(view)
 
-    def prompt_rating_step(self) -> Rating:
-        prompt = self._rating_prompt()
+    def prompt_rating_step(self, default_rating: Rating | None = None) -> Rating:
+        prompt = self._rating_prompt(default_rating)
         while True:
             self.console.print(prompt, end="", markup=False, highlight=False)
             key = read_single_key()
             if maybe_suspend_for_key(key):
                 self.console.print()
                 continue
+            if key in {"\r", "\n"} and default_rating is not None:
+                self.console.print()
+                self.console.print(f"Set rating: {default_rating.name}")
+                return default_rating
             try:
                 rating = Rating.from_bytes(self.button_to_rating_byte[key])
             except (KeyError, ValueError):
@@ -80,13 +84,15 @@ class ReviewUI:
     def _clear_screen(self) -> None:
         os.system("cls" if os.name == "nt" else "clear")
 
-    def _rating_prompt(self) -> str:
+    def _rating_prompt(self, default_rating: Rating | None) -> str:
         parts = [
             f"{self.rating_buttons[Rating.Again]}=Again",
             f"{self.rating_buttons[Rating.Hard]}=Hard",
             f"{self.rating_buttons[Rating.Good]}=Good",
             f"{self.rating_buttons[Rating.Easy]}=Easy",
         ]
+        if default_rating is not None:
+            parts.append(f"Enter={default_rating.name}")
         return f"Rate [{', '.join(parts)}]: "
 
     def _print_view(self, view: CardView) -> None:

@@ -5,9 +5,11 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, ClassVar, Dict, List, Tuple
 
 from fsrs import Card as SchedulerCard
+from fsrs import Rating
 
 from card.card import Card, CardView, REVEAL_ALL_LABEL, RevealMode, ViewBlock
 from card.api import NoteParser
+from core.autograde import suggest_rating
 from core.index.storage import Metadata
 from core.config import ReviewConfig
 
@@ -146,6 +148,25 @@ class ClozeCard(Card):
             return None
         self.whole_revealed[idx] = True
         return self.question_view()
+
+    def suggested_rating(self) -> Rating | None:
+        total_hidden = sum(self._hidden_char_count(hidden) for hidden in self.clozes)
+        revealed_hidden = 0
+        for idx, hidden in enumerate(self.clozes):
+            hidden_count = self._hidden_char_count(hidden)
+            if self.reveal_mode == RevealMode.INCREMENTAL:
+                state = self.incremental_states[idx]
+                if state.fully_revealed:
+                    revealed_hidden += hidden_count
+                else:
+                    revealed_hidden += min(len(state.revealed_positions), hidden_count)
+                continue
+            if self.whole_revealed[idx]:
+                revealed_hidden += hidden_count
+        return suggest_rating(revealed_hidden, total_hidden)
+
+    def _hidden_char_count(self, hidden: str) -> int:
+        return sum(1 for ch in hidden if ch != "\n")
 
     def question_view(self) -> CardView:
         current = self._question_block()
