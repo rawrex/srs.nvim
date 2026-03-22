@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import patch
 
+from fsrs import Rating
 from rich.markdown import Markdown
 
 from card.card import REVEAL_ALL_LABEL, RevealMode, SchedulerCard
@@ -232,6 +233,40 @@ class ClozePackTest(unittest.TestCase):
             ],
             cards,
         )
+
+    def test_suggested_rating_supports_single_cloze_cards(self) -> None:
+        card = ClozeCard(
+            note_id="1",
+            note_path="/tmp/note.md",
+            card_path="/tmp/1.json",
+            note_text="A ~{single} B",
+            metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
+            reveal_mode=RevealMode.WHOLE,
+            cloze_open="~{",
+            cloze_close="}",
+            mask_char="▇",
+        )
+
+        card.reveal_for_label(REVEAL_ALL_LABEL)
+
+        self.assertEqual(Rating.Again, card.suggested_rating())
+
+    def test_suggested_rating_uses_partial_incremental_reveal_ratio(self) -> None:
+        card = ClozeCard(
+            note_id="1",
+            note_path="/tmp/note.md",
+            card_path="/tmp/1.json",
+            note_text="A ~{abcd} B ~{efgh}",
+            metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
+            reveal_mode=RevealMode.INCREMENTAL,
+            cloze_open="~{",
+            cloze_close="}",
+            mask_char="▇",
+        )
+
+        card.reveal_for_label("a")
+
+        self.assertEqual(Rating.Easy, card.suggested_rating())
 
 
 if __name__ == "__main__":

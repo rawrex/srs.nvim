@@ -24,6 +24,12 @@ class _DummyCard:
         self.card_path = card_path
         self.metadata = _DummyMetadata(scheduler_card)
 
+    def suggested_rating(self) -> Rating | None:
+        return None
+
+    def reveal_for_label(self, _label: str) -> str:
+        return "answer"
+
 
 class ReviewSessionRunTest(unittest.TestCase):
     def test_run_returns_1_when_index_missing(self) -> None:
