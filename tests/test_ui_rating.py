@@ -1,4 +1,6 @@
+import os
 import unittest
+from unittest.mock import Mock
 from unittest.mock import patch
 
 from fsrs import Rating
@@ -38,6 +40,98 @@ class ReviewUiRatingTest(unittest.TestCase):
 
         self.assertEqual(Rating.Good, rating)
         self.assertIn(("Invalid rating", {}), console.printed)
+
+    def test_print_markdown_with_images_falls_back_to_filename_without_chafa(
+        self,
+    ) -> None:
+        console = _FakeConsole()
+        with patch("ui.ui.shutil.which", return_value=None):
+            ui = ReviewUI(
+                config=ReviewConfig(attachments_directory="/repo/.attachments"),
+                console=console,
+            )  # type: ignore[arg-type]
+
+        ui._print_markdown_with_images("![](diagram.png)\n")
+
+        self.assertIn(
+            ("diagram.png", {"markup": False, "highlight": False}),
+            console.printed,
+        )
+
+    def test_print_markdown_with_images_supports_wiki_image_syntax(self) -> None:
+        console = _FakeConsole()
+        with patch("ui.ui.shutil.which", return_value=None):
+            ui = ReviewUI(
+                config=ReviewConfig(attachments_directory="/repo/.attachments"),
+                console=console,
+            )  # type: ignore[arg-type]
+
+        ui._print_markdown_with_images("![[diagram.png]]\n")
+
+        self.assertIn(
+            ("diagram.png", {"markup": False, "highlight": False}),
+            console.printed,
+        )
+
+    def test_print_markdown_with_images_supports_wiki_image_in_blockquote(self) -> None:
+        console = _FakeConsole()
+        with patch("ui.ui.shutil.which", return_value=None):
+            ui = ReviewUI(
+                config=ReviewConfig(attachments_directory="/repo/.attachments"),
+                console=console,
+            )  # type: ignore[arg-type]
+
+        ui._print_markdown_with_images("> ![[_Pasted image 20241023210525.png]]\n")
+
+        self.assertIn(
+            (
+                "_Pasted image 20241023210525.png",
+                {"markup": False, "highlight": False},
+            ),
+            console.printed,
+        )
+
+    def test_print_markdown_with_images_renders_with_chafa_when_available(self) -> None:
+        console = _FakeConsole()
+        completed = Mock(returncode=0, stdout="ASCII ART\n")
+        with (
+            patch("ui.ui.shutil.which", return_value="/usr/bin/chafa"),
+            patch(
+                "ui.ui.shutil.get_terminal_size",
+                return_value=os.terminal_size((100, 40)),
+            ),
+            patch("ui.ui.os.path.exists", return_value=True),
+            patch("ui.ui.subprocess.run", return_value=completed) as run_mock,
+        ):
+            ui = ReviewUI(
+                config=ReviewConfig(attachments_directory="/repo/.attachments"),
+                console=console,
+            )  # type: ignore[arg-type]
+            ui._print_markdown_with_images("![](diagram.png)\n")
+
+        run_mock.assert_called_once_with(
+            [
+                "/usr/bin/chafa",
+                "--size",
+                "98x20",
+                "/repo/.attachments/diagram.png",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertIn(
+            (
+                "ASCII ART\n",
+                {
+                    "end": "",
+                    "markup": False,
+                    "highlight": False,
+                    "soft_wrap": True,
+                },
+            ),
+            console.printed,
+        )
 
 
 class SessionEntryUiTest(unittest.TestCase):
