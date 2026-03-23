@@ -89,14 +89,56 @@ class HandlerTest(unittest.TestCase):
             ]
         )
 
-        with patch(
-            "hooks.handler.util.run_git", return_value=(0, ls_files, "")
-        ):
+        with patch("hooks.handler.util.run_git", return_value=(0, ls_files, "")):
             tracked_paths = handler._tracked_paths_from_git_index()
 
         self.assertEqual(
             {"/notes/top.md", "/notes/sub/deep/deep.md"},
             tracked_paths,
+        )
+
+    def test_diff_patch_ignores_eol_whitespace_noise(self) -> None:
+        handler = Handler("/repo")
+
+        with patch(
+            "hooks.handler.util.run_git", return_value=(0, "patch", "")
+        ) as run_git:
+            result = handler.diff_patch("old", "new")
+
+        self.assertEqual("patch", result)
+        run_git.assert_called_once_with(
+            [
+                "diff",
+                "--unified=0",
+                "--ignore-space-at-eol",
+                "--ignore-cr-at-eol",
+                "old",
+                "new",
+            ],
+            cwd="/repo",
+        )
+
+    def test_diff_patch_cached_ignores_eol_whitespace_noise(self) -> None:
+        handler = Handler("/repo")
+
+        with (
+            patch.object(handler, "is_rev_exists", return_value=True),
+            patch(
+                "hooks.handler.util.run_git", return_value=(0, "patch", "")
+            ) as run_git,
+        ):
+            result = handler.diff_patch_cached()
+
+        self.assertEqual("patch", result)
+        run_git.assert_called_once_with(
+            [
+                "diff",
+                "--cached",
+                "--unified=0",
+                "--ignore-space-at-eol",
+                "--ignore-cr-at-eol",
+            ],
+            cwd="/repo",
         )
 
 
