@@ -17,12 +17,20 @@ class QuoteBlockCard(Card):
     def reveal_for_label(self, label: str) -> CardView | None:
         if label != REVEAL_ALL_LABEL:
             return None
-        return self._build_view(current_block=self.note_text)
+        return self.answer_view()
 
     def question_view(self) -> CardView:
         lines = self.note_text.splitlines(keepends=True)
         question = lines[0] if lines else self.note_text
         return self._build_view(current_block=question)
+
+    def answer_view(self) -> CardView:
+        return self._build_view(current_block=self.note_text)
+
+    def context_view(self) -> CardView:
+        lines = self.note_text.splitlines(keepends=True)
+        context = lines[0] if lines else self.note_text
+        return self._build_view(current_block=context)
 
     def _build_view(self, current_block: str) -> CardView:
         blocks: List[ViewBlock] = []

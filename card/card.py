@@ -83,5 +83,13 @@ class Card(ABC):
     def question_view(self) -> CardView:
         raise NotImplementedError
 
+    @abstractmethod
+    def answer_view(self) -> CardView:
+        raise NotImplementedError
+
+    @abstractmethod
+    def context_view(self) -> CardView:
+        raise NotImplementedError
+
     def suggested_rating(self) -> Rating | None:
         return None

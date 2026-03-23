@@ -34,7 +34,7 @@ class QuoteBlockClozeCard(ClozeCard, QuoteBlockCard):
             return self.question_view()
 
         if label == REVEAL_ALL_LABEL:
-            self.block_opened = True
+            return self.answer_view()
 
         return super().reveal_for_label(label)
 
@@ -48,6 +48,10 @@ class QuoteBlockClozeCard(ClozeCard, QuoteBlockCard):
             current_block=f"block[{self.block_open_label}]\n{first_line}",
             mask_context=False,
         )
+
+    def answer_view(self) -> CardView:
+        self.block_opened = True
+        return super().answer_view()
 
     def _build_view(self, current_block: str, mask_context: bool = False) -> CardView:
         return ClozeCard._build_view(self, current_block, mask_context)

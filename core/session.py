@@ -7,7 +7,7 @@ from fsrs import Scheduler
 from core import util
 from core.index.index import Index
 
-from card.card import REVEAL_ALL_LABEL, Card
+from card.card import Card
 from core.config import ReviewConfig
 from card.parsers import ParserRegistry
 from core.index.storage import parse_storage_json
@@ -53,7 +53,7 @@ class ReviewSession:
 
                 # Step 1: question + reveals.
                 question_started_ns = time.monotonic_ns()
-                question_view = self.ui.run_question_step(question_title, card)
+                self.ui.run_question_step(question_title, card)
 
                 review_duration_ms = max(
                     0, (time.monotonic_ns() - question_started_ns) // 1_000_000
@@ -61,7 +61,7 @@ class ReviewSession:
 
                 # Step 2: answer view.
                 suggested_rating = card.suggested_rating()
-                answer_view = card.reveal_for_label(REVEAL_ALL_LABEL) or question_view
+                answer_view = card.answer_view()
                 self.ui.show_answer_step(answer_title, card, answer_view)
 
                 # Step 3: rating.
@@ -141,7 +141,7 @@ class ReviewSession:
                 note_blocks=blocks_for_parser,
             )
             note_question_blocks.setdefault(note_path, {})[(start_line, end_line)] = (
-                card.question_view().primary_block().text
+                card.context_view().primary_block().text
             )
             cards_with_paths.append((card, note_path))
 

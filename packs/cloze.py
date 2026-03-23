@@ -128,13 +128,7 @@ class ClozeCard(Card):
 
     def reveal_for_label(self, label: str) -> CardView | None:
         if label == REVEAL_ALL_LABEL:
-            if self.reveal_mode == RevealMode.INCREMENTAL:
-                for state in self.incremental_states:
-                    state.fully_revealed = True
-            else:
-                for idx in range(len(self.whole_revealed)):
-                    self.whole_revealed[idx] = True
-            return self.question_view()
+            return self.answer_view()
 
         idx = self.label_to_index.get(label)
         if idx is None:
@@ -171,6 +165,21 @@ class ClozeCard(Card):
     def question_view(self) -> CardView:
         current = self._question_block()
         return self._build_view(current_block=current, mask_context=True)
+
+    def answer_view(self) -> CardView:
+        if self.reveal_mode == RevealMode.INCREMENTAL:
+            for state in self.incremental_states:
+                state.fully_revealed = True
+        else:
+            for idx in range(len(self.whole_revealed)):
+                self.whole_revealed[idx] = True
+        return self._build_view(current_block=self._question_block(), mask_context=True)
+
+    def context_view(self) -> CardView:
+        return self._build_view(
+            current_block=self._masked_context_block(self.note_text),
+            mask_context=True,
+        )
 
     def _question_block(self) -> str:
         parts: List[str] = [self.text_parts[0]]
