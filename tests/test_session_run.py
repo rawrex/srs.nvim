@@ -30,6 +30,9 @@ class _DummyCard:
     def reveal_for_label(self, _label: str) -> str:
         return "answer"
 
+    def answer_view(self) -> str:
+        return "answer"
+
 
 class ReviewSessionRunTest(unittest.TestCase):
     def test_run_returns_1_when_index_missing(self) -> None:

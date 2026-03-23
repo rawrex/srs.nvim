@@ -38,6 +38,23 @@ class QuoteBlockPackTest(unittest.TestCase):
         assert answer is not None
         self.assertEqual(block_text, answer.primary_block().text)
 
+    def test_quote_block_card_context_is_first_line(self) -> None:
+        block_text = ">[!code]- Example\n>```cpp\n>int x = 1;\n>```\n"
+        card = QuoteBlockCard(
+            note_id="1",
+            note_path="/tmp/note.md",
+            card_path="/tmp/1.json",
+            note_text=block_text,
+            metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
+            start_line=5,
+            end_line=8,
+            note_blocks={(5, 8): block_text},
+        )
+
+        self.assertEqual(
+            ">[!code]- Example\n", card.context_view().primary_block().text
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

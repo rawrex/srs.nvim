@@ -95,7 +95,8 @@ class ReviewSessionTest(unittest.TestCase):
             self.assertIn((2, 2), blocks)
             self.assertIn((3, 3), blocks)
             self.assertEqual("Prelude line\n", blocks[(1, 1)])
-            self.assertIn("[a]", blocks[(2, 2)])
+            self.assertNotIn("[a]", blocks[(2, 2)])
+            self.assertIn("▇▇▇▇▇▇", blocks[(2, 2)])
             self.assertEqual("Tail line\n", blocks[(3, 3)])
 
 

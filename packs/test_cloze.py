@@ -206,6 +206,25 @@ class ClozePackTest(unittest.TestCase):
         self.assertNotIn("context cloze", context)
         self.assertIn("▇▇▇▇▇▇▇▇▇▇▇▇▇", context)
 
+    def test_context_view_masks_primary_cloze_without_labels(self) -> None:
+        card = ClozeCard(
+            note_id="1",
+            note_path="/tmp/note.md",
+            card_path="/tmp/1.json",
+            note_text="Term [a]~{hidden}",
+            metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
+            reveal_mode=RevealMode.WHOLE,
+            cloze_open="~{",
+            cloze_close="}",
+            mask_char="▇",
+        )
+
+        context = card.context_view().primary_block().text
+
+        self.assertNotIn("[a]", context)
+        self.assertIn("▇▇▇▇▇▇", context)
+        self.assertNotIn("hidden", context)
+
     def test_parse_note_clozes_with_custom_syntax(self) -> None:
         text_parts, clozes = parse_note_clozes(
             "A <<one>> B", cloze_open="<<", cloze_close=">>"
