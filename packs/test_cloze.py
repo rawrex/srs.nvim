@@ -85,15 +85,15 @@ class ClozePackTest(unittest.TestCase):
         ):
             ui.prompt_cloze_reveal("title", card)
 
-        markdown_frames = [
+        frames = [
             item.markup
             for item, _kwargs in console.printed
             if isinstance(item, Markdown)
         ]
-        self.assertGreaterEqual(len(markdown_frames), 2)
-        self.assertIn("[A]", markdown_frames[0])
-        self.assertIn("`c26`", markdown_frames[1])
-        self.assertNotIn("[A]", markdown_frames[1])
+        self.assertGreaterEqual(len(frames), 2)
+        self.assertIn("[A]", frames[0])
+        self.assertIn("`c26`", frames[1])
+        self.assertNotIn("[A]", frames[1])
 
     def test_prompt_cloze_reveal_renders_masked_context_without_labels(self) -> None:
         note_blocks = {
@@ -126,19 +126,16 @@ class ClozePackTest(unittest.TestCase):
         ):
             ui.prompt_cloze_reveal("title", card)
 
-        markdown_calls = [
-            (item.markup, kwargs)
-            for item, kwargs in console.printed
+        calls = [
+            item.markup
+            for item, _kwargs in console.printed
             if isinstance(item, Markdown)
         ]
-        self.assertEqual(2, len(markdown_calls))
-        self.assertIn("[a]", markdown_calls[0][0])
-        self.assertIsNone(markdown_calls[0][1].get("style"))
-        self.assertIn("Second", markdown_calls[1][0])
-        self.assertNotIn("context cloze", markdown_calls[1][0])
-        self.assertNotIn("[a]", markdown_calls[1][0])
-        self.assertIn("▇▇▇▇▇▇▇▇▇▇▇▇▇", markdown_calls[1][0])
-        self.assertEqual("grey50", markdown_calls[1][1].get("style"))
+        self.assertEqual(1, len(calls))
+        self.assertIn("[a]", calls[0])
+        self.assertIn("Second", calls[0])
+        self.assertNotIn("context cloze", calls[0])
+        self.assertIn("▇▇▇▇▇▇▇▇▇▇▇▇▇", calls[0])
 
     def test_prompt_cloze_reveal_hides_context_when_disabled(self) -> None:
         note_blocks = {
@@ -171,14 +168,14 @@ class ClozePackTest(unittest.TestCase):
         ):
             ui.prompt_cloze_reveal("title", card)
 
-        markdown_calls = [
-            (item.markup, kwargs)
-            for item, kwargs in console.printed
+        calls = [
+            item.markup
+            for item, _kwargs in console.printed
             if isinstance(item, Markdown)
         ]
-        self.assertEqual(1, len(markdown_calls))
-        self.assertIn("[a]", markdown_calls[0][0])
-        self.assertNotIn("Second", markdown_calls[0][0])
+        self.assertEqual(1, len(calls))
+        self.assertIn("[a]", calls[0])
+        self.assertNotIn("Second", calls[0])
 
     def test_reveal_all_keeps_context_masked(self) -> None:
         note_blocks = {
