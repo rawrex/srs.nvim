@@ -36,7 +36,7 @@ class Handler:
 
     def diff_patch(self, old: str, new: str) -> str:
         code, out, _err = util.run_git(
-            ["diff", "--unified=0", old, new],
+            [ "diff", "--unified=0", "--ignore-space-at-eol", "--ignore-cr-at-eol", old, new, ],
             cwd=self.repository_root,
         )
         if code == 0:
@@ -44,7 +44,7 @@ class Handler:
         return ""
 
     def diff_patch_cached(self) -> str:
-        args = ["diff", "--cached", "--unified=0"]
+        args = [ "diff", "--cached", "--unified=0", "--ignore-space-at-eol", "--ignore-cr-at-eol", ]
         if not self.is_rev_exists("HEAD"):
             args.append("--root")
         code, out, _err = util.run_git(args, cwd=self.repository_root)
