@@ -28,8 +28,11 @@ class ReviewCliTest(unittest.TestCase):
             patch("core.review.load_review_config", return_value=config),
             patch("core.review.build_parser_registry", return_value=parser_registry),
             patch("core.review.ReviewUI", return_value=ui) as ui_cls,
+            patch("core.review.SessionEntryUI") as session_entry_ui_cls,
             patch("core.review.ReviewSession", return_value=session) as session_cls,
         ):
+            session_entry_ui = Mock()
+            session_entry_ui_cls.return_value = session_entry_ui
             code = review.main()
 
         self.assertEqual(7, code)
@@ -39,6 +42,7 @@ class ReviewCliTest(unittest.TestCase):
             ui=ui,
             config=config,
             parser_registry=parser_registry,
+            session_entry_ui=session_entry_ui,
         )
         session.run.assert_called_once_with()
 

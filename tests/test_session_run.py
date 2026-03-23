@@ -84,6 +84,7 @@ class ReviewSessionRunTest(unittest.TestCase):
 
             config = ReviewConfig(between_notes_timeout_ms=200)
             ui = Mock()
+            session_entry_ui = Mock()
             ui.prompt_rating_step.return_value = Rating.Good
             ui.run_question_step.side_effect = ["answer1", "answer2"]
 
@@ -92,6 +93,7 @@ class ReviewSessionRunTest(unittest.TestCase):
                 ui=ui,
                 config=config,
                 parser_registry=build_parser_registry(config),
+                session_entry_ui=session_entry_ui,
             )
 
             scheduler = Mock()
@@ -136,6 +138,7 @@ class ReviewSessionRunTest(unittest.TestCase):
         self.assertEqual(2, save_card.call_count)
         sleep_mock.assert_called_once_with(0.2)
         self.assertEqual(2, scheduler.review_card.call_count)
+        session_entry_ui.show_start_menu.assert_called_once_with(2)
 
     def test_run_auto_stages_each_reviewed_card_and_commits_at_end(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
@@ -147,6 +150,7 @@ class ReviewSessionRunTest(unittest.TestCase):
 
             config = ReviewConfig(auto_stage_reviewed_cards=True)
             ui = Mock()
+            session_entry_ui = Mock()
             ui.prompt_rating_step.return_value = Rating.Good
             ui.run_question_step.return_value = "answer"
 
@@ -155,6 +159,7 @@ class ReviewSessionRunTest(unittest.TestCase):
                 ui=ui,
                 config=config,
                 parser_registry=build_parser_registry(config),
+                session_entry_ui=session_entry_ui,
             )
 
             scheduler = Mock()
@@ -181,6 +186,7 @@ class ReviewSessionRunTest(unittest.TestCase):
                 code = session.run()
 
         self.assertEqual(0, code)
+        session_entry_ui.show_start_menu.assert_called_once_with(1)
         run_git.assert_any_call(
             ["add", "--", ".srs/1.json"],
             cwd=repo_root,
@@ -204,6 +210,7 @@ class ReviewSessionRunTest(unittest.TestCase):
 
             config = ReviewConfig(auto_stage_reviewed_cards=True)
             ui = Mock()
+            session_entry_ui = Mock()
             ui.run_question_step.return_value = "answer"
             ui.prompt_rating_step.side_effect = [Rating.Good, KeyboardInterrupt]
 
@@ -212,6 +219,7 @@ class ReviewSessionRunTest(unittest.TestCase):
                 ui=ui,
                 config=config,
                 parser_registry=build_parser_registry(config),
+                session_entry_ui=session_entry_ui,
             )
 
             scheduler = Mock()
@@ -250,6 +258,7 @@ class ReviewSessionRunTest(unittest.TestCase):
             ["commit", "-m", "Spaced repetition session", "--", ".srs/1.json"],
             cwd=repo_root,
         )
+        session_entry_ui.show_start_menu.assert_called_once_with(2)
 
 
 if __name__ == "__main__":
