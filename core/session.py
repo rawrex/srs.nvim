@@ -62,7 +62,7 @@ class ReviewSession:
                 # Step 2: answer view.
                 suggested_rating = card.suggested_rating()
                 answer_view = card.reveal_for_label(REVEAL_ALL_LABEL) or question_view
-                self.ui.show_answer_step(answer_title, answer_view)
+                self.ui.show_answer_step(answer_title, card, answer_view)
 
                 # Step 3: rating.
                 self.ui.print_message("")

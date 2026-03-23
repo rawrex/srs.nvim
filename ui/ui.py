@@ -33,7 +33,7 @@ class ReviewUI:
         while True:
             self._clear_screen()
             self.console.print(title)
-            self._print_view(current_view)
+            self._print_view(card, current_view)
 
             key = read_single_key()
             if maybe_suspend_for_key(key):
@@ -44,10 +44,10 @@ class ReviewUI:
             if maybe_view is not None:
                 current_view = maybe_view
 
-    def show_answer_step(self, title: str, view: CardView) -> None:
+    def show_answer_step(self, title: str, card: Card, view: CardView) -> None:
         self._clear_screen()
         self.console.print(title)
-        self._print_view(view)
+        self._print_view(card, view)
 
     def prompt_rating_step(self, default_rating: Rating | None = None) -> Rating:
         prompt = self._rating_prompt(default_rating)
@@ -76,7 +76,9 @@ class ReviewUI:
         return self.run_question_step(title, card)
 
     def show_rating_view(self, title: str, view: CardView) -> None:
-        self.show_answer_step(title, view)
+        self._clear_screen()
+        self.console.print(title)
+        self.console.print(Markdown(view.primary_block().text.rstrip("\n")))
 
     def prompt_rating(self) -> Rating:
         return self.prompt_rating_step()
@@ -95,13 +97,18 @@ class ReviewUI:
             parts.append(f"Enter={default_rating.name}")
         return f"Rate [{', '.join(parts)}]: "
 
-    def _print_view(self, view: CardView) -> None:
+    def _print_view(self, card: Card, view: CardView) -> None:
+        _ = card
+        primary_block = view.primary_block().text
+
         if not self.show_context:
-            self.console.print(Markdown(view.primary_block().text.rstrip("\n")))
+            self.console.print(Markdown(primary_block.rstrip("\n")))
             return
-        for block in view.blocks:
-            style = None if block.is_primary else self.context_dim_style
-            self.console.print(Markdown(block.text.rstrip("\n")), style=style)
+
+        rendered_blocks = [block.text for block in view.blocks]
+        if not rendered_blocks:
+            rendered_blocks = [primary_block]
+        self.console.print(Markdown("".join(rendered_blocks).rstrip("\n")))
 
 
 def read_single_key() -> str:
