@@ -123,6 +123,20 @@ def load_review_config(repo_root: str) -> ReviewConfig:
     if isinstance(auto_stage_reviewed_cards_raw, bool):
         auto_stage_reviewed_cards = auto_stage_reviewed_cards_raw
 
+    attachments_directory = defaults.attachments_directory
+    attachments_directory_raw = raw.get("attachments_directory")
+    if isinstance(attachments_directory_raw, str):
+        attachments_directory_candidate = attachments_directory_raw.strip()
+        if attachments_directory_candidate:
+            if os.path.isabs(attachments_directory_candidate):
+                attachments_directory = os.path.normpath(
+                    attachments_directory_candidate
+                )
+            else:
+                attachments_directory = os.path.normpath(
+                    os.path.join(repo_root, attachments_directory_candidate)
+                )
+
     scheduler_parameters = defaults.scheduler_parameters
     scheduler_desired_retention = defaults.scheduler_desired_retention
     scheduler_learning_steps = defaults.scheduler_learning_steps
@@ -148,6 +162,7 @@ def load_review_config(repo_root: str) -> ReviewConfig:
         between_notes_timeout_ms=between_notes_timeout_ms,
         auto_stage_reviewed_cards=auto_stage_reviewed_cards,
         show_context=show_context,
+        attachments_directory=attachments_directory,
         cloze=ClozeConfig(
             reveal_mode=reveal_mode,
             cloze_open=cloze_open,
