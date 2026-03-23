@@ -117,6 +117,28 @@ class ReviewUI:
         return f"{first_line} {mark}{sep}{rest}"
 
 
+class SessionEntryUI:
+    def __init__(self, console: Console | None = None) -> None:
+        self.console = console or Console()
+
+    def show_start_menu(self, due_cards_count: int) -> None:
+        while True:
+            self._clear_screen()
+            self.console.print("Session")
+            self.console.print(f"Due cards: {due_cards_count}")
+            self.console.print("")
+            self.console.print("Press Enter to start")
+
+            key = read_single_key()
+            if maybe_suspend_for_key(key):
+                continue
+            if key in {"\r", "\n"}:
+                return
+
+    def _clear_screen(self) -> None:
+        os.system("cls" if os.name == "nt" else "clear")
+
+
 def read_single_key() -> str:
     if os.name == "nt":
         import msvcrt

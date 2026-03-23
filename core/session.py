@@ -11,7 +11,7 @@ from card.card import Card
 from core.config import ReviewConfig
 from card.parsers import ParserRegistry
 from core.index.storage import parse_storage_json
-from ui.ui import ReviewUI
+from ui.ui import ReviewUI, SessionEntryUI
 
 IndexRow = tuple[str, str, str, int, int]
 LineRange = tuple[int, int]
@@ -24,10 +24,12 @@ class ReviewSession:
         ui: ReviewUI,
         config: ReviewConfig,
         parser_registry: ParserRegistry,
+        session_entry_ui: SessionEntryUI | None = None,
         scheduler: Scheduler | None = None,
     ) -> None:
         self.repo_root = repo_root
         self.ui = ui
+        self.session_entry_ui = session_entry_ui
         self.between_notes_timeout_ms = config.between_notes_timeout_ms
         self.auto_stage_reviewed_cards = config.auto_stage_reviewed_cards
         self.scheduler = scheduler or config.build_scheduler()
@@ -46,6 +48,8 @@ class ReviewSession:
             return 0
 
         total = len(cards)
+        if self.session_entry_ui:
+            self.session_entry_ui.show_start_menu(total)
         try:
             for idx, card in enumerate(cards, start=1):
                 question_title = f"\n[{idx}/{total}] {card.note_filename}"

@@ -12,7 +12,7 @@ from core import util
 from core.config import load_review_config
 from card.parsers import build_parser_registry
 from core.session import ReviewSession
-from ui.ui import ReviewUI
+from ui.ui import ReviewUI, SessionEntryUI
 
 
 def main() -> int:
@@ -26,11 +26,13 @@ def main() -> int:
         config = load_review_config(repo_root)
         parser_registry = build_parser_registry(config)
         ui = ReviewUI(config=config)
+        session_entry_ui = SessionEntryUI(console=ui.console)
         session = ReviewSession(
             repo_root=repo_root,
             ui=ui,
             config=config,
             parser_registry=parser_registry,
+            session_entry_ui=session_entry_ui,
         )
         return session.run()
     except KeyboardInterrupt:
