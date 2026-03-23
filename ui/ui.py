@@ -159,8 +159,19 @@ class ReviewUI:
         path = os.path.join(self.attachments_directory, filename)
         if not os.path.exists(path):
             return None
+
+        terminal_size = shutil.get_terminal_size(fallback=(120, 40))
+        render_width = max(40, terminal_size.columns - 2)
+        render_height = max(16, terminal_size.lines // 2)
+
         result = subprocess.run(
-            [self.chafa_path, path],
+            [
+                self.chafa_path,
+                "--size",
+                f"{render_width}x{render_height}",
+                "--dither=none",
+                path,
+            ],
             capture_output=True,
             text=True,
             check=False,
