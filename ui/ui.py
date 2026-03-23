@@ -97,17 +97,24 @@ class ReviewUI:
         return f"Rate [{', '.join(parts)}]: "
 
     def _print_view(self, card: Card, view: CardView) -> None:
-        _ = card
-        primary_block = view.primary_block().text
+        primary_block = self._mark_active_line(view.primary_block().text)
 
         if not self.show_context:
             self.console.print(Markdown(primary_block.rstrip("\n")))
             return
 
-        rendered_blocks = [block.text for block in view.blocks]
+        rendered_blocks = [
+            primary_block if block.is_primary else block.text
+            for block in view.blocks
+        ]
         if not rendered_blocks:
             rendered_blocks = [primary_block]
         self.console.print(Markdown("".join(rendered_blocks).rstrip("\n")))
+
+    def _mark_active_line(self, text: str) -> str:
+        mark = "<|---"
+        first_line, sep, rest = text.partition("\n")
+        return f"{first_line} {mark}{sep}{rest}"
 
 
 def read_single_key() -> str:
