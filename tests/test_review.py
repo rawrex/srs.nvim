@@ -22,7 +22,6 @@ class ReviewConfigTest(unittest.TestCase):
         self.assertEqual(0, config.between_notes_timeout_ms)
         self.assertFalse(config.auto_stage_reviewed_cards)
         self.assertTrue(config.show_context)
-        self.assertEqual("dim", config.context_dim_style)
         self.assertEqual(Scheduler().to_dict(), config.build_scheduler().to_dict())
 
     def test_load_review_config_reads_custom_values(self) -> None:
@@ -41,7 +40,6 @@ class ReviewConfigTest(unittest.TestCase):
                             "between_notes_timeout_ms": 250,
                             "auto_stage_reviewed_cards": True,
                             "show_context": False,
-                            "context_dim_style": "grey50",
                         },
                         "cloze": {
                             "reveal_mode": "whole",
@@ -98,7 +96,6 @@ class ReviewConfigTest(unittest.TestCase):
         self.assertEqual(250, config.between_notes_timeout_ms)
         self.assertTrue(config.auto_stage_reviewed_cards)
         self.assertFalse(config.show_context)
-        self.assertEqual("grey50", config.context_dim_style)
         scheduler = config.build_scheduler()
         self.assertEqual(0.5, scheduler.parameters[0])
         self.assertEqual(0.88, scheduler.desired_retention)
@@ -178,7 +175,6 @@ class ReviewConfigTest(unittest.TestCase):
                             "between_notes_timeout_ms": -10,
                             "auto_stage_reviewed_cards": "yes",
                             "show_context": "yes",
-                            "context_dim_style": "   ",
                         },
                         "cloze": {
                             "reveal_mode": "bad-value",
@@ -198,7 +194,6 @@ class ReviewConfigTest(unittest.TestCase):
         self.assertEqual(0, config.between_notes_timeout_ms)
         self.assertFalse(config.auto_stage_reviewed_cards)
         self.assertTrue(config.show_context)
-        self.assertEqual("dim", config.context_dim_style)
 
     def test_load_review_config_uses_default_scheduler_when_scheduler_values_invalid(
         self,

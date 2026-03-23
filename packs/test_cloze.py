@@ -116,7 +116,7 @@ class ClozePackTest(unittest.TestCase):
             note_blocks=note_blocks,
         )
         ui = ReviewUI(
-            config=ReviewConfig(context_dim_style="grey50"),
+            config=ReviewConfig(),
             console=console,  # type: ignore[arg-type]
         )
 

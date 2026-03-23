@@ -2,7 +2,6 @@
     "review": {
         "auto_stage_reviewed_cards": false,
         "between_notes_timeout_ms": 0,
-        "context_dim_style": "grey50",
         "rating_buttons": {
             "Again": "n",
             "Easy": "o",

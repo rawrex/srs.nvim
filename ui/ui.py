@@ -19,7 +19,6 @@ class ReviewUI:
         self.console = console or Console()
         self.rating_buttons = config.rating_buttons
         self.show_context = config.show_context
-        self.context_dim_style = config.context_dim_style
         self.button_to_rating_byte: dict[str, bytes] = {
             button: bytes([rating.value])
             for rating, button in self.rating_buttons.items()
