@@ -37,6 +37,7 @@ class ReviewConfig:
     between_notes_timeout_ms: int = 0
     auto_stage_reviewed_cards: bool = False
     show_context: bool = True
+    attachments_directory: str | None = None
     cloze: ClozeConfig = field(default_factory=ClozeConfig)
     scheduler_parameters: tuple[float, ...] = DEFAULT_SCHEDULER.parameters
     scheduler_desired_retention: float = DEFAULT_SCHEDULER.desired_retention
