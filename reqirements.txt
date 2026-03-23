@@ -1,4 +1,4 @@
 ruff
 rich
 fsrs
-fsrs[optimizer]
+# fsrs[optimizer]
