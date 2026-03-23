@@ -129,15 +129,12 @@ class ReviewUI:
             image_reference = self._extract_image_reference_from_line(line)
             if image_reference is None:
                 markdown_lines.append(line)
+                flush_markdown_lines()
                 continue
             flush_markdown_lines()
             rendered_image = self._render_image(image_reference)
             if rendered_image is None:
-                self.console.print(
-                    image_reference,
-                    markup=False,
-                    highlight=False,
-                )
+                self.console.print( image_reference, markup=False, highlight=False,)
                 continue
             self.console.print(
                 rendered_image,
