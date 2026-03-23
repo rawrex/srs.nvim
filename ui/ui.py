@@ -1,5 +1,8 @@
 import os
+import re
+import shutil
 import signal
+import subprocess
 import sys
 
 from fsrs import Rating
@@ -19,6 +22,10 @@ class ReviewUI:
         self.console = console or Console()
         self.rating_buttons = config.rating_buttons
         self.show_context = config.show_context
+        self.attachments_directory = config.attachments_directory
+        self.chafa_path = (
+            shutil.which("chafa") if self.attachments_directory is not None else None
+        )
         self.button_to_rating_byte: dict[str, bytes] = {
             button: bytes([rating.value])
             for rating, button in self.rating_buttons.items()
@@ -77,7 +84,7 @@ class ReviewUI:
     def show_rating_view(self, title: str, view: CardView) -> None:
         self._clear_screen()
         self.console.print(title)
-        self.console.print(Markdown(view.primary_block().text.rstrip("\n")))
+        self._print_markdown_with_images(view.primary_block().text.rstrip("\n"))
 
     def prompt_rating(self) -> Rating:
         return self.prompt_rating_step()
@@ -100,7 +107,7 @@ class ReviewUI:
         primary_block = self._mark_active_line(view.primary_block().text)
 
         if not self.show_context:
-            self.console.print(Markdown(primary_block.rstrip("\n")))
+            self._print_markdown_with_images(primary_block.rstrip("\n"))
             return
 
         rendered_blocks = [
@@ -109,7 +116,58 @@ class ReviewUI:
         ]
         if not rendered_blocks:
             rendered_blocks = [primary_block]
-        self.console.print(Markdown("".join(rendered_blocks).rstrip("\n")))
+        self._print_markdown_with_images("".join(rendered_blocks).rstrip("\n"))
+
+    def _print_markdown_with_images(self, text: str) -> None:
+        markdown_lines: list[str] = []
+        def flush_markdown_lines() -> None:
+            if not markdown_lines:
+                return
+            self.console.print(Markdown("".join(markdown_lines).rstrip("\n")))
+            markdown_lines.clear()
+        for line in text.splitlines(keepends=True):
+            image_reference = self._extract_image_reference_from_line(line)
+            if image_reference is None:
+                markdown_lines.append(line)
+                continue
+            flush_markdown_lines()
+            rendered_image = self._render_image(image_reference)
+            if rendered_image is None:
+                self.console.print(
+                    image_reference,
+                    markup=False,
+                    highlight=False,
+                )
+                continue
+            self.console.print(rendered_image, end="", markup=False, highlight=False)
+        flush_markdown_lines()
+
+    def _extract_image_reference_from_line(self, line: str) -> str | None:
+        image_match = re.match(r"^\s*(?:>\s*)*!\[\[([^\]]+)\]\]\s*$", line)
+        if image_match is not None:
+            reference = image_match.group(1).strip()
+            return reference or None
+        return None
+
+    def _render_image(self, image_reference: str) -> str | None:
+        if self.attachments_directory is None or self.chafa_path is None:
+            return None
+
+        filename = os.path.basename(image_reference)
+        if not filename:
+            return None
+        path = os.path.join(self.attachments_directory, filename)
+        if not os.path.exists(path):
+            return None
+        result = subprocess.run(
+            [self.chafa_path, path],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            return None
+        return result.stdout or None
 
     def _mark_active_line(self, text: str) -> str:
         mark = "<|---"
