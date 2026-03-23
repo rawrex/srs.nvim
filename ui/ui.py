@@ -139,7 +139,13 @@ class ReviewUI:
                     highlight=False,
                 )
                 continue
-            self.console.print(rendered_image, end="", markup=False, highlight=False)
+            self.console.print(
+                rendered_image,
+                end="",
+                markup=False,
+                highlight=False,
+                soft_wrap=True,
+            )
         flush_markdown_lines()
 
     def _extract_image_reference_from_line(self, line: str) -> str | None:
@@ -169,7 +175,6 @@ class ReviewUI:
                 self.chafa_path,
                 "--size",
                 f"{render_width}x{render_height}",
-                "--dither=none",
                 path,
             ],
             capture_output=True,
