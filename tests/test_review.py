@@ -11,6 +11,12 @@ from core.config import DEFAULT_RATING_BUTTONS, load_review_config
 
 
 class ReviewConfigTest(unittest.TestCase):
+    @staticmethod
+    def _config_path(repo_root: str) -> str:
+        srs_dir = os.path.join(repo_root, ".srs")
+        os.makedirs(srs_dir, exist_ok=True)
+        return os.path.join(srs_dir, "config.json")
+
     def test_load_review_config_uses_defaults_when_missing(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
             config = load_review_config(repo_root)
@@ -27,7 +33,7 @@ class ReviewConfigTest(unittest.TestCase):
 
     def test_load_review_config_reads_custom_values(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
-            path = os.path.join(repo_root, "config.json")
+            path = self._config_path(repo_root)
             with open(path, "w", encoding="utf-8") as handle:
                 json.dump(
                     {
@@ -117,7 +123,7 @@ class ReviewConfigTest(unittest.TestCase):
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
-            path = os.path.join(repo_root, "config.json")
+            path = self._config_path(repo_root)
             with open(path, "w", encoding="utf-8") as handle:
                 json.dump(
                     {
@@ -139,7 +145,7 @@ class ReviewConfigTest(unittest.TestCase):
 
     def test_load_review_config_falls_back_to_defaults_on_invalid_json(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
-            path = os.path.join(repo_root, "config.json")
+            path = self._config_path(repo_root)
             with open(path, "w", encoding="utf-8") as handle:
                 handle.write("not-json")
 
@@ -150,7 +156,7 @@ class ReviewConfigTest(unittest.TestCase):
 
     def test_load_review_config_rejects_invalid_rating_button_map(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
-            path = os.path.join(repo_root, "config.json")
+            path = self._config_path(repo_root)
             with open(path, "w", encoding="utf-8") as handle:
                 json.dump(
                     {
@@ -172,7 +178,7 @@ class ReviewConfigTest(unittest.TestCase):
 
     def test_load_review_config_uses_defaults_for_invalid_partial_fields(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
-            path = os.path.join(repo_root, "config.json")
+            path = self._config_path(repo_root)
             with open(path, "w", encoding="utf-8") as handle:
                 json.dump(
                     {
@@ -206,7 +212,7 @@ class ReviewConfigTest(unittest.TestCase):
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
-            path = os.path.join(repo_root, "config.json")
+            path = self._config_path(repo_root)
             with open(path, "w", encoding="utf-8") as handle:
                 json.dump(
                     {

@@ -59,7 +59,7 @@ class ReviewConfig:
 
 
 def load_review_config(repo_root: str) -> ReviewConfig:
-    path = os.path.join(repo_root, "config.json")
+    path = os.path.join(repo_root, ".srs", "config.json")
     defaults = ReviewConfig()
     raw = _load_raw_config(path)
     if raw is None:
