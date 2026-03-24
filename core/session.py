@@ -53,7 +53,6 @@ class ReviewSession:
         try:
             for idx, card in enumerate(cards, start=1):
                 question_title = f"\n[{idx}/{total}] {card.note_filename}"
-                answer_title = f"\n[{idx}/{total}] {card.note_filename} — answer"
 
                 # Step 1: question + reveals.
                 question_started_ns = time.monotonic_ns()
@@ -61,6 +60,11 @@ class ReviewSession:
 
                 review_duration_ms = max(
                     0, (time.monotonic_ns() - question_started_ns) // 1_000_000
+                )
+                review_duration_s = review_duration_ms / 1000
+                answer_title = (
+                    f"\n[{idx}/{total}] {card.note_filename} "
+                    f"— answer ({review_duration_s:.1f}s)"
                 )
 
                 # Step 2: answer view.
