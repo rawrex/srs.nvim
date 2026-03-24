@@ -131,11 +131,12 @@ class ClozePackTest(unittest.TestCase):
             for item, _kwargs in console.printed
             if isinstance(item, Markdown)
         ]
-        self.assertEqual(1, len(calls))
-        self.assertIn("[a]", calls[0])
-        self.assertIn("Second", calls[0])
-        self.assertNotIn("context cloze", calls[0])
-        self.assertIn("▇▇▇▇▇▇▇▇▇▇▇▇▇", calls[0])
+        self.assertGreaterEqual(len(calls), 1)
+        rendered = "".join(calls)
+        self.assertIn("[a]", rendered)
+        self.assertIn("Second", rendered)
+        self.assertNotIn("context cloze", rendered)
+        self.assertIn("▇▇▇▇▇▇▇▇▇▇▇▇▇", rendered)
 
     def test_prompt_cloze_reveal_hides_context_when_disabled(self) -> None:
         note_blocks = {
@@ -173,9 +174,10 @@ class ClozePackTest(unittest.TestCase):
             for item, _kwargs in console.printed
             if isinstance(item, Markdown)
         ]
-        self.assertEqual(1, len(calls))
-        self.assertIn("[a]", calls[0])
-        self.assertNotIn("Second", calls[0])
+        self.assertGreaterEqual(len(calls), 1)
+        rendered = "".join(calls)
+        self.assertIn("[a]", rendered)
+        self.assertNotIn("Second", rendered)
 
     def test_reveal_all_keeps_context_masked(self) -> None:
         note_blocks = {

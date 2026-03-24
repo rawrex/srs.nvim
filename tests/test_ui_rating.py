@@ -4,6 +4,7 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 from fsrs import Rating
+from rich.markdown import Markdown
 
 from core.config import ReviewConfig
 from ui.ui import ReviewUI, SessionEntryUI
@@ -41,7 +42,7 @@ class ReviewUiRatingTest(unittest.TestCase):
         self.assertEqual(Rating.Good, rating)
         self.assertIn(("Invalid rating", {}), console.printed)
 
-    def test_print_markdown_with_images_falls_back_to_filename_without_chafa(
+    def test_print_markdown_with_images_leaves_standard_markdown_image_unchanged(
         self,
     ) -> None:
         console = _FakeConsole()
@@ -53,10 +54,10 @@ class ReviewUiRatingTest(unittest.TestCase):
 
         ui._print_markdown_with_images("![](diagram.png)\n")
 
-        self.assertIn(
-            ("diagram.png", {"markup": False, "highlight": False}),
-            console.printed,
-        )
+        self.assertEqual(1, len(console.printed))
+        printed_value, printed_kwargs = console.printed[0]
+        self.assertIsInstance(printed_value, Markdown)
+        self.assertEqual({}, printed_kwargs)
 
     def test_print_markdown_with_images_supports_wiki_image_syntax(self) -> None:
         console = _FakeConsole()
@@ -68,10 +69,10 @@ class ReviewUiRatingTest(unittest.TestCase):
 
         ui._print_markdown_with_images("![[diagram.png]]\n")
 
-        self.assertIn(
-            ("diagram.png", {"markup": False, "highlight": False}),
-            console.printed,
-        )
+        self.assertEqual(1, len(console.printed))
+        printed_value, printed_kwargs = console.printed[0]
+        self.assertIsInstance(printed_value, Markdown)
+        self.assertEqual({}, printed_kwargs)
 
     def test_print_markdown_with_images_supports_wiki_image_in_blockquote(self) -> None:
         console = _FakeConsole()
@@ -83,13 +84,10 @@ class ReviewUiRatingTest(unittest.TestCase):
 
         ui._print_markdown_with_images("> ![[_Pasted image 20241023210525.png]]\n")
 
-        self.assertIn(
-            (
-                "_Pasted image 20241023210525.png",
-                {"markup": False, "highlight": False},
-            ),
-            console.printed,
-        )
+        self.assertEqual(1, len(console.printed))
+        printed_value, printed_kwargs = console.printed[0]
+        self.assertIsInstance(printed_value, Markdown)
+        self.assertEqual({}, printed_kwargs)
 
     def test_print_markdown_with_images_renders_with_chafa_when_available(self) -> None:
         console = _FakeConsole()
@@ -107,7 +105,7 @@ class ReviewUiRatingTest(unittest.TestCase):
                 config=ReviewConfig(attachments_directory="/repo/.attachments"),
                 console=console,
             )  # type: ignore[arg-type]
-            ui._print_markdown_with_images("![](diagram.png)\n")
+            ui._print_markdown_with_images("![[diagram.png]]\n")
 
         run_mock.assert_called_once_with(
             [

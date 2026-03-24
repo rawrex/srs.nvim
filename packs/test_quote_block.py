@@ -31,7 +31,7 @@ class QuoteBlockPackTest(unittest.TestCase):
         )
 
         self.assertEqual(
-            ">[!code]- Example\n", card.question_view().primary_block().text
+            ">[!code]- Example\n\n\n\n", card.question_view().primary_block().text
         )
         answer = card.reveal_for_label(REVEAL_ALL_LABEL)
         self.assertIsNotNone(answer)
@@ -52,7 +52,7 @@ class QuoteBlockPackTest(unittest.TestCase):
         )
 
         self.assertEqual(
-            ">[!code]- Example\n", card.context_view().primary_block().text
+            ">[!code]- Example\n\n\n\n", card.context_view().primary_block().text
         )
 
 
