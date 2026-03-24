@@ -16,6 +16,11 @@ class _DummyMetadata:
         self.review_logs: list[object] = []
 
 
+class _DummyReviewLog:
+    def __init__(self, review_duration: int) -> None:
+        self.review_duration = review_duration
+
+
 class _DummyCard:
     def __init__(
         self, note_filename: str, scheduler_card: object, card_path: str
@@ -138,7 +143,7 @@ class ReviewSessionRunTest(unittest.TestCase):
         self.assertEqual(2, save_card.call_count)
         sleep_mock.assert_called_once_with(0.2)
         self.assertEqual(2, scheduler.review_card.call_count)
-        session_entry_ui.show_start_menu.assert_called_once_with(2)
+        session_entry_ui.show_start_menu.assert_called_once_with(2, None)
 
     def test_run_auto_stages_each_reviewed_card_and_commits_at_end(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
@@ -186,7 +191,7 @@ class ReviewSessionRunTest(unittest.TestCase):
                 code = session.run()
 
         self.assertEqual(0, code)
-        session_entry_ui.show_start_menu.assert_called_once_with(1)
+        session_entry_ui.show_start_menu.assert_called_once_with(1, None)
         run_git.assert_any_call(
             ["add", "--", ".srs/1.json"],
             cwd=repo_root,
@@ -258,7 +263,58 @@ class ReviewSessionRunTest(unittest.TestCase):
             ["commit", "-m", "Spaced repetition session", "--", ".srs/1.json"],
             cwd=repo_root,
         )
-        session_entry_ui.show_start_menu.assert_called_once_with(2)
+        session_entry_ui.show_start_menu.assert_called_once_with(2, None)
+
+    def test_run_passes_estimated_minutes_to_session_entry_ui(self) -> None:
+        with tempfile.TemporaryDirectory() as repo_root:
+            os.makedirs(os.path.join(repo_root, ".srs"), exist_ok=True)
+            with open(
+                os.path.join(repo_root, ".srs", "index.txt"), "w", encoding="utf-8"
+            ):
+                pass
+
+            config = ReviewConfig()
+            ui = Mock()
+            session_entry_ui = Mock()
+            ui.prompt_rating_step.return_value = Rating.Good
+            ui.run_question_step.side_effect = ["answer1", "answer2"]
+
+            session = ReviewSession(
+                repo_root=repo_root,
+                ui=ui,
+                config=config,
+                parser_registry=build_parser_registry(config),
+                session_entry_ui=session_entry_ui,
+            )
+
+            scheduler = Mock()
+            scheduler.review_card.side_effect = [
+                (object(), object()),
+                (object(), object()),
+            ]
+            session.scheduler = scheduler
+
+            card_1 = _DummyCard(
+                "one.md", object(), os.path.join(repo_root, ".srs", "1.json")
+            )
+            card_2 = _DummyCard(
+                "two.md", object(), os.path.join(repo_root, ".srs", "2.json")
+            )
+            card_1.metadata.review_logs = [_DummyReviewLog(review_duration=30_000)]
+            card_2.metadata.review_logs = [_DummyReviewLog(review_duration=40_000)]
+
+            with (
+                patch.object(session, "_load_due_cards", return_value=[card_1, card_2]),
+                patch.object(session, "_save_reviewed_card"),
+                patch(
+                    "core.session.time.monotonic_ns",
+                    side_effect=[0, 1_000_000, 2_000_000, 3_000_000],
+                ),
+            ):
+                code = session.run()
+
+        self.assertEqual(0, code)
+        session_entry_ui.show_start_menu.assert_called_once_with(2, 2)
 
 
 if __name__ == "__main__":

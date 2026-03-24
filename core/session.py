@@ -1,4 +1,5 @@
 import os
+import math
 import time
 from datetime import datetime, timezone
 
@@ -49,7 +50,8 @@ class ReviewSession:
 
         total = len(cards)
         if self.session_entry_ui:
-            self.session_entry_ui.show_start_menu(total)
+            estimated_minutes = self._estimate_due_cards_duration_minutes(cards)
+            self.session_entry_ui.show_start_menu(total, estimated_minutes)
         try:
             for idx, card in enumerate(cards, start=1):
                 question_title = f"\n[{idx}/{total}] {card.note_filename}"
@@ -206,6 +208,19 @@ class ReviewSession:
             if card.is_due(now):
                 due_cards.append(card)
         return due_cards
+
+    def _estimate_due_cards_duration_minutes(self, cards: list[Card]) -> int | None:
+        total_duration_ms = 0
+        for card in cards:
+            if not card.metadata.review_logs:
+                return None
+            latest_review_log = card.metadata.review_logs[-1]
+            review_duration = getattr(latest_review_log, "review_duration", None)
+            if not isinstance(review_duration, int):
+                return None
+            total_duration_ms += review_duration
+
+        return math.ceil(total_duration_ms / 60_000)
 
     def _note_abs_path(self, indexed_path: str) -> str:
         return os.path.join(self.repo_root, indexed_path.lstrip("/"))

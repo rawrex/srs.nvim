@@ -145,6 +145,7 @@ class SessionEntryUiTest(unittest.TestCase):
 
         self.assertIn(("Session", {}), console.printed)
         self.assertIn(("Due cards: 3", {}), console.printed)
+        self.assertIn(("Estimated time: n/a", {}), console.printed)
 
     def test_show_start_menu_reprompts_on_non_enter_key(self) -> None:
         console = _FakeConsole()
@@ -160,6 +161,18 @@ class SessionEntryUiTest(unittest.TestCase):
             value for value, _kwargs in console.printed if isinstance(value, str)
         ]
         self.assertGreaterEqual(prompts.count("Press Enter to start"), 2)
+
+    def test_show_start_menu_shows_estimated_minutes_when_provided(self) -> None:
+        console = _FakeConsole()
+        ui = SessionEntryUI(console=console)  # type: ignore[arg-type]
+
+        with (
+            patch("ui.ui.os.system", return_value=0),
+            patch("ui.ui.read_single_key", return_value="\n"),
+        ):
+            ui.show_start_menu(due_cards_count=3, estimated_minutes=7)
+
+        self.assertIn(("Estimated time: 7 min", {}), console.printed)
 
 
 if __name__ == "__main__":
