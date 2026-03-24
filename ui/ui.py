@@ -120,36 +120,25 @@ class ReviewUI:
 
     def _print_markdown_with_images(self, text: str) -> None:
         markdown_lines: list[str] = []
+
         def flush_markdown_lines() -> None:
             if not markdown_lines:
                 return
             self.console.print(Markdown("".join(markdown_lines).rstrip("\n")))
             markdown_lines.clear()
+
         for line in text.splitlines(keepends=True):
-            image_reference = self._extract_image_reference_from_line(line)
-            if image_reference is None:
-                markdown_lines.append(line)
-                flush_markdown_lines()
-                continue
-            flush_markdown_lines()
-            rendered_image = self._render_image(image_reference)
-            if rendered_image is None:
-                self.console.print( image_reference, markup=False, highlight=False,)
-                continue
-            self.console.print(
-                rendered_image,
-                end="",
-                markup=False,
-                highlight=False,
-                soft_wrap=True,
-            )
+            if image_reference := self._extract_image_reference_from_line(line):
+                if rendered_image := self._render_image(image_reference):
+                    flush_markdown_lines()
+                    self.console.print(rendered_image, end="", markup=False, highlight=False, soft_wrap=True,)
+                    continue
+            markdown_lines.append(line)
         flush_markdown_lines()
 
     def _extract_image_reference_from_line(self, line: str) -> str | None:
-        image_match = re.match(r"^\s*(?:>\s*)*!\[\[([^\]]+)\]\]\s*$", line)
-        if image_match is not None:
-            reference = image_match.group(1).strip()
-            return reference or None
+        if image_match := re.match(r"^\s*(?:>\s*)*!\[\[([^\]]+)\]\]\s*$", line):
+            return image_match.group(1).strip()
         return None
 
     def _render_image(self, image_reference: str) -> str | None:
@@ -168,19 +157,12 @@ class ReviewUI:
         render_height = max(16, terminal_size.lines // 2)
 
         result = subprocess.run(
-            [
-                self.chafa_path,
-                "--size",
-                f"{render_width}x{render_height}",
-                path,
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
+            [ self.chafa_path, "--size", f"{render_width}x{render_height}", path, ],
+            capture_output=True, text=True, check=False,
         )
         if result.returncode != 0:
             return None
-        return result.stdout or None
+        return result.stdout
 
     def _mark_active_line(self, text: str) -> str:
         mark = "<|---"
