@@ -78,17 +78,6 @@ class ReviewUI:
             self.console.print(f"Set rating: {rating.name}")
             return rating
 
-    def prompt_cloze_reveal(self, title: str, card: Card) -> CardView:
-        return self.run_question_step(title, card)
-
-    def show_rating_view(self, title: str, view: CardView) -> None:
-        self._clear_screen()
-        self.console.print(title)
-        self._print_markdown_with_images(view.primary_block().text.rstrip("\n"))
-
-    def prompt_rating(self) -> Rating:
-        return self.prompt_rating_step()
-
     def _clear_screen(self) -> None:
         os.system("cls" if os.name == "nt" else "clear")
 
