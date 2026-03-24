@@ -67,7 +67,7 @@ class ReviewSessionRunTest(unittest.TestCase):
                 parser_registry=build_parser_registry(config),
             )
 
-            with patch.object(session, "_load_due_cards", return_value=[]):
+            with patch.object(session.cards_manager, "load_due_cards", return_value=[]):
                 code = session.run()
 
         self.assertEqual(0, code)
@@ -110,8 +110,12 @@ class ReviewSessionRunTest(unittest.TestCase):
             )
 
             with (
-                patch.object(session, "_load_due_cards", return_value=[card_1, card_2]),
-                patch.object(session, "_save_reviewed_card") as save_card,
+                patch.object(
+                    session.cards_manager,
+                    "load_due_cards",
+                    return_value=[card_1, card_2],
+                ),
+                patch.object(session.cards_manager, "save_reviewed_card") as save_card,
                 patch("core.session.time.monotonic_ns") as monotonic_ns,
                 patch("core.session.time.sleep") as sleep_mock,
             ):
@@ -160,8 +164,10 @@ class ReviewSessionRunTest(unittest.TestCase):
             )
 
             with (
-                patch.object(session, "_load_due_cards", return_value=[card]),
-                patch.object(session, "_save_reviewed_card"),
+                patch.object(
+                    session.cards_manager, "load_due_cards", return_value=[card]
+                ),
+                patch.object(session.cards_manager, "save_reviewed_card"),
                 patch("core.session.time.monotonic_ns", side_effect=[0, 1_000_000]),
                 patch("core.session.util.run_git") as run_git,
             ):
@@ -219,8 +225,12 @@ class ReviewSessionRunTest(unittest.TestCase):
             )
 
             with (
-                patch.object(session, "_load_due_cards", return_value=[card_1, card_2]),
-                patch.object(session, "_save_reviewed_card"),
+                patch.object(
+                    session.cards_manager,
+                    "load_due_cards",
+                    return_value=[card_1, card_2],
+                ),
+                patch.object(session.cards_manager, "save_reviewed_card"),
                 patch(
                     "core.session.time.monotonic_ns",
                     side_effect=[0, 1_000_000, 2_000_000, 3_000_000],
@@ -274,8 +284,12 @@ class ReviewSessionRunTest(unittest.TestCase):
             card_2.metadata.review_logs = [_DummyReviewLog(review_duration=40_000)]
 
             with (
-                patch.object(session, "_load_due_cards", return_value=[card_1, card_2]),
-                patch.object(session, "_save_reviewed_card"),
+                patch.object(
+                    session.cards_manager,
+                    "load_due_cards",
+                    return_value=[card_1, card_2],
+                ),
+                patch.object(session.cards_manager, "save_reviewed_card"),
                 patch(
                     "core.session.time.monotonic_ns",
                     side_effect=[0, 1_000_000, 2_000_000, 3_000_000],

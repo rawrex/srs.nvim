@@ -86,7 +86,7 @@ class ReviewSessionTest(unittest.TestCase):
             )
 
             with patch("card.card.Card.is_due", return_value=True):
-                cards = session._load_due_cards()
+                cards = session.cards_manager.load_due_cards()
 
             self.assertEqual(1, len(cards))
             blocks = cards[0].note_blocks
