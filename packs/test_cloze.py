@@ -83,7 +83,7 @@ class ClozePackTest(unittest.TestCase):
             patch("ui.ui.os.system", return_value=0),
             patch("ui.ui.read_single_key", side_effect=["A", "\n"]),
         ):
-            ui.prompt_cloze_reveal("title", card)
+            ui.run_question_step("title", card)
 
         frames = [
             item.markup
@@ -124,7 +124,7 @@ class ClozePackTest(unittest.TestCase):
             patch("ui.ui.os.system", return_value=0),
             patch("ui.ui.read_single_key", side_effect=["\n"]),
         ):
-            ui.prompt_cloze_reveal("title", card)
+            ui.run_question_step("title", card)
 
         calls = [
             item.markup
@@ -167,7 +167,7 @@ class ClozePackTest(unittest.TestCase):
             patch("ui.ui.os.system", return_value=0),
             patch("ui.ui.read_single_key", side_effect=["\n"]),
         ):
-            ui.prompt_cloze_reveal("title", card)
+            ui.run_question_step("title", card)
 
         calls = [
             item.markup
