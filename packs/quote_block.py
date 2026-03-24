@@ -20,17 +20,18 @@ class QuoteBlockCard(Card):
         return self.answer_view()
 
     def question_view(self) -> CardView:
-        lines = self.note_text.splitlines(keepends=True)
-        question = lines[0] if lines else self.note_text
-        return self._build_view(current_block=question)
+        return self._build_view(current_block=self._first_line_with_padding())
 
     def answer_view(self) -> CardView:
         return self._build_view(current_block=self.note_text)
 
     def context_view(self) -> CardView:
-        lines = self.note_text.splitlines(keepends=True)
-        context = lines[0] if lines else self.note_text
-        return self._build_view(current_block=context)
+        return self._build_view(current_block=self._first_line_with_padding())
+
+    def _first_line_with_padding(self) -> str:
+        if lines := self.note_text.splitlines(keepends=True):
+            return lines[0] + ("\n" * (len(lines) - 1))
+        return self.note_text
 
     def _build_view(self, current_block: str) -> CardView:
         blocks: List[ViewBlock] = []
