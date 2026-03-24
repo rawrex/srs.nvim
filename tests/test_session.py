@@ -1,6 +1,5 @@
 import json
 import os
-import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -10,6 +9,7 @@ from core.config import ReviewConfig
 from card.parsers import build_parser_registry
 from packs.cloze import ClozeCard
 from core.session import ReviewSession
+from tests.setup_test_helpers import temporary_session_repo
 
 
 class _DummyUI:
@@ -63,9 +63,8 @@ class ReviewSessionTest(unittest.TestCase):
         self.assertFalse(session.scheduler.enable_fuzzing)
 
     def test_load_due_cards_keeps_unclaimed_lines_as_context(self) -> None:
-        with tempfile.TemporaryDirectory() as repo_root:
+        with temporary_session_repo() as repo_root:
             note_path = os.path.join(repo_root, "note.md")
-            os.makedirs(os.path.join(repo_root, ".srs"), exist_ok=True)
             with open(note_path, "w", encoding="utf-8") as handle:
                 handle.write("Prelude line\nTerm ~{hidden}\nTail line\n")
 

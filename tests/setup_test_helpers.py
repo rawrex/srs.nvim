@@ -1,6 +1,8 @@
+import tempfile
 import re
 import subprocess
 import sys
+from contextlib import contextmanager
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -32,6 +34,33 @@ def install_system(repo_dir: Path) -> None:
 
 def uninstall_system(repo_dir: Path) -> None:
     run_command([sys.executable, str(UNINSTALL_SCRIPT)], cwd=repo_dir)
+
+
+@contextmanager
+def temporary_git_repo(
+    *,
+    install: bool = False,
+    with_repeat_marker: bool = False,
+):
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        repo_dir = Path(tmp_dir)
+        init_git_repo(repo_dir)
+        if install:
+            install_system(repo_dir)
+        if with_repeat_marker:
+            (repo_dir / ".repeat").write_text("", encoding="utf-8")
+        yield repo_dir
+
+
+@contextmanager
+def temporary_session_repo(with_index: bool = True):
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        repo_root = Path(tmp_dir)
+        srs_dir = repo_root / ".srs"
+        srs_dir.mkdir(parents=True, exist_ok=True)
+        if with_index:
+            (srs_dir / "index.txt").write_text("", encoding="utf-8")
+        yield str(repo_root)
 
 
 def tracked_head_files(repo_dir: Path) -> set[str]:

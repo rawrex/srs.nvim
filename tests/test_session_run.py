@@ -1,5 +1,4 @@
 import os
-import tempfile
 import unittest
 from unittest.mock import Mock, patch
 
@@ -8,6 +7,7 @@ from fsrs import Rating
 from core.config import ReviewConfig
 from card.parsers import build_parser_registry
 from core.session import ReviewSession
+from tests.setup_test_helpers import temporary_session_repo
 
 
 class _DummyMetadata:
@@ -41,7 +41,7 @@ class _DummyCard:
 
 class ReviewSessionRunTest(unittest.TestCase):
     def test_run_returns_1_when_index_missing(self) -> None:
-        with tempfile.TemporaryDirectory() as repo_root:
+        with temporary_session_repo(with_index=False) as repo_root:
             ui = Mock()
             config = ReviewConfig()
             session = ReviewSession(
@@ -57,13 +57,7 @@ class ReviewSessionRunTest(unittest.TestCase):
         ui.print_message.assert_called_once_with("Missing index")
 
     def test_run_returns_0_when_no_due_cards(self) -> None:
-        with tempfile.TemporaryDirectory() as repo_root:
-            os.makedirs(os.path.join(repo_root, ".srs"), exist_ok=True)
-            with open(
-                os.path.join(repo_root, ".srs", "index.txt"), "w", encoding="utf-8"
-            ):
-                pass
-
+        with temporary_session_repo() as repo_root:
             ui = Mock()
             config = ReviewConfig()
             session = ReviewSession(
@@ -80,13 +74,7 @@ class ReviewSessionRunTest(unittest.TestCase):
         ui.print_message.assert_called_once_with("No due cards.")
 
     def test_run_reviews_cards_persists_and_sleeps_between_notes(self) -> None:
-        with tempfile.TemporaryDirectory() as repo_root:
-            os.makedirs(os.path.join(repo_root, ".srs"), exist_ok=True)
-            with open(
-                os.path.join(repo_root, ".srs", "index.txt"), "w", encoding="utf-8"
-            ):
-                pass
-
+        with temporary_session_repo() as repo_root:
             config = ReviewConfig(between_notes_timeout_ms=200)
             ui = Mock()
             session_entry_ui = Mock()
@@ -146,13 +134,7 @@ class ReviewSessionRunTest(unittest.TestCase):
         session_entry_ui.show_start_menu.assert_called_once_with(2, None)
 
     def test_run_auto_stages_each_reviewed_card_and_commits_at_end(self) -> None:
-        with tempfile.TemporaryDirectory() as repo_root:
-            os.makedirs(os.path.join(repo_root, ".srs"), exist_ok=True)
-            with open(
-                os.path.join(repo_root, ".srs", "index.txt"), "w", encoding="utf-8"
-            ):
-                pass
-
+        with temporary_session_repo() as repo_root:
             config = ReviewConfig(auto_stage_reviewed_cards=True)
             ui = Mock()
             session_entry_ui = Mock()
@@ -206,13 +188,7 @@ class ReviewSessionRunTest(unittest.TestCase):
         )
 
     def test_run_commits_reviewed_cards_on_interrupt(self) -> None:
-        with tempfile.TemporaryDirectory() as repo_root:
-            os.makedirs(os.path.join(repo_root, ".srs"), exist_ok=True)
-            with open(
-                os.path.join(repo_root, ".srs", "index.txt"), "w", encoding="utf-8"
-            ):
-                pass
-
+        with temporary_session_repo() as repo_root:
             config = ReviewConfig(auto_stage_reviewed_cards=True)
             ui = Mock()
             session_entry_ui = Mock()
@@ -266,13 +242,7 @@ class ReviewSessionRunTest(unittest.TestCase):
         session_entry_ui.show_start_menu.assert_called_once_with(2, None)
 
     def test_run_passes_estimated_minutes_to_session_entry_ui(self) -> None:
-        with tempfile.TemporaryDirectory() as repo_root:
-            os.makedirs(os.path.join(repo_root, ".srs"), exist_ok=True)
-            with open(
-                os.path.join(repo_root, ".srs", "index.txt"), "w", encoding="utf-8"
-            ):
-                pass
-
+        with temporary_session_repo() as repo_root:
             config = ReviewConfig()
             ui = Mock()
             session_entry_ui = Mock()

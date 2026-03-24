@@ -145,7 +145,7 @@ class SessionEntryUiTest(unittest.TestCase):
 
         self.assertIn(("Session", {}), console.printed)
         self.assertIn(("Due cards: 3", {}), console.printed)
-        self.assertIn(("Estimated time: n/a", {}), console.printed)
+        self.assertNotIn(("Estimated time: n/a", {}), console.printed)
 
     def test_show_start_menu_reprompts_on_non_enter_key(self) -> None:
         console = _FakeConsole()
