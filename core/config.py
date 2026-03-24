@@ -1,7 +1,6 @@
 import json
 import os
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 from datetime import timedelta
 
 from fsrs import Rating
@@ -62,81 +61,26 @@ class ReviewConfig:
 def load_review_config(repo_root: str) -> ReviewConfig:
     path = os.path.join(repo_root, "config.json")
     defaults = ReviewConfig()
-    if not os.path.exists(path):
+    raw = _load_raw_config(path)
+    if raw is None:
         return defaults
 
-    try:
-        with open(path, "r", encoding="utf-8") as handle:
-            raw = json.load(handle)
-    except (OSError, json.JSONDecodeError):
-        return defaults
-    if not isinstance(raw, dict):
-        return defaults
+    review_raw = _dict_or_empty(raw.get("review"))
+    cloze_raw = _dict_or_empty(raw.get("cloze"))
+    scheduler_raw = (
+        raw.get("scheduler") if isinstance(raw.get("scheduler"), dict) else None
+    )
 
-    review_raw = raw.get("review")
-    if not isinstance(review_raw, dict):
-        review_raw = {}
-
-    cloze_raw = raw.get("cloze")
-    if not isinstance(cloze_raw, dict):
-        cloze_raw = {}
-
-    scheduler_raw: dict[str, object] | None = None
-    maybe_scheduler_raw = raw.get("scheduler")
-    if isinstance(maybe_scheduler_raw, dict):
-        scheduler_raw = maybe_scheduler_raw
-
-    reveal_raw = cloze_raw.get("reveal_mode")
-    try:
-        reveal_mode = RevealMode(reveal_raw)
-    except (TypeError, ValueError):
-        reveal_mode = defaults.cloze.reveal_mode
     rating_buttons = _parse_rating_buttons(review_raw.get("rating_buttons"))
-
-    syntax_raw = cloze_raw.get("syntax")
-    cloze_open = defaults.cloze.cloze_open
-    cloze_close = defaults.cloze.cloze_close
-    if isinstance(syntax_raw, dict):
-        maybe_open = syntax_raw.get("open")
-        maybe_close = syntax_raw.get("close")
-        if isinstance(maybe_open, str) and maybe_open:
-            cloze_open = maybe_open
-        if isinstance(maybe_close, str) and maybe_close:
-            cloze_close = maybe_close
-
-    mask_char = defaults.cloze.mask_char
-    mask_char_raw = cloze_raw.get("mask_char")
-    if isinstance(mask_char_raw, str) and len(mask_char_raw) == 1:
-        mask_char = mask_char_raw
-
-    between_notes_timeout_ms = defaults.between_notes_timeout_ms
-    timeout_raw = review_raw.get("between_notes_timeout_ms")
-    if isinstance(timeout_raw, int) and timeout_raw >= 0:
-        between_notes_timeout_ms = timeout_raw
-
-    show_context = defaults.show_context
-    show_context_raw = review_raw.get("show_context")
-    if isinstance(show_context_raw, bool):
-        show_context = show_context_raw
-
-    auto_stage_reviewed_cards = defaults.auto_stage_reviewed_cards
-    auto_stage_reviewed_cards_raw = review_raw.get("auto_stage_reviewed_cards")
-    if isinstance(auto_stage_reviewed_cards_raw, bool):
-        auto_stage_reviewed_cards = auto_stage_reviewed_cards_raw
-
-    attachments_directory = defaults.attachments_directory
-    attachments_directory_raw = raw.get("attachments_directory")
-    if isinstance(attachments_directory_raw, str):
-        attachments_directory_candidate = attachments_directory_raw.strip()
-        if attachments_directory_candidate:
-            if os.path.isabs(attachments_directory_candidate):
-                attachments_directory = os.path.normpath(
-                    attachments_directory_candidate
-                )
-            else:
-                attachments_directory = os.path.normpath(
-                    os.path.join(repo_root, attachments_directory_candidate)
-                )
+    between_notes_timeout_ms, show_context, auto_stage_reviewed_cards = (
+        _parse_review_flags(review_raw, defaults)
+    )
+    cloze_config = _parse_cloze_config(cloze_raw, defaults.cloze)
+    attachments_directory = _parse_attachments_directory(
+        raw.get("attachments_directory"),
+        repo_root,
+        defaults.attachments_directory,
+    )
 
     scheduler_parameters = defaults.scheduler_parameters
     scheduler_desired_retention = defaults.scheduler_desired_retention
@@ -164,12 +108,7 @@ def load_review_config(repo_root: str) -> ReviewConfig:
         auto_stage_reviewed_cards=auto_stage_reviewed_cards,
         show_context=show_context,
         attachments_directory=attachments_directory,
-        cloze=ClozeConfig(
-            reveal_mode=reveal_mode,
-            cloze_open=cloze_open,
-            cloze_close=cloze_close,
-            mask_char=mask_char,
-        ),
+        cloze=cloze_config,
         scheduler_parameters=scheduler_parameters,
         scheduler_desired_retention=scheduler_desired_retention,
         scheduler_learning_steps=scheduler_learning_steps,
@@ -177,6 +116,95 @@ def load_review_config(repo_root: str) -> ReviewConfig:
         scheduler_maximum_interval=scheduler_maximum_interval,
         scheduler_enable_fuzzing=scheduler_enable_fuzzing,
     )
+
+
+def _load_raw_config(path: str) -> dict[str, object] | None:
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            raw = json.load(handle)
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(raw, dict):
+        return None
+    return raw
+
+
+def _dict_or_empty(value: object) -> dict[str, object]:
+    if isinstance(value, dict):
+        return value
+    return {}
+
+
+def _parse_review_flags(
+    review_raw: dict[str, object],
+    defaults: ReviewConfig,
+) -> tuple[int, bool, bool]:
+    between_notes_timeout_ms = defaults.between_notes_timeout_ms
+    timeout_raw = review_raw.get("between_notes_timeout_ms")
+    if isinstance(timeout_raw, int) and timeout_raw >= 0:
+        between_notes_timeout_ms = timeout_raw
+
+    show_context = defaults.show_context
+    show_context_raw = review_raw.get("show_context")
+    if isinstance(show_context_raw, bool):
+        show_context = show_context_raw
+
+    auto_stage_reviewed_cards = defaults.auto_stage_reviewed_cards
+    auto_stage_reviewed_cards_raw = review_raw.get("auto_stage_reviewed_cards")
+    if isinstance(auto_stage_reviewed_cards_raw, bool):
+        auto_stage_reviewed_cards = auto_stage_reviewed_cards_raw
+
+    return between_notes_timeout_ms, show_context, auto_stage_reviewed_cards
+
+
+def _parse_cloze_config(
+    cloze_raw: dict[str, object], defaults: ClozeConfig
+) -> ClozeConfig:
+    reveal_raw = cloze_raw.get("reveal_mode")
+    try:
+        reveal_mode = RevealMode(reveal_raw)
+    except (TypeError, ValueError):
+        reveal_mode = defaults.reveal_mode
+
+    cloze_open = defaults.cloze_open
+    cloze_close = defaults.cloze_close
+    syntax_raw = cloze_raw.get("syntax")
+    if isinstance(syntax_raw, dict):
+        maybe_open = syntax_raw.get("open")
+        maybe_close = syntax_raw.get("close")
+        if isinstance(maybe_open, str) and maybe_open:
+            cloze_open = maybe_open
+        if isinstance(maybe_close, str) and maybe_close:
+            cloze_close = maybe_close
+
+    mask_char = defaults.mask_char
+    mask_char_raw = cloze_raw.get("mask_char")
+    if isinstance(mask_char_raw, str) and len(mask_char_raw) == 1:
+        mask_char = mask_char_raw
+
+    return ClozeConfig(
+        reveal_mode=reveal_mode,
+        cloze_open=cloze_open,
+        cloze_close=cloze_close,
+        mask_char=mask_char,
+    )
+
+
+def _parse_attachments_directory(
+    raw_value: object,
+    repo_root: str,
+    default: str | None,
+) -> str | None:
+    if not isinstance(raw_value, str):
+        return default
+    candidate = raw_value.strip()
+    if not candidate:
+        return default
+    if os.path.isabs(candidate):
+        return os.path.normpath(candidate)
+    return os.path.normpath(os.path.join(repo_root, candidate))
 
 
 def _parse_rating_buttons(raw: object) -> dict[Rating, str]:
