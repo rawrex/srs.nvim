@@ -105,7 +105,8 @@ class ReviewUI:
         ]
         if not rendered_blocks:
             rendered_blocks = [primary_block]
-        self._print_markdown_with_images("".join(rendered_blocks).rstrip("\n"))
+        merged_text = "\n\n".join(block.rstrip("\n") for block in rendered_blocks)
+        self._print_markdown_with_images(merged_text.rstrip("\n"))
 
     def _print_markdown_with_images(self, text: str) -> None:
         markdown_lines: list[str] = []
