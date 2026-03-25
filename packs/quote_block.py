@@ -41,7 +41,7 @@ class QuoteBlockCard(Card):
         for line_range in sorted(note_blocks):
             start_line, _end_line = line_range
             text = (
-                current_block
+                self._with_callout_heading_separator(current_block)
                 if line_range == (self.start_line, self.end_line)
                 else note_blocks[line_range]
             )
@@ -53,6 +53,18 @@ class QuoteBlockCard(Card):
                 )
             )
         return CardView(blocks=blocks)
+
+    def _with_callout_heading_separator(self, block: str) -> str:
+        lines = block.splitlines(keepends=True)
+        if len(lines) < 2:
+            return block
+        if not lines[0].startswith(">[!"):
+            return block
+        if not lines[1].startswith(">"):
+            return block
+        if lines[1].strip() == ">":
+            return block
+        return "".join([lines[0], ">\n", *lines[1:]])
 
 
 @dataclass(frozen=True)
