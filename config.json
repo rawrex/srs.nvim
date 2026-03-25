@@ -1,4 +1,5 @@
 {
+    "attachments_directory": "_",
     "review": {
         "auto_stage_reviewed_cards": false,
         "between_notes_timeout_ms": 0,
