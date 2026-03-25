@@ -114,6 +114,30 @@ class QuoteBlockClozePackTest(unittest.TestCase):
         self.assertNotIn("1", context)
         self.assertIn(">let x = ▇;", context)
 
+    def test_answer_view_keeps_revealed_callout_content(self) -> None:
+        block_text = ">[!code]- Example\n>let x = ~{1};\n"
+        card = QuoteBlockClozeCard(
+            note_id="1",
+            note_path="/tmp/note.md",
+            card_path="/tmp/1.json",
+            note_text=block_text,
+            metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
+            reveal_mode=RevealMode.WHOLE,
+            cloze_open="~{",
+            cloze_close="}",
+            mask_char="▇",
+            start_line=3,
+            end_line=4,
+            note_blocks={(3, 4): block_text},
+        )
+
+        answer = card.answer_view().primary_block().text
+
+        self.assertEqual(
+            ">[!code]- Example\n>let x = `1`;\n",
+            answer,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

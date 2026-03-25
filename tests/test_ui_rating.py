@@ -6,6 +6,7 @@ from unittest.mock import patch
 from fsrs import Rating
 from rich.markdown import Markdown
 
+from card.card import CardView, ViewBlock
 from core.config import ReviewConfig
 from ui.ui import ReviewUI, SessionEntryUI
 
@@ -129,6 +130,35 @@ class ReviewUiRatingTest(unittest.TestCase):
                 },
             ),
             console.printed,
+        )
+
+    def test_print_view_separates_quote_blocks_when_showing_context(self) -> None:
+        ui = ReviewUI(config=ReviewConfig(show_context=True), console=_FakeConsole())  # type: ignore[arg-type]
+        captured: list[str] = []
+        ui._print_markdown_with_images = captured.append  # type: ignore[method-assign]
+
+        view = CardView(
+            blocks=[
+                ViewBlock(
+                    start_line=1,
+                    text=">[!note]- Primary\n>Line 1\n",
+                    is_primary=True,
+                ),
+                ViewBlock(
+                    start_line=3,
+                    text=">[!note]- Context\n>Line 2\n",
+                    is_primary=False,
+                ),
+            ]
+        )
+
+        ui._print_view(card=Mock(), view=view)
+
+        self.assertEqual(
+            [
+                ">[!note]- Primary <|---\n>Line 1\n\n>[!note]- Context\n>Line 2",
+            ],
+            captured,
         )
 
 
