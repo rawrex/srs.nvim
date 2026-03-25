@@ -36,7 +36,10 @@ class QuoteBlockPackTest(unittest.TestCase):
         answer = card.reveal_for_label(REVEAL_ALL_LABEL)
         self.assertIsNotNone(answer)
         assert answer is not None
-        self.assertEqual(block_text, answer.primary_block().text)
+        self.assertEqual(
+            ">[!code]- Example\n>\n>```cpp\n>int x = 1;\n>```\n",
+            answer.primary_block().text,
+        )
 
     def test_quote_block_card_context_is_first_line(self) -> None:
         block_text = ">[!code]- Example\n>```cpp\n>int x = 1;\n>```\n"
