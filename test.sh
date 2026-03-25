@@ -12,7 +12,6 @@ touch .repeat &&\
 git add .srs/index.txt .repeat &&\
 git commit -m 'Inited srs' &&\
 echo 'Added SRS to git' &&\
-# cp -rv ../test_data_more/* . &&\
 cp -rv ../test_data/* . &&\
 cp -rv ../config.json .srs/ &&\
 git add -A &&\
