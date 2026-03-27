@@ -30,13 +30,15 @@ class QuoteBlockPackTest(unittest.TestCase):
             note_blocks={(5, 8): block_text},
         )
 
-        self.assertEqual(">Example\n\n\n\n", card.question_view().primary_block().text)
+        self.assertEqual(
+            ">Example\n>\n\n\n\n", card.question_view().primary_block().text
+        )
         self.assertEqual("code", card.callout_kind)
         answer = card.reveal_for_label(REVEAL_ALL_LABEL)
         self.assertIsNotNone(answer)
         assert answer is not None
         self.assertEqual(
-            ">Example\n>```cpp\n>int x = 1;\n>```\n",
+            ">Example\n>\n>```cpp\n>int x = 1;\n>```\n",
             answer.primary_block().text,
         )
 
@@ -53,7 +55,9 @@ class QuoteBlockPackTest(unittest.TestCase):
             note_blocks={(5, 8): block_text},
         )
 
-        self.assertEqual(">Example\n\n\n\n", card.context_view().primary_block().text)
+        self.assertEqual(
+            ">Example\n>\n\n\n\n", card.context_view().primary_block().text
+        )
         self.assertEqual("code", card.callout_kind)
 
 
