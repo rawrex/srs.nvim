@@ -50,7 +50,8 @@ class QuoteBlockClozePackTest(unittest.TestCase):
         )
 
         question = card.question_view().primary_block().text
-        self.assertEqual("block[a]\n>[!code]- Example\n", question)
+        self.assertEqual("block[a]\n>Example\n", question)
+        self.assertEqual("code", card.callout_kind)
 
         opened = card.reveal_for_label("a")
         self.assertIsNotNone(opened)
@@ -112,7 +113,7 @@ class QuoteBlockClozePackTest(unittest.TestCase):
         self.assertNotIn("block[a]", context)
         self.assertNotIn("[b]", context)
         self.assertNotIn("1", context)
-        self.assertEqual(">[!code]- Example\n\n", context)
+        self.assertEqual(">Example\n\n", context)
 
     def test_answer_view_keeps_revealed_callout_content(self) -> None:
         block_text = ">[!code]- Example\n>let x = ~{1};\n"
@@ -134,7 +135,7 @@ class QuoteBlockClozePackTest(unittest.TestCase):
         answer = card.answer_view().primary_block().text
 
         self.assertEqual(
-            ">[!code]- Example\n>let x = `1`;\n",
+            ">Example\n>let x = `1`;\n",
             answer,
         )
 
