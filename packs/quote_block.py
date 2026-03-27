@@ -1,4 +1,5 @@
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, ClassVar, Dict, List, Tuple
 
 from card.api import NoteParser
@@ -10,10 +11,13 @@ if TYPE_CHECKING:
 
 
 QUOTE_BLOCK_PARSER_ID = "quote_block"
+CALLOUT_HEADING_RE = re.compile(r"^>\[!(?P<kind>[^\]]+)\]-\s?(?P<title>.*)$")
 
 
 @dataclass
 class QuoteBlockCard(Card):
+    callout_kind: str | None = field(default=None, init=False)
+
     def reveal_for_label(self, label: str) -> CardView | None:
         if label != REVEAL_ALL_LABEL:
             return None
@@ -41,7 +45,7 @@ class QuoteBlockCard(Card):
         for line_range in sorted(note_blocks):
             start_line, _end_line = line_range
             text = (
-                self._with_callout_heading_separator(current_block)
+                self._strip_callout_heading(current_block)
                 if line_range == (self.start_line, self.end_line)
                 else note_blocks[line_range]
             )
@@ -54,17 +58,19 @@ class QuoteBlockCard(Card):
             )
         return CardView(blocks=blocks)
 
-    def _with_callout_heading_separator(self, block: str) -> str:
+    def _strip_callout_heading(self, block: str) -> str:
         lines = block.splitlines(keepends=True)
-        if len(lines) < 2:
+        if not lines:
             return block
-        if not lines[0].startswith(">[!"):
+
+        heading_match = CALLOUT_HEADING_RE.match(lines[0].rstrip("\n"))
+        if heading_match is None:
             return block
-        if not lines[1].startswith(">"):
-            return block
-        if lines[1].strip() == ">":
-            return block
-        return "".join([lines[0], ">\n", *lines[1:]])
+
+        self.callout_kind = heading_match.group("kind")
+        newline = "\n" if lines[0].endswith("\n") else ""
+        rendered_heading = f">{heading_match.group('title')}{newline}"
+        return "".join([rendered_heading, ">\n",  *lines[1:]])
 
 
 @dataclass(frozen=True)
