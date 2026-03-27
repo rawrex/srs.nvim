@@ -53,6 +53,13 @@ class QuoteBlockClozeCard(ClozeCard, QuoteBlockCard):
         self.block_opened = True
         return super().answer_view()
 
+    def context_view(self) -> CardView:
+        masked_block = self._masked_context_block(self.note_text)
+        lines = masked_block.splitlines(keepends=True)
+        first_line = lines[0] if lines else masked_block
+        collapsed_block = first_line + ("\n" * (len(lines) - 1))
+        return self._build_view(current_block=collapsed_block, mask_context=True)
+
     def _build_view(self, current_block: str, mask_context: bool = False) -> CardView:
         return ClozeCard._build_view(self, current_block, mask_context)
 
