@@ -121,7 +121,8 @@ class ReviewUI:
             if image_reference := self._extract_image_reference_from_line(line):
                 if rendered_image := self._render_image(image_reference):
                     flush_markdown_lines()
-                    self.console.print(rendered_image, end="", markup=False, highlight=False, soft_wrap=True,)
+                    image_block = f"{rendered_image.rstrip('\n')}\n\n"
+                    self.console.print(image_block, end="", markup=False, highlight=False, soft_wrap=True,)
                     continue
             markdown_lines.append(line)
         flush_markdown_lines()
