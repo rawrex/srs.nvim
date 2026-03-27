@@ -49,7 +49,7 @@ class ReviewUiRatingTest(unittest.TestCase):
         console = _FakeConsole()
         with patch("ui.ui.shutil.which", return_value=None):
             ui = ReviewUI(
-                config=ReviewConfig(attachments_directory="/repo/.attachments"),
+                config=ReviewConfig(media="/repo/.attachments"),
                 console=console,
             )  # type: ignore[arg-type]
 
@@ -64,7 +64,7 @@ class ReviewUiRatingTest(unittest.TestCase):
         console = _FakeConsole()
         with patch("ui.ui.shutil.which", return_value=None):
             ui = ReviewUI(
-                config=ReviewConfig(attachments_directory="/repo/.attachments"),
+                config=ReviewConfig(media="/repo/.attachments"),
                 console=console,
             )  # type: ignore[arg-type]
 
@@ -79,7 +79,7 @@ class ReviewUiRatingTest(unittest.TestCase):
         console = _FakeConsole()
         with patch("ui.ui.shutil.which", return_value=None):
             ui = ReviewUI(
-                config=ReviewConfig(attachments_directory="/repo/.attachments"),
+                config=ReviewConfig(media="/repo/.attachments"),
                 console=console,
             )  # type: ignore[arg-type]
 
@@ -103,7 +103,7 @@ class ReviewUiRatingTest(unittest.TestCase):
             patch("ui.ui.subprocess.run", return_value=completed) as run_mock,
         ):
             ui = ReviewUI(
-                config=ReviewConfig(attachments_directory="/repo/.attachments"),
+                config=ReviewConfig(media="/repo/.attachments"),
                 console=console,
             )  # type: ignore[arg-type]
             ui._print_markdown_with_images("![[diagram.png]]\n")
