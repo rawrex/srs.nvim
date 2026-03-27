@@ -22,10 +22,8 @@ class ReviewUI:
         self.console = console or Console()
         self.rating_buttons = config.rating_buttons
         self.show_context = config.show_context
-        self.attachments_directory = config.attachments_directory
-        self.chafa_path = (
-            shutil.which("chafa") if self.attachments_directory is not None else None
-        )
+        self.media = config.media
+        self.chafa_path = shutil.which("chafa") if self.media is not None else None
         self.button_to_rating_byte: dict[str, bytes] = {
             button: bytes([rating.value])
             for rating, button in self.rating_buttons.items()
@@ -133,13 +131,13 @@ class ReviewUI:
         return None
 
     def _render_image(self, image_reference: str) -> str | None:
-        if self.attachments_directory is None or self.chafa_path is None:
+        if self.media is None or self.chafa_path is None:
             return None
 
         filename = os.path.basename(image_reference)
         if not filename:
             return None
-        path = os.path.join(self.attachments_directory, filename)
+        path = os.path.join(self.media, filename)
         if not os.path.exists(path):
             return None
 

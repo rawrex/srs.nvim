@@ -36,7 +36,7 @@ class ReviewConfig:
     between_notes_timeout_ms: int = 0
     auto_stage_reviewed_cards: bool = False
     show_context: bool = True
-    attachments_directory: str | None = None
+    media: str | None = None
     cloze: ClozeConfig = field(default_factory=ClozeConfig)
     scheduler_parameters: tuple[float, ...] = DEFAULT_SCHEDULER.parameters
     scheduler_desired_retention: float = DEFAULT_SCHEDULER.desired_retention
@@ -76,11 +76,9 @@ def load_review_config(repo_root: str) -> ReviewConfig:
         _parse_review_flags(review_raw, defaults)
     )
     cloze_config = _parse_cloze_config(cloze_raw, defaults.cloze)
-    attachments_directory = _parse_attachments_directory(
-        raw.get("attachments_directory"),
-        repo_root,
-        defaults.attachments_directory,
-    )
+    media = _parse_media_directory(raw.get("media"), repo_root, defaults.media,)
+    if media is None:
+        media = _parse_media_directory(raw.get("attachments_directory"), repo_root, defaults.media,)
 
     scheduler_parameters = defaults.scheduler_parameters
     scheduler_desired_retention = defaults.scheduler_desired_retention
@@ -107,7 +105,7 @@ def load_review_config(repo_root: str) -> ReviewConfig:
         between_notes_timeout_ms=between_notes_timeout_ms,
         auto_stage_reviewed_cards=auto_stage_reviewed_cards,
         show_context=show_context,
-        attachments_directory=attachments_directory,
+        media=media,
         cloze=cloze_config,
         scheduler_parameters=scheduler_parameters,
         scheduler_desired_retention=scheduler_desired_retention,
@@ -192,7 +190,7 @@ def _parse_cloze_config(
     )
 
 
-def _parse_attachments_directory(
+def _parse_media_directory(
     raw_value: object,
     repo_root: str,
     default: str | None,
