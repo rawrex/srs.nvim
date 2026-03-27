@@ -112,7 +112,7 @@ class QuoteBlockClozePackTest(unittest.TestCase):
         self.assertNotIn("block[a]", context)
         self.assertNotIn("[b]", context)
         self.assertNotIn("1", context)
-        self.assertIn(">let x = ▇;", context)
+        self.assertEqual(">[!code]- Example\n\n", context)
 
     def test_answer_view_keeps_revealed_callout_content(self) -> None:
         block_text = ">[!code]- Example\n>let x = ~{1};\n"
