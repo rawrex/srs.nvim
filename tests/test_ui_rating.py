@@ -121,7 +121,7 @@ class ReviewUiRatingTest(unittest.TestCase):
         )
         self.assertIn(
             (
-                "ASCII ART\n",
+                "ASCII ART\n\n",
                 {
                     "end": "",
                     "markup": False,
