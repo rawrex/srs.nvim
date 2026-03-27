@@ -46,7 +46,7 @@ class QuoteBlockClozeCard(ClozeCard, QuoteBlockCard):
         first_line = lines[0] if lines else self._question_block()
         first_line = self._strip_callout_heading(first_line)
         return self._build_view(
-            current_block=f"block[{self.block_open_label}]\n{first_line}",
+            current_block=self._with_block_open_label(first_line),
             mask_context=False,
         )
 
@@ -63,6 +63,13 @@ class QuoteBlockClozeCard(ClozeCard, QuoteBlockCard):
 
     def _build_view(self, current_block: str, mask_context: bool = False) -> CardView:
         return ClozeCard._build_view(self, self._strip_callout_heading(current_block), mask_context,)
+
+    def _with_block_open_label(self, first_line: str) -> str:
+        if first_line.startswith(">"):
+            if first_line.startswith(">\n"):
+                return f">[{self.block_open_label}]\n"
+            return f">[{self.block_open_label}] {first_line[1:]}"
+        return f"[{self.block_open_label}] {first_line}"
 
 
 @dataclass(frozen=True)
