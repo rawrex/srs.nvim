@@ -70,7 +70,7 @@ class QuoteBlockCard(Card):
         self.callout_kind = heading_match.group("kind")
         newline = "\n" if lines[0].endswith("\n") else ""
         rendered_heading = f">{heading_match.group('title')}{newline}"
-        return "".join([rendered_heading, ">\n",  *lines[1:]])
+        return "".join([rendered_heading, ">\n", *lines[1:]])
 
 
 @dataclass(frozen=True)
