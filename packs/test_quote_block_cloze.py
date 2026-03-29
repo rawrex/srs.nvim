@@ -32,6 +32,30 @@ class QuoteBlockClozePackTest(unittest.TestCase):
             cards,
         )
 
+    def test_parser_claims_indented_quoted_blocks_with_clozes(self) -> None:
+        note_text = (
+            "Intro\n"
+            " > plain quote\n"
+            " > still plain\n"
+            "Middle\n"
+            " > quoted start\n"
+            " > includes ~{cloze}\n"
+            "End\n"
+        )
+        parser = QuoteBlockClozeParser(
+            reveal_mode=RevealMode.WHOLE,
+            cloze_open="~{",
+            cloze_close="}",
+            mask_char="▇",
+        )
+
+        cards = parser.split_note_into_cards(note_text)
+
+        self.assertEqual(
+            [(5, 6, " > quoted start\n > includes ~{cloze}\n")],
+            cards,
+        )
+
     def test_card_uses_label_to_open_block_and_labels_for_clozes(self) -> None:
         block_text = ">[!code]- Example\n>let x = ~{1};\n"
         card = QuoteBlockClozeCard(

@@ -17,6 +17,17 @@ class QuoteBlockPackTest(unittest.TestCase):
             cards,
         )
 
+    def test_quote_block_parser_claims_indented_quoted_lines(self) -> None:
+        note_text = "Intro\n >[!code]- Example\n >```cpp\n >int x = 1;\n >```\nEnd\n"
+        parser = QuoteBlockParser()
+
+        cards = parser.split_note_into_cards(note_text)
+
+        self.assertEqual(
+            [(2, 5, " >[!code]- Example\n >```cpp\n >int x = 1;\n >```\n")],
+            cards,
+        )
+
     def test_quote_block_card_question_is_first_line(self) -> None:
         block_text = ">[!code]- Example\n>```cpp\n>int x = 1;\n>```\n"
         card = QuoteBlockCard(
