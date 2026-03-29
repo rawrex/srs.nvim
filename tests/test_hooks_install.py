@@ -1,6 +1,5 @@
 import os
 import json
-import subprocess
 import unittest
 from pathlib import Path
 
@@ -300,22 +299,19 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             removed_card_id = inserted_ids_by_line[3]
             note_path.write_text("~{A}\n~{X}\n~{C}\n", encoding="utf-8")
             run_command(["git", "add", "note.md"], cwd=repo_dir)
-            commit_result = subprocess.run(
-                ["git", "commit", "-m", "delete middle line"],
-                cwd=repo_dir,
-                text=True,
-                capture_output=True,
-            )
-            self.assertNotEqual(0, commit_result.returncode)
-            self.assertIn("SRS index update aborted", commit_result.stderr)
+            self._commit(repo_dir, "delete middle line")
 
             rows = self._read_index_rows(repo_dir)
-            failed_ids_by_line = {
+            ids_after_delete = {
                 start_line: note_id
                 for note_id, _path, _parser_id, start_line, _end_line in rows
             }
-            self.assertEqual(inserted_ids_by_line, failed_ids_by_line)
-            self.assertTrue((srs_dir / f"{removed_card_id}.json").exists())
+            self.assertEqual(3, len(rows))
+            self.assertEqual(inserted_ids_by_line[1], ids_after_delete[1])
+            self.assertEqual(inserted_ids_by_line[2], ids_after_delete[2])
+            self.assertEqual(inserted_ids_by_line[4], ids_after_delete[3])
+            self.assertNotIn(removed_card_id, set(ids_after_delete.values()))
+            self.assertFalse((srs_dir / f"{removed_card_id}.json").exists())
 
     def test_index_ignores_empty_line_insertions(self):
         with self._setup_installed_repo(with_repeat_marker=True) as repo_dir:
@@ -368,22 +364,27 @@ class HooksInstallIntegrationTest(unittest.TestCase):
                 encoding="utf-8",
             )
             run_command(["git", "add", "note.md"], cwd=repo_dir)
-            commit_result = subprocess.run(
-                ["git", "commit", "-m", "multi-hunk edit"],
-                cwd=repo_dir,
-                text=True,
-                capture_output=True,
-            )
-            self.assertNotEqual(0, commit_result.returncode)
-            self.assertIn("SRS index update aborted", commit_result.stderr)
+            self._commit(repo_dir, "multi-hunk edit")
 
             rows = self._read_index_rows(repo_dir)
             ids_after = {
                 start_line: note_id
                 for note_id, _path, _parser_id, start_line, _end_line in rows
             }
-            self.assertEqual(ids_by_line, ids_after)
-            self.assertTrue((srs_dir / f"{ids_by_line[6]}.json").exists())
+            self.assertEqual(6, len(rows))
+            self.assertEqual(ids_by_line[1], ids_after[1])
+            self.assertEqual(ids_by_line[2], ids_after[3])
+            self.assertEqual(ids_by_line[3], ids_after[4])
+            self.assertEqual(ids_by_line[4], ids_after[5])
+            self.assertEqual(ids_by_line[5], ids_after[6])
+
+            removed_card_id = ids_by_line[6]
+            self.assertNotIn(removed_card_id, set(ids_after.values()))
+            self.assertFalse((srs_dir / f"{removed_card_id}.json").exists())
+
+            inserted_card_id = ids_after[2]
+            self.assertNotIn(inserted_card_id, set(ids_by_line.values()))
+            self.assertTrue((srs_dir / f"{inserted_card_id}.json").exists())
 
 
 if __name__ == "__main__":
