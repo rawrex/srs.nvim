@@ -14,6 +14,7 @@ def remap_rows_for_path(
     hunks: list[Hunk],
     collect_parser_rows: Callable[[str], list[tuple[str, int, int]]],
     create_card_row: Callable[[str, int, int], tuple[IndexRowTuple, str]],
+    remove_card_file: Callable[[str], str | None],
 ) -> PathRemapResult:
     changed = False
     touched_paths: set[str] = set()
@@ -82,15 +83,11 @@ def remap_rows_for_path(
             continue
 
         if within_range:
-            return PathRemapResult(
-                rows=path_rows,
-                changed=False,
-                touched_paths=touched_paths,
-                error_message=(
-                    "SRS index update aborted: parser could not claim an edited "
-                    f"card range in {modified_path}. Please resolve manually."
-                ),
-            )
+            removed_path = remove_card_file(note_id)
+            if removed_path is not None:
+                touched_paths.add(removed_path)
+            changed = True
+            continue
 
         if fallback_range is None:
             return PathRemapResult(

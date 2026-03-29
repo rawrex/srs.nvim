@@ -216,6 +216,7 @@ class Index:
                 hunks=modified_hunks.get(modified_path, []),
                 collect_parser_rows=self._collect_parser_rows,
                 create_card_row=self._create_card_row,
+                remove_card_file=self._remove_card_file,
             )
             if remap_result.error_message:
                 raise IndexUpdateAbortError(remap_result.error_message)
