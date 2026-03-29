@@ -78,6 +78,9 @@ class QuoteBlockParser(NoteParser):
     parser_id: ClassVar[str] = QUOTE_BLOCK_PARSER_ID
     priority: ClassVar[int] = 10
 
+    def _is_quote_line(self, line: str) -> bool:
+        return line.lstrip().startswith(">")
+
     def split_note_into_cards(self, note_text: str) -> List[Tuple[int, int, str]]:
         cards: List[Tuple[int, int, str]] = []
         current_start: int | None = None
@@ -86,7 +89,7 @@ class QuoteBlockParser(NoteParser):
         for line_number, line in enumerate(
             note_text.splitlines(keepends=True), start=1
         ):
-            if line.startswith(">"):
+            if self._is_quote_line(line):
                 if current_start is None:
                     current_start = line_number
                 current_lines.append(line)

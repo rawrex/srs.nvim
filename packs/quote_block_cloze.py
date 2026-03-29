@@ -89,7 +89,7 @@ class QuoteBlockClozeParser(ClozeParser, QuoteBlockParser, NoteParser):
         for line_number, line in enumerate(
             note_text.splitlines(keepends=True), start=1
         ):
-            if line.startswith(">"):
+            if self._is_quote_line(line):
                 if current_start is None:
                     current_start = line_number
                 current_lines.append(line)
