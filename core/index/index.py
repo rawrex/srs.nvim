@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+from dataclasses import dataclass
 
 from card.parsers import ParserRegistry
 from core import util
@@ -83,6 +84,172 @@ class Index:
         if len(lines) != original_count:
             self._write(lines)
         return len(lines) - original_count
+
+    def build_cleanup_report(self, tracked_paths: set[str]) -> "IndexCleanupReport":
+        lines = self._read()
+        grouped_rows = self._rows_by_path(lines)
+
+        expected_rows_cache: dict[str, set[tuple[str, int, int]]] = {}
+        missing_rows_by_path: dict[str, list[tuple[str, int, int]]] = {}
+        missing_tracked_paths: list[str] = []
+
+        for tracked_path in sorted(tracked_paths):
+            if not self._is_note_path(tracked_path):
+                continue
+            indexed_rows = grouped_rows.get(tracked_path, [])
+            if not indexed_rows:
+                missing_tracked_paths.append(tracked_path)
+
+            expected_rows = self._expected_rows_set(tracked_path)
+            expected_rows_cache[tracked_path] = expected_rows
+            indexed_row_keys = {
+                (parser_id, start_line, end_line)
+                for _note_id, parser_id, start_line, end_line in indexed_rows
+            }
+            missing_rows = sorted(expected_rows - indexed_row_keys)
+            if missing_rows:
+                missing_rows_by_path[tracked_path] = missing_rows
+
+        invalid_rows: list[IndexInvalidRow] = []
+        for raw_line in lines:
+            row = self.row_reader.parse(raw_line)
+            if row is None:
+                continue
+            if not self._is_note_path(row.path):
+                invalid_rows.append(
+                    IndexInvalidRow(
+                        note_id=row.note_id,
+                        path=row.path,
+                        parser_id=row.parser_id,
+                        start_line=row.start_line,
+                        end_line=row.end_line,
+                        reason="non_note_path",
+                    )
+                )
+                continue
+            if self._read_note_text(row.path) is None:
+                invalid_rows.append(
+                    IndexInvalidRow(
+                        note_id=row.note_id,
+                        path=row.path,
+                        parser_id=row.parser_id,
+                        start_line=row.start_line,
+                        end_line=row.end_line,
+                        reason="missing_note",
+                    )
+                )
+                continue
+
+            expected_rows = expected_rows_cache.get(row.path)
+            if expected_rows is None:
+                expected_rows = self._expected_rows_set(row.path)
+                expected_rows_cache[row.path] = expected_rows
+            if (row.parser_id, row.start_line, row.end_line) not in expected_rows:
+                invalid_rows.append(
+                    IndexInvalidRow(
+                        note_id=row.note_id,
+                        path=row.path,
+                        parser_id=row.parser_id,
+                        start_line=row.start_line,
+                        end_line=row.end_line,
+                        reason="missing_parser_row",
+                    )
+                )
+
+        referenced_card_ids = {
+            row.note_id
+            for raw_line in lines
+            for row in [self.row_reader.parse(raw_line)]
+            if row is not None
+        }
+        orphan_card_ids = sorted(self._list_card_ids() - referenced_card_ids)
+
+        return IndexCleanupReport(
+            missing_tracked_paths=missing_tracked_paths,
+            missing_rows_by_path=missing_rows_by_path,
+            invalid_rows=invalid_rows,
+            orphan_card_ids=orphan_card_ids,
+        )
+
+    def apply_cleanup_report(
+        self,
+        report: "IndexCleanupReport",
+        *,
+        add_missing: bool,
+        remove_invalid: bool,
+        remove_orphan_cards: bool,
+    ) -> "IndexCleanupApplyResult":
+        lines = self._read()
+        added_rows = 0
+        removed_invalid_rows = 0
+        removed_orphan_cards = 0
+
+        if add_missing:
+            for tracked_path in sorted(report.missing_rows_by_path):
+                missing_rows = report.missing_rows_by_path[tracked_path]
+                added_rows += self._append_missing_rows(
+                    tracked_path, missing_rows, lines
+                )
+
+        if remove_invalid:
+            invalid_row_keys = {
+                (row.note_id, row.path, row.parser_id, row.start_line, row.end_line)
+                for row in report.invalid_rows
+            }
+            if invalid_row_keys:
+                updated: list[str] = []
+                removed_note_ids: list[str] = []
+                for raw_line in lines:
+                    row = self.row_reader.parse(raw_line)
+                    if row is None:
+                        updated.append(raw_line)
+                        continue
+                    key = (
+                        row.note_id,
+                        row.path,
+                        row.parser_id,
+                        row.start_line,
+                        row.end_line,
+                    )
+                    if key in invalid_row_keys:
+                        removed_invalid_rows += 1
+                        removed_note_ids.append(row.note_id)
+                        continue
+                    updated.append(raw_line)
+                lines = updated
+
+                remaining_note_ids = {
+                    parsed_row.note_id
+                    for raw_line in lines
+                    for parsed_row in [self.row_reader.parse(raw_line)]
+                    if parsed_row is not None
+                }
+                for note_id in removed_note_ids:
+                    if note_id in remaining_note_ids:
+                        continue
+                    self._remove_card_file(note_id)
+
+        if add_missing or remove_invalid:
+            self._write(lines)
+
+        if remove_orphan_cards:
+            referenced_note_ids = {
+                row.note_id
+                for raw_line in lines
+                for row in [self.row_reader.parse(raw_line)]
+                if row is not None
+            }
+            orphan_card_ids = sorted(self._list_card_ids() - referenced_note_ids)
+            for note_id in orphan_card_ids:
+                removed = self._remove_card_file(note_id)
+                if removed is not None:
+                    removed_orphan_cards += 1
+
+        return IndexCleanupApplyResult(
+            added_rows=added_rows,
+            removed_invalid_rows=removed_invalid_rows,
+            removed_orphan_cards=removed_orphan_cards,
+        )
 
     def read_rows(self) -> list[tuple[str, str, str, int, int]]:
         rows: list[tuple[str, str, str, int, int]] = []
@@ -330,11 +497,63 @@ class Index:
     def _read_note_text(self, indexed_path: str) -> str | None:
         return self.card_store.read_note_text(indexed_path)
 
+    def _append_missing_rows(
+        self,
+        indexed_path: str,
+        missing_rows: list[tuple[str, int, int]],
+        lines: list[str],
+    ) -> int:
+        added_rows = 0
+        grouped_rows = self._rows_by_path(lines)
+        existing_row_keys = {
+            (parser_id, start_line, end_line)
+            for _note_id, parser_id, start_line, end_line in grouped_rows.get(
+                indexed_path, []
+            )
+        }
+        for parser_id, start_line, end_line in missing_rows:
+            key = (parser_id, start_line, end_line)
+            if key in existing_row_keys:
+                continue
+            row, _touched_path = self._create_card_row(parser_id, start_line, end_line)
+            note_id, row_parser_id, row_start_line, row_end_line = row
+            lines.append(
+                self._format_row(
+                    note_id,
+                    indexed_path,
+                    row_parser_id,
+                    row_start_line,
+                    row_end_line,
+                )
+            )
+            existing_row_keys.add((row_parser_id, row_start_line, row_end_line))
+            added_rows += 1
+        return added_rows
+
+    def _expected_rows_set(self, indexed_path: str) -> set[tuple[str, int, int]]:
+        return {
+            (parser_id, start_line, end_line)
+            for parser_id, start_line, end_line in self._collect_parser_rows(
+                indexed_path
+            )
+        }
+
     def _is_note_path(self, indexed_path: str) -> bool:
         return self.card_store.is_note_path(indexed_path)
 
     def _index_file_path(self) -> str:
         return self.card_store.index_file_path()
+
+    def _list_card_ids(self) -> set[str]:
+        srs_dir = os.path.dirname(self.path)
+        if not os.path.isdir(srs_dir):
+            return set()
+        card_ids: set[str] = set()
+        for name in os.listdir(srs_dir):
+            if not name.endswith(".json"):
+                continue
+            card_ids.add(name[: -len(".json")])
+        return card_ids
 
     def _rows_by_path(self, lines: list[str]) -> PathRows:
         return rows_by_path(lines, row_reader=self.row_reader)
@@ -350,4 +569,36 @@ class Index:
         return format_row(note_id, indexed_path, parser_id, start_line, end_line)
 
 
-__all__ = ["Index", "IndexUpdateAbortError", "IndexRowReader"]
+@dataclass(frozen=True)
+class IndexInvalidRow:
+    note_id: str
+    path: str
+    parser_id: str
+    start_line: int
+    end_line: int
+    reason: str
+
+
+@dataclass(frozen=True)
+class IndexCleanupReport:
+    missing_tracked_paths: list[str]
+    missing_rows_by_path: dict[str, list[tuple[str, int, int]]]
+    invalid_rows: list[IndexInvalidRow]
+    orphan_card_ids: list[str]
+
+
+@dataclass(frozen=True)
+class IndexCleanupApplyResult:
+    added_rows: int
+    removed_invalid_rows: int
+    removed_orphan_cards: int
+
+
+__all__ = [
+    "Index",
+    "IndexCleanupApplyResult",
+    "IndexCleanupReport",
+    "IndexInvalidRow",
+    "IndexUpdateAbortError",
+    "IndexRowReader",
+]
