@@ -552,7 +552,9 @@ class Index:
         for name in os.listdir(srs_dir):
             if not name.endswith(".json"):
                 continue
-            card_ids.add(name[: -len(".json")])
+            card_id = name[: -len(".json")]
+            if card_id.isdigit():
+                card_ids.add(card_id)
         return card_ids
 
     def _rows_by_path(self, lines: list[str]) -> PathRows:
