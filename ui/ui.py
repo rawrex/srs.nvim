@@ -103,47 +103,62 @@ class ReviewUI:
         ]
         if not rendered_blocks:
             rendered_blocks = [primary_block]
-        merged_text = "\n\n".join(block.rstrip("\n") for block in rendered_blocks)
         primary_block_index = next(
             (idx for idx, block in enumerate(view.blocks) if block.is_primary),
             0,
         )
-        target_line_index = self._line_index_for_block(
+        viewport_blocks = self._select_viewport_blocks(
             rendered_blocks, primary_block_index
         )
-        viewport_text = self._center_viewport_on_line(
-            merged_text.rstrip("\n"),
-            target_line_index,
-        )
-        self._print_markdown_with_images(viewport_text)
+        merged_text = "\n\n".join(block.rstrip("\n") for block in viewport_blocks)
+        self._print_markdown_with_images(merged_text)
 
-    def _line_index_for_block(self, blocks: list[str], block_index: int) -> int:
-        line_index = 0
-        for idx, block in enumerate(blocks):
-            if idx == block_index:
-                return line_index
-            line_index += len(block.rstrip("\n").splitlines())
-            if idx < len(blocks) - 1:
-                line_index += 1
-        return line_index
+    def _select_viewport_blocks(
+        self,
+        blocks: list[str],
+        primary_block_index: int,
+    ) -> list[str]:
+        if not blocks:
+            return []
 
-    def _center_viewport_on_line(self, text: str, target_line_index: int) -> str:
-        lines = text.splitlines(keepends=True)
-        if not lines:
-            return text
-
-        terminal_size = shutil.get_terminal_size()
+        terminal_size = shutil.get_terminal_size(fallback=(120, 40))
         viewport_height = max(1, terminal_size.lines - 2)
-        if len(lines) <= viewport_height:
-            return text
+        primary_idx = min(max(0, primary_block_index), len(blocks) - 1)
+        primary_lines = self._block_line_count(blocks[primary_idx])
+        if primary_lines >= viewport_height:
+            return [blocks[primary_idx]]
 
-        clamped_target = min(max(0, target_line_index), len(lines) - 1)
-        start = max(0, clamped_target - ((viewport_height - 1) // 2))
-        end = start + viewport_height
-        if end > len(lines):
-            end = len(lines)
-            start = max(0, end - viewport_height)
-        return "".join(lines[start:end]).rstrip("\n")
+        start = primary_idx
+        end = primary_idx
+        used_lines = primary_lines
+        offset = 1
+        while start > 0 or end < len(blocks) - 1:
+            added = False
+
+            left_idx = primary_idx - offset
+            if left_idx >= 0:
+                left_lines = self._block_line_count(blocks[left_idx])
+                if used_lines + 2 + left_lines <= viewport_height:
+                    start = left_idx
+                    used_lines += 2 + left_lines
+                    added = True
+
+            right_idx = primary_idx + offset
+            if right_idx < len(blocks):
+                right_lines = self._block_line_count(blocks[right_idx])
+                if used_lines + 2 + right_lines <= viewport_height:
+                    end = right_idx
+                    used_lines += 2 + right_lines
+                    added = True
+
+            if not added:
+                break
+            offset += 1
+
+        return blocks[start : end + 1]
+
+    def _block_line_count(self, block: str) -> int:
+        return max(1, len(block.rstrip("\n").splitlines()))
 
     def _print_markdown_with_images(self, text: str) -> None:
         markdown_lines: list[str] = []
