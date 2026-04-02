@@ -161,6 +161,44 @@ class ReviewUiRatingTest(unittest.TestCase):
             captured,
         )
 
+    def test_center_viewport_on_line_centers_primary_block(self) -> None:
+        ui = ReviewUI(config=ReviewConfig(show_context=True), console=_FakeConsole())  # type: ignore[arg-type]
+        text = "\n".join(
+            [
+                "ctx-1",
+                "ctx-2",
+                "ctx-3",
+                "ctx-4",
+                "active",
+                "ctx-6",
+                "ctx-7",
+                "ctx-8",
+                "ctx-9",
+                "ctx-10",
+            ]
+        )
+
+        with patch(
+            "ui.ui.shutil.get_terminal_size",
+            return_value=os.terminal_size((80, 8)),
+        ):
+            viewport = ui._center_viewport_on_line(text, target_line_index=4)
+
+        self.assertEqual(
+            "\n".join(["ctx-3", "ctx-4", "active", "ctx-6", "ctx-7", "ctx-8"]),
+            viewport,
+        )
+
+    def test_line_index_for_block_accounts_for_separator_lines(self) -> None:
+        ui = ReviewUI(config=ReviewConfig(show_context=True), console=_FakeConsole())  # type: ignore[arg-type]
+
+        line_index = ui._line_index_for_block(
+            blocks=["a1\na2\n", "b1\n", "c1\nc2\n"],
+            block_index=2,
+        )
+
+        self.assertEqual(5, line_index)
+
 
 class SessionEntryUiTest(unittest.TestCase):
     def test_show_start_menu_returns_on_enter(self) -> None:
