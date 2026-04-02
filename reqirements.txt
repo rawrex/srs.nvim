@@ -1,5 +1,4 @@
 ruff
 rich
 fsrs
-debugpy
 # fsrs[optimizer]
