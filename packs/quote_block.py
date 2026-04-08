@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 
 QUOTE_BLOCK_PARSER_ID = "quote_block"
-CALLOUT_HEADING_RE = re.compile(r"^>\[!(?P<kind>[^\]]+)\]-\s?(?P<title>.*)$")
+CALLOUT_HEADING_RE = re.compile(r"^>\s*\[!(?P<kind>[^\]]+)\](?:[+-])?\s*(?P<title>.*)$")
 
 
 @dataclass
