@@ -49,6 +49,8 @@ class ReviewSessionRunTest(unittest.TestCase):
                 ui=ui,
                 config=config,
                 parser_registry=build_parser_registry(config),
+                session_entry_ui=None,
+                scheduler=config.build_scheduler(),
             )
 
             code = session.run()
@@ -57,7 +59,7 @@ class ReviewSessionRunTest(unittest.TestCase):
         ui.print_message.assert_called_once_with("Missing index")
 
     def test_run_returns_0_when_no_due_cards(self) -> None:
-        with temporary_session_repo() as repo_root:
+        with temporary_session_repo(with_index=True) as repo_root:
             ui = Mock()
             config = ReviewConfig()
             session = ReviewSession(
@@ -65,6 +67,8 @@ class ReviewSessionRunTest(unittest.TestCase):
                 ui=ui,
                 config=config,
                 parser_registry=build_parser_registry(config),
+                session_entry_ui=None,
+                scheduler=config.build_scheduler(),
             )
 
             with patch.object(session.cards_manager, "load_due_cards", return_value=[]):
@@ -74,7 +78,7 @@ class ReviewSessionRunTest(unittest.TestCase):
         ui.print_message.assert_called_once_with("No due cards.")
 
     def test_run_reviews_cards_persists_and_sleeps_between_notes(self) -> None:
-        with temporary_session_repo() as repo_root:
+        with temporary_session_repo(with_index=True) as repo_root:
             config = ReviewConfig(between_notes_timeout_ms=200)
             ui = Mock()
             session_entry_ui = Mock()
@@ -87,6 +91,7 @@ class ReviewSessionRunTest(unittest.TestCase):
                 config=config,
                 parser_registry=build_parser_registry(config),
                 session_entry_ui=session_entry_ui,
+                scheduler=config.build_scheduler(),
             )
 
             scheduler = Mock()
@@ -138,7 +143,7 @@ class ReviewSessionRunTest(unittest.TestCase):
         session_entry_ui.show_start_menu.assert_called_once_with(2, None)
 
     def test_run_auto_stages_each_reviewed_card_and_commits_at_end(self) -> None:
-        with temporary_session_repo() as repo_root:
+        with temporary_session_repo(with_index=True) as repo_root:
             config = ReviewConfig(auto_stage_reviewed_cards=True)
             ui = Mock()
             session_entry_ui = Mock()
@@ -151,6 +156,7 @@ class ReviewSessionRunTest(unittest.TestCase):
                 config=config,
                 parser_registry=build_parser_registry(config),
                 session_entry_ui=session_entry_ui,
+                scheduler=config.build_scheduler(),
             )
 
             scheduler = Mock()
@@ -194,7 +200,7 @@ class ReviewSessionRunTest(unittest.TestCase):
         )
 
     def test_run_commits_reviewed_cards_on_interrupt(self) -> None:
-        with temporary_session_repo() as repo_root:
+        with temporary_session_repo(with_index=True) as repo_root:
             config = ReviewConfig(auto_stage_reviewed_cards=True)
             ui = Mock()
             session_entry_ui = Mock()
@@ -207,6 +213,7 @@ class ReviewSessionRunTest(unittest.TestCase):
                 config=config,
                 parser_registry=build_parser_registry(config),
                 session_entry_ui=session_entry_ui,
+                scheduler=config.build_scheduler(),
             )
 
             scheduler = Mock()
@@ -252,7 +259,7 @@ class ReviewSessionRunTest(unittest.TestCase):
         session_entry_ui.show_start_menu.assert_called_once_with(2, None)
 
     def test_run_passes_estimated_minutes_to_session_entry_ui(self) -> None:
-        with temporary_session_repo() as repo_root:
+        with temporary_session_repo(with_index=True) as repo_root:
             config = ReviewConfig()
             ui = Mock()
             session_entry_ui = Mock()
@@ -265,6 +272,7 @@ class ReviewSessionRunTest(unittest.TestCase):
                 config=config,
                 parser_registry=build_parser_registry(config),
                 session_entry_ui=session_entry_ui,
+                scheduler=config.build_scheduler(),
             )
 
             scheduler = Mock()

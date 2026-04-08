@@ -18,15 +18,15 @@ class ReviewSession:
         ui: ReviewUI,
         config: ReviewConfig,
         parser_registry: ParserRegistry,
-        session_entry_ui: SessionEntryUI | None = None,
-        scheduler: Scheduler | None = None,
+        session_entry_ui: SessionEntryUI | None,
+        scheduler: Scheduler,
     ) -> None:
         self.repo_root = repo_root
         self.ui = ui
         self.session_entry_ui = session_entry_ui
         self.between_notes_timeout_ms = config.between_notes_timeout_ms
         self.auto_stage_reviewed_cards = config.auto_stage_reviewed_cards
-        self.scheduler = scheduler or config.build_scheduler()
+        self.scheduler = scheduler
         self.cards_manager = CardsManager(
             repo_root=repo_root,
             parser_registry=parser_registry,
@@ -45,7 +45,9 @@ class ReviewSession:
 
         total = len(cards)
         if self.session_entry_ui:
-            estimated_minutes = self.cards_manager.estimate_due_cards_duration_minutes(cards)
+            estimated_minutes = self.cards_manager.estimate_due_cards_duration_minutes(
+                cards
+            )
             self.session_entry_ui.show_start_menu(total, estimated_minutes)
         try:
             for idx, card in enumerate(cards, start=1):

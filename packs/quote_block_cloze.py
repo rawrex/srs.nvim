@@ -61,8 +61,12 @@ class QuoteBlockClozeCard(ClozeCard, QuoteBlockCard):
         collapsed_block = first_line + ("\n" * (len(lines) - 1))
         return self._build_view(current_block=collapsed_block, mask_context=True)
 
-    def _build_view(self, current_block: str, mask_context: bool = False) -> CardView:
-        return ClozeCard._build_view(self, self._strip_callout_heading(current_block), mask_context,)
+    def _build_view(self, current_block: str, mask_context: bool) -> CardView:
+        return ClozeCard._build_view(
+            self,
+            self._strip_callout_heading(current_block),
+            mask_context,
+        )
 
     def _with_block_open_label(self, first_line: str) -> str:
         if first_line.startswith(">"):

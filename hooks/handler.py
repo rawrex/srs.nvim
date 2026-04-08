@@ -98,8 +98,11 @@ class Handler:
     def _apply_ref_diff(self, index: Index, old_ref: str, new_ref: str) -> None:
         diff_text = self.diff_name_status(old_ref, new_ref)
         patch_text = self.diff_patch(old_ref, new_ref)
-        index.apply_diff(diff_text, patch_text)
-        index.sync_tracked_paths(set(find_repeat_tracked_paths(self.repository_root)))
+        index.apply_diff(diff_text, patch_text, repo_root=self.repository_root)
+        index.sync_tracked_paths(
+            set(find_repeat_tracked_paths(self.repository_root)),
+            repo_root="",
+        )
 
     def _tracked_paths_from_git_index(self) -> set[str]:
         code, out, _err = util.run_git(["ls-files"], cwd=self.repository_root)

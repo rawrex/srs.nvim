@@ -8,6 +8,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from core import util
+from rich.console import Console
 
 from core.config import load_review_config
 from card.parsers import build_parser_registry
@@ -25,7 +26,7 @@ def main() -> int:
 
         config = load_review_config(repo_root)
         parser_registry = build_parser_registry(config)
-        ui = ReviewUI(config=config)
+        ui = ReviewUI(config=config, console=Console())
         session_entry_ui = SessionEntryUI(console=ui.console)
         session = ReviewSession(
             repo_root=repo_root,
@@ -33,6 +34,7 @@ def main() -> int:
             config=config,
             parser_registry=parser_registry,
             session_entry_ui=session_entry_ui,
+            scheduler=config.build_scheduler(),
         )
         return session.run()
     except KeyboardInterrupt:

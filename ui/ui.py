@@ -17,9 +17,9 @@ class ReviewUI:
     def __init__(
         self,
         config: ReviewConfig,
-        console: Console | None = None,
+        console: Console,
     ) -> None:
-        self.console = console or Console()
+        self.console = console
         self.rating_buttons = config.rating_buttons
         self.show_context = config.show_context
         self.media = config.media
@@ -53,26 +53,26 @@ class ReviewUI:
         self.console.print(title)
         self._print_view(card, view)
 
-    def prompt_rating_step(self, default_rating: Rating | None = None) -> Rating:
+    def prompt_rating_step(self, default_rating: Rating | None) -> Rating:
         prompt = self._rating_prompt(default_rating)
         while True:
             self.console.print(prompt, end="", markup=False, highlight=False)
             key = read_single_key()
             if maybe_suspend_for_key(key):
-                self.console.print()
+                self.console.print("")
                 continue
             if key in {"\r", "\n"} and default_rating is not None:
-                self.console.print()
+                self.console.print("")
                 self.console.print(f"Set rating: {default_rating.name}")
                 return default_rating
             try:
                 rating = Rating.from_bytes(self.button_to_rating_byte[key])
             except (KeyError, ValueError):
-                self.console.print()
+                self.console.print("")
                 self.console.print("Invalid rating")
                 continue
 
-            self.console.print()
+            self.console.print("")
             self.console.print(f"Set rating: {rating.name}")
             return rating
 
@@ -98,8 +98,7 @@ class ReviewUI:
             return
 
         rendered_blocks = [
-            primary_block if block.is_primary else block.text
-            for block in view.blocks
+            primary_block if block.is_primary else block.text for block in view.blocks
         ]
         if not rendered_blocks:
             rendered_blocks = [primary_block]
@@ -152,7 +151,9 @@ class ReviewUI:
             if not markdown_lines:
                 return
             markdown = "".join(markdown_lines).rstrip("\n")
-            self.console.print(Markdown(self._preserve_blockquote_line_breaks(markdown)))
+            self.console.print(
+                Markdown(self._preserve_blockquote_line_breaks(markdown))
+            )
             markdown_lines.clear()
 
         for line in text.splitlines(keepends=True):
@@ -160,7 +161,13 @@ class ReviewUI:
                 if rendered_image := self._render_image(image_reference):
                     flush_markdown_lines()
                     image_block = f"{rendered_image.rstrip('\n')}\n\n"
-                    self.console.print(image_block, end="", markup=False, highlight=False, soft_wrap=True,)
+                    self.console.print(
+                        image_block,
+                        end="",
+                        markup=False,
+                        highlight=False,
+                        soft_wrap=True,
+                    )
                     continue
             markdown_lines.append(line)
         flush_markdown_lines()
@@ -198,8 +205,15 @@ class ReviewUI:
         render_height = max(16, terminal_size.lines // 2)
 
         result = subprocess.run(
-            [ self.chafa_path, "--size", f"{render_width}x{render_height}", path, ],
-            capture_output=True, text=True, check=False,
+            [
+                self.chafa_path,
+                "--size",
+                f"{render_width}x{render_height}",
+                path,
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
         )
         if result.returncode != 0:
             return None
@@ -212,13 +226,13 @@ class ReviewUI:
 
 
 class SessionEntryUI:
-    def __init__(self, console: Console | None = None) -> None:
-        self.console = console or Console()
+    def __init__(self, console: Console) -> None:
+        self.console = console
 
     def show_start_menu(
         self,
         due_cards_count: int,
-        estimated_minutes: int | None = None,
+        estimated_minutes: int | None,
     ) -> None:
         while True:
             self._clear_screen()

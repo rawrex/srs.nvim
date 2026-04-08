@@ -39,8 +39,8 @@ def uninstall_system(repo_dir: Path) -> None:
 @contextmanager
 def temporary_git_repo(
     *,
-    install: bool = False,
-    with_repeat_marker: bool = False,
+    install: bool,
+    with_repeat_marker: bool,
 ):
     with tempfile.TemporaryDirectory() as tmp_dir:
         repo_dir = Path(tmp_dir)
@@ -53,7 +53,7 @@ def temporary_git_repo(
 
 
 @contextmanager
-def temporary_session_repo(with_index: bool = True):
+def temporary_session_repo(with_index: bool):
     with tempfile.TemporaryDirectory() as tmp_dir:
         repo_root = Path(tmp_dir)
         srs_dir = repo_root / ".srs"

@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import ANY, Mock, patch
 
 import core.review as review
 from core.config import ReviewConfig
@@ -36,13 +36,14 @@ class ReviewCliTest(unittest.TestCase):
             code = review.main()
 
         self.assertEqual(7, code)
-        ui_cls.assert_called_once_with(config=config)
+        ui_cls.assert_called_once_with(config=config, console=ANY)
         session_cls.assert_called_once_with(
             repo_root="/repo",
             ui=ui,
             config=config,
             parser_registry=parser_registry,
             session_entry_ui=session_entry_ui,
+            scheduler=ANY,
         )
         session.run.assert_called_once_with()
 

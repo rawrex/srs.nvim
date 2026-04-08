@@ -41,8 +41,8 @@ class Index:
     def apply_diff(
         self,
         diff_text: str,
-        patch_text: str = "",
-        repo_root: str | None = None,
+        patch_text: str,
+        repo_root: str,
     ) -> bool:
         changes = DiffChangeSet.from_diff_text(diff_text)
         if not changes.has_changes():
@@ -67,10 +67,10 @@ class Index:
     def sync_tracked_paths(
         self,
         tracked_paths: set[str],
-        repo_root: str | None = None,
+        repo_root: str,
     ) -> bool:
         changed, touched_paths = self._sync_tracked_paths(tracked_paths)
-        if changed and repo_root is not None:
+        if changed and repo_root:
             self._stage_paths(repo_root, touched_paths)
         return changed
 

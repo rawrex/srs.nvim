@@ -20,14 +20,14 @@ class HooksInstallIntegrationTest(unittest.TestCase):
     def _commit(self, repo_dir: Path, message: str) -> None:
         run_command(["git", "commit", "-m", message], cwd=repo_dir)
 
-    def _setup_installed_repo(self, with_repeat_marker: bool = False):
+    def _setup_installed_repo(self, with_repeat_marker: bool):
         return temporary_git_repo(
             install=True,
             with_repeat_marker=with_repeat_marker,
         )
 
     def test_marker_commits_start_and_stop_tracking_paths(self):
-        with self._setup_installed_repo() as repo_dir:
+        with self._setup_installed_repo(with_repeat_marker=False) as repo_dir:
             notes_dir = repo_dir / "notes"
             sub_dir = notes_dir / "sub"
             deep_dir = sub_dir / "deep"
@@ -75,7 +75,7 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             )
 
     def test_install_bootstraps_index_from_repeat_marked_directories(self):
-        with temporary_git_repo() as repo_dir:
+        with temporary_git_repo(install=False, with_repeat_marker=False) as repo_dir:
             notes_dir = repo_dir / "notes"
             nested_dir = notes_dir / "nested"
             excluded_dir = notes_dir / "excluded"

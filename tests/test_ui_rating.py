@@ -15,7 +15,7 @@ class _FakeConsole:
     def __init__(self) -> None:
         self.printed: list[tuple[object, dict[str, object]]] = []
 
-    def print(self, value: object = "", *args: object, **kwargs: object) -> None:
+    def print(self, value: object, *args: object, **kwargs: object) -> None:
         self.printed.append((value, dict(kwargs)))
 
 
@@ -38,7 +38,7 @@ class ReviewUiRatingTest(unittest.TestCase):
         ui = ReviewUI(config=ReviewConfig(), console=console)  # type: ignore[arg-type]
 
         with patch("ui.ui.read_single_key", side_effect=["\n", "i"]):
-            rating = ui.prompt_rating_step()
+            rating = ui.prompt_rating_step(default_rating=None)
 
         self.assertEqual(Rating.Good, rating)
         self.assertIn(("Invalid rating", {}), console.printed)
@@ -219,7 +219,7 @@ class SessionEntryUiTest(unittest.TestCase):
             patch("ui.ui.os.system", return_value=0),
             patch("ui.ui.read_single_key", return_value="\n"),
         ):
-            ui.show_start_menu(due_cards_count=3)
+            ui.show_start_menu(due_cards_count=3, estimated_minutes=None)
 
         self.assertIn(("Session", {}), console.printed)
         self.assertIn(("Due cards: 3", {}), console.printed)
@@ -233,7 +233,7 @@ class SessionEntryUiTest(unittest.TestCase):
             patch("ui.ui.os.system", return_value=0),
             patch("ui.ui.read_single_key", side_effect=["x", "\n"]),
         ):
-            ui.show_start_menu(due_cards_count=1)
+            ui.show_start_menu(due_cards_count=1, estimated_minutes=None)
 
         prompts = [
             value for value, _kwargs in console.printed if isinstance(value, str)

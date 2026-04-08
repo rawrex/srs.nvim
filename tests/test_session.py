@@ -54,6 +54,8 @@ class ReviewSessionTest(unittest.TestCase):
             ui=_DummyUI(),  # type: ignore[arg-type]
             config=config,
             parser_registry=build_parser_registry(config),
+            session_entry_ui=None,
+            scheduler=config.build_scheduler(),
         )
 
         self.assertEqual(0.5, session.scheduler.parameters[0])
@@ -63,7 +65,7 @@ class ReviewSessionTest(unittest.TestCase):
         self.assertFalse(session.scheduler.enable_fuzzing)
 
     def test_load_due_cards_keeps_unclaimed_lines_as_context(self) -> None:
-        with temporary_session_repo() as repo_root:
+        with temporary_session_repo(with_index=True) as repo_root:
             note_path = os.path.join(repo_root, "note.md")
             with open(note_path, "w", encoding="utf-8") as handle:
                 handle.write("Prelude line\nTerm ~{hidden}\nTail line\n")
@@ -83,6 +85,8 @@ class ReviewSessionTest(unittest.TestCase):
                 ui=_DummyUI(),  # type: ignore[arg-type]
                 config=ReviewConfig(),
                 parser_registry=build_parser_registry(ReviewConfig()),
+                session_entry_ui=None,
+                scheduler=ReviewConfig().build_scheduler(),
             )
 
             with patch("card.card.Card.is_due", return_value=True):
