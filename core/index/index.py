@@ -28,7 +28,7 @@ class Index:
         self._parser_registry = parser_registry
         self.row_reader = IndexRowReader()
         self.hunk_parser = HunkParser()
-        self.card_store = IndexCardStore(path, parser_registry)
+        self.card_store = IndexCardStore(path)
 
     @property
     def parser_registry(self) -> ParserRegistry:
@@ -37,7 +37,6 @@ class Index:
     @parser_registry.setter
     def parser_registry(self, parser_registry: ParserRegistry) -> None:
         self._parser_registry = parser_registry
-        self.card_store.parser_registry = parser_registry
 
     def apply_diff_and_stage(
         self,
@@ -325,7 +324,7 @@ class Index:
         return self.card_store.remove_card_file(note_id)
 
     def _collect_parser_rows(self, indexed_path: str) -> list[tuple[str, int, int]]:
-        return self.card_store.collect_parser_rows(indexed_path)
+        return self.card_store.collect_parser_rows(indexed_path, self.parser_registry)
 
     def _read_note_text(self, indexed_path: str) -> str | None:
         return self.card_store.read_note_text(indexed_path)

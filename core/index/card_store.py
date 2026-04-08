@@ -8,9 +8,8 @@ from core.index.storage import Metadata, write_metadata_file
 
 
 class IndexCardStore:
-    def __init__(self, index_path: str, parser_registry: ParserRegistry) -> None:
+    def __init__(self, index_path: str) -> None:
         self.index_path = index_path
-        self.parser_registry = parser_registry
 
     def is_note_path(self, indexed_path: str) -> bool:
         return not (
@@ -31,16 +30,18 @@ class IndexCardStore:
             return self.card_path(note_id)
         return None
 
-    def collect_parser_rows(self, indexed_path: str) -> list[tuple[str, int, int]]:
+    def collect_parser_rows(
+        self, indexed_path: str, parser_registry: ParserRegistry
+    ) -> list[tuple[str, int, int]]:
         note_text = self.read_note_text(indexed_path)
         if note_text is None:
             return []
 
         selected: list[tuple[str, int, int]] = []
         claimed: list[tuple[int, int]] = []
-        for parser in self.parser_registry.ordered():
+        for parser in parser_registry.ordered():
             cards = parser.split_note_into_cards(note_text)
-            for start_line, end_line, _block_text in cards:
+            for start_line, end_line, _ in cards:
                 if any(
                     not (end_line < claimed_start or start_line > claimed_end)
                     for claimed_start, claimed_end in claimed
