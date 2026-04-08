@@ -151,7 +151,8 @@ class ReviewUI:
         def flush_markdown_lines() -> None:
             if not markdown_lines:
                 return
-            self.console.print(Markdown("".join(markdown_lines).rstrip("\n")))
+            markdown = "".join(markdown_lines).rstrip("\n")
+            self.console.print(Markdown(self._preserve_blockquote_line_breaks(markdown)))
             markdown_lines.clear()
 
         for line in text.splitlines(keepends=True):
@@ -163,6 +164,18 @@ class ReviewUI:
                     continue
             markdown_lines.append(line)
         flush_markdown_lines()
+
+    def _preserve_blockquote_line_breaks(self, text: str) -> str:
+        lines: list[str] = []
+        for line in text.splitlines(keepends=True):
+            if not line.endswith("\n"):
+                lines.append(line)
+                continue
+            if re.match(r"^\s*>\s*\S", line):
+                lines.append(f"{line[:-1]}  \n")
+                continue
+            lines.append(line)
+        return "".join(lines)
 
     def _extract_image_reference_from_line(self, line: str) -> str | None:
         if image_match := re.match(r"^\s*(?:>\s*)*!\[\[([^\]]+)\]\]\s*$", line):
