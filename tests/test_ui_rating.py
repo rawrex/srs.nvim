@@ -90,6 +90,16 @@ class ReviewUiRatingTest(unittest.TestCase):
         self.assertIsInstance(printed_value, Markdown)
         self.assertEqual({}, printed_kwargs)
 
+    def test_preserve_blockquote_line_breaks_keeps_each_quote_line(self) -> None:
+        ui = ReviewUI(config=ReviewConfig(), console=_FakeConsole())  # type: ignore[arg-type]
+
+        text = ">line 1\n>line 2\n>line 3\n"
+
+        self.assertEqual(
+            ">line 1  \n>line 2  \n>line 3  \n",
+            ui._preserve_blockquote_line_breaks(text),
+        )
+
     def test_print_markdown_with_images_renders_with_chafa_when_available(self) -> None:
         console = _FakeConsole()
         completed = Mock(returncode=0, stdout="ASCII ART\n")
