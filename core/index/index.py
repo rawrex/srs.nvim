@@ -38,32 +38,40 @@ class Index:
     def parser_registry(self, parser_registry: ParserRegistry) -> None:
         self._parser_registry = parser_registry
 
-    def apply_diff_and_stage(
+    def apply_diff(
         self,
-        repo_root: str,
         diff_text: str,
         patch_text: str = "",
-    ) -> None:
-        changed, staged_paths = self._apply_diff(diff_text, patch_text)
-        if changed:
-            self._stage_paths(repo_root, staged_paths)
+        repo_root: str | None = None,
+    ) -> bool:
+        changes = DiffChangeSet.from_diff_text(diff_text)
+        if not changes.has_changes():
+            return False
 
-    def apply_diff(self, diff_text: str, patch_text: str = "") -> bool:
-        changed, _staged_paths = self._apply_diff(diff_text, patch_text)
-        return changed
+        result = self._update_index_lines(
+            self._read(),
+            changes,
+            self._parse_modified_hunks(patch_text),
+        )
+        if not result.changed:
+            return False
 
-    def sync_tracked_paths_and_stage(
+        self._write(result.lines)
+        touched_paths = set(result.touched_paths)
+        touched_paths.add(self._index_file_path())
+        if repo_root:
+            self._stage_paths(repo_root, touched_paths)
+            return True
+        return False
+
+    def sync_tracked_paths(
         self,
-        repo_root: str,
         tracked_paths: set[str],
+        repo_root: str | None = None,
     ) -> bool:
         changed, touched_paths = self._sync_tracked_paths(tracked_paths)
-        if changed:
+        if changed and repo_root is not None:
             self._stage_paths(repo_root, touched_paths)
-        return changed
-
-    def sync_tracked_paths(self, tracked_paths: set[str]) -> bool:
-        changed, _touched_paths = self._sync_tracked_paths(tracked_paths)
         return changed
 
     def add_missing_tracked_paths(self, tracked_paths: set[str]) -> int:
@@ -93,24 +101,6 @@ class Index:
                 (row.note_id, row.path, row.parser_id, row.start_line, row.end_line)
             )
         return rows
-
-    def _apply_diff(self, diff_text: str, patch_text: str) -> tuple[bool, set[str]]:
-        changes = DiffChangeSet.from_diff_text(diff_text)
-        if not changes.has_changes():
-            return False, set()
-
-        result = self._update_index_lines(
-            self._read(),
-            changes,
-            self._parse_modified_hunks(patch_text),
-        )
-        if not result.changed:
-            return False, set()
-
-        self._write(result.lines)
-        touched_paths = set(result.touched_paths)
-        touched_paths.add(self._index_file_path())
-        return True, touched_paths
 
     def _update_index_lines(
         self,

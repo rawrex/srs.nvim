@@ -23,9 +23,9 @@ class HandlerTest(unittest.TestCase):
         ):
             handler.handle_pre_commit(index)
 
-        index.apply_diff_and_stage.assert_called_once_with("/repo", "M\tnote.md\n", "")
-        index.sync_tracked_paths_and_stage.assert_called_once_with(
-            "/repo", {"/note.md"}
+        index.apply_diff.assert_called_once_with("M\tnote.md\n", "", repo_root="/repo")
+        index.sync_tracked_paths.assert_called_once_with(
+            {"/note.md"}, repo_root="/repo"
         )
 
     def test_handle_post_checkout_ignores_short_args(self) -> None:

@@ -36,7 +36,14 @@ class Handler:
 
     def diff_patch(self, old: str, new: str) -> str:
         code, out, _err = util.run_git(
-            [ "diff", "--unified=0", "--ignore-space-at-eol", "--ignore-cr-at-eol", old, new, ],
+            [
+                "diff",
+                "--unified=0",
+                "--ignore-space-at-eol",
+                "--ignore-cr-at-eol",
+                old,
+                new,
+            ],
             cwd=self.repository_root,
         )
         if code == 0:
@@ -44,7 +51,13 @@ class Handler:
         return ""
 
     def diff_patch_cached(self) -> str:
-        args = [ "diff", "--cached", "--unified=0", "--ignore-space-at-eol", "--ignore-cr-at-eol", ]
+        args = [
+            "diff",
+            "--cached",
+            "--unified=0",
+            "--ignore-space-at-eol",
+            "--ignore-cr-at-eol",
+        ]
         if not self.is_rev_exists("HEAD"):
             args.append("--root")
         code, out, _err = util.run_git(args, cwd=self.repository_root)
@@ -61,9 +74,9 @@ class Handler:
     def _handle_cached_diff(self, index: Index) -> None:
         diff_text = self.diff_name_status_cached()
         patch_text = self.diff_patch_cached()
-        index.apply_diff_and_stage(self.repository_root, diff_text, patch_text)
+        index.apply_diff(diff_text, patch_text, repo_root=self.repository_root)
         tracked_paths = self._tracked_paths_from_git_index()
-        index.sync_tracked_paths_and_stage(self.repository_root, tracked_paths)
+        index.sync_tracked_paths(tracked_paths, repo_root=self.repository_root)
 
     def handle_post_checkout(self, index: Index, args: list[str]) -> None:
         if len(args) < 2:
