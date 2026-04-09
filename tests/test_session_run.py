@@ -146,68 +146,9 @@ class ReviewSessionRunTest(unittest.TestCase):
         self.assertEqual(2, scheduler.review_card.call_count)
         session_entry_ui.show_start_menu.assert_called_once_with(2, None)
 
-    def test_run_auto_stages_each_reviewed_card_and_commits_at_end(self) -> None:
+    def test_run_raises_interrupt_during_rating(self) -> None:
         with temporary_session_repo(with_index=True) as repo_root:
-            config = ReviewConfig(auto_stage_reviewed_cards=True)
-            ui = Mock()
-            session_entry_ui = Mock()
-            ui.prompt_rating_step.return_value = Rating.Good
-            ui.run_question_step.return_value = "answer"
-
-            session = ReviewSession(
-                repo_root=repo_root,
-                ui=ui,
-                config=config,
-                parser_registry=build_parser_registry(config),
-                session_entry_ui=session_entry_ui,
-                scheduler=config.build_scheduler(),
-            )
-
-            scheduler = Mock()
-            scheduler.review_card.return_value = (object(), object())
-            session.scheduler = scheduler
-
-            card = _DummyCard(
-                "one.md",
-                object(),
-                os.path.join(repo_root, ".srs", "1.json"),
-            )
-
-            with (
-                patch.object(
-                    session.cards_manager,
-                    "load_due_cards",
-                    return_value=[DueCard(card=card, note_context_blocks={})],
-                ),
-                patch.object(session.cards_manager, "save_reviewed_card"),
-                patch("core.session.time.monotonic_ns", side_effect=[0, 1_000_000]),
-                patch("core.session.util.run_git") as run_git,
-            ):
-                run_git.side_effect = [
-                    (0, "", ""),
-                    (1, "", ""),
-                    (0, "", ""),
-                ]
-                code = session.run()
-
-        self.assertEqual(0, code)
-        session_entry_ui.show_start_menu.assert_called_once_with(1, None)
-        run_git.assert_any_call(
-            ["add", "--", ".srs/1.json"],
-            cwd=repo_root,
-        )
-        run_git.assert_any_call(
-            ["diff", "--cached", "--quiet", "--", ".srs/1.json"],
-            cwd=repo_root,
-        )
-        run_git.assert_any_call(
-            ["commit", "-m", "Spaced repetition session", "--", ".srs/1.json"],
-            cwd=repo_root,
-        )
-
-    def test_run_commits_reviewed_cards_on_interrupt(self) -> None:
-        with temporary_session_repo(with_index=True) as repo_root:
-            config = ReviewConfig(auto_stage_reviewed_cards=True)
+            config = ReviewConfig()
             ui = Mock()
             session_entry_ui = Mock()
             ui.run_question_step.return_value = "answer"
@@ -251,20 +192,10 @@ class ReviewSessionRunTest(unittest.TestCase):
                     "core.session.time.monotonic_ns",
                     side_effect=[0, 1_000_000, 2_000_000, 3_000_000],
                 ),
-                patch("core.session.util.run_git") as run_git,
             ):
-                run_git.side_effect = [
-                    (0, "", ""),
-                    (1, "", ""),
-                    (0, "", ""),
-                ]
                 with self.assertRaises(KeyboardInterrupt):
                     session.run()
 
-        run_git.assert_any_call(
-            ["commit", "-m", "Spaced repetition session", "--", ".srs/1.json"],
-            cwd=repo_root,
-        )
         session_entry_ui.show_start_menu.assert_called_once_with(2, None)
 
     def test_run_passes_estimated_minutes_to_session_entry_ui(self) -> None:
