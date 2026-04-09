@@ -90,6 +90,41 @@ class ReviewUiRatingTest(unittest.TestCase):
         self.assertIsInstance(printed_value, Markdown)
         self.assertEqual({}, printed_kwargs)
 
+    def test_print_markdown_with_images_splits_inline_wiki_image_in_blockquote(
+        self,
+    ) -> None:
+        console = _FakeConsole()
+        completed = Mock(returncode=0, stdout="ASCII ART\n")
+        with (
+            patch("ui.ui.shutil.which", return_value="/usr/bin/chafa"),
+            patch(
+                "ui.ui.shutil.get_terminal_size",
+                return_value=os.terminal_size((100, 40)),
+            ),
+            patch("ui.ui.os.path.exists", return_value=True),
+            patch("ui.ui.subprocess.run", return_value=completed),
+        ):
+            ui = ReviewUI(
+                config=ReviewConfig(media="/repo/.attachments"),
+                console=console,
+            )  # type: ignore[arg-type]
+            ui._print_markdown_with_images(">[!note] Example ![[diagram.png]]\n")
+
+        self.assertEqual(2, len(console.printed))
+        self.assertIsInstance(console.printed[0][0], Markdown)
+        self.assertEqual(
+            (
+                "ASCII ART\n\n",
+                {
+                    "end": "",
+                    "markup": False,
+                    "highlight": False,
+                    "soft_wrap": True,
+                },
+            ),
+            console.printed[1],
+        )
+
     def test_preserve_blockquote_line_breaks_keeps_each_quote_line(self) -> None:
         ui = ReviewUI(config=ReviewConfig(), console=_FakeConsole())  # type: ignore[arg-type]
 

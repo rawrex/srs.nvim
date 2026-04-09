@@ -12,6 +12,8 @@ from rich.markdown import Markdown
 from card.card import Card, CardView
 from core.config import ReviewConfig
 
+WIKI_IMAGE_RE = re.compile(r"!\[\[[^\]]+\]\]")
+
 
 class ReviewUI:
     def __init__(
@@ -222,7 +224,7 @@ class ReviewUI:
             )
             markdown_lines.clear()
 
-        for line in text.splitlines(keepends=True):
+        for line in self._split_inline_wiki_images(text):
             if image_reference := self._extract_image_reference_from_line(line):
                 if rendered_image := self._render_image(image_reference):
                     flush_markdown_lines()
@@ -237,6 +239,26 @@ class ReviewUI:
                     continue
             markdown_lines.append(line)
         flush_markdown_lines()
+
+    def _split_inline_wiki_images(self, text: str) -> list[str]:
+        lines: list[str] = []
+        for line in text.splitlines(keepends=True):
+            newline = "\n" if line.endswith("\n") else ""
+            content = line[:-1] if newline else line
+            prefix_match = re.match(r"^(\s*(?:>\s*)*)", content)
+            prefix = prefix_match.group(1) if prefix_match else ""
+            remainder = content[len(prefix) :]
+            images = WIKI_IMAGE_RE.findall(remainder)
+            if not images:
+                lines.append(line)
+                continue
+
+            text_without_images = WIKI_IMAGE_RE.sub("", remainder).strip()
+            if text_without_images:
+                lines.append(f"{prefix}{text_without_images}{newline}")
+            for image in images:
+                lines.append(f"{prefix}{image}{newline}")
+        return lines
 
     def _preserve_blockquote_line_breaks(self, text: str) -> str:
         lines: list[str] = []
