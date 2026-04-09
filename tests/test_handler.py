@@ -33,9 +33,14 @@ class HandlerTest(unittest.TestCase):
             handler.handle_pre_commit(index)
 
         handle_cached_diff.assert_called_once_with(index)
-        index.apply_diff.assert_called_once_with("M\tnote.md\n", "", repo_root="/repo")
+        index.apply_diff.assert_called_once_with(
+            "M\tnote.md\n",
+            "",
+            repo_root="/repo",
+        )
         index.sync_tracked_paths.assert_called_once_with(
-            {"/note.md"}, repo_root="/repo"
+            {"/note.md"},
+            repo_root="/repo",
         )
         self.assertEqual(
             [
@@ -124,7 +129,8 @@ class HandlerTest(unittest.TestCase):
 
         find_repeat.assert_called_once_with("/repo")
         index.sync_tracked_paths.assert_called_once_with(
-            {"/notes/top.md", "/notes/sub/deep/deep.md"}, repo_root="/repo"
+            {"/notes/top.md", "/notes/sub/deep/deep.md"},
+            repo_root="/repo",
         )
 
     def test_apply_ref_diff_ignores_eol_whitespace_noise(self) -> None:
@@ -163,8 +169,15 @@ class HandlerTest(unittest.TestCase):
             ],
             run_git.call_args_list,
         )
-        index.apply_diff.assert_called_once_with("M\tnote.md\n", "", repo_root="/repo")
-        index.sync_tracked_paths.assert_called_once_with(set(), repo_root="")
+        index.apply_diff.assert_called_once_with(
+            "M\tnote.md\n",
+            "",
+            repo_root="/repo",
+        )
+        index.sync_tracked_paths.assert_called_once_with(
+            set(),
+            repo_root="",
+        )
 
     def test_handle_pre_commit_adds_root_flag_when_head_missing(self) -> None:
         handler = Handler("/repo")

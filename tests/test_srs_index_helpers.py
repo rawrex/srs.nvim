@@ -5,6 +5,7 @@ import unittest
 from core.api import NoteParser
 from core.parsers import ParserRegistry
 from core.index.index import Index, IndexRowReader
+from core.index.card_store import IndexCardStore
 
 
 class _StaticParser(NoteParser):
@@ -33,8 +34,8 @@ class _StaticParser(NoteParser):
 
 
 class SrsIndexHelperTest(unittest.TestCase):
-    def _empty_registry(self) -> ParserRegistry:
-        return ParserRegistry(parsers={})
+    def _index(self, index_path: str) -> Index:
+        return Index(index_path, collect_parser_rows=lambda _indexed_path: [])
 
     def test_index_row_reader_parses_valid_row_and_rejects_invalid(self) -> None:
         reader = IndexRowReader()
@@ -56,7 +57,7 @@ class SrsIndexHelperTest(unittest.TestCase):
             os.makedirs(os.path.dirname(index_path), exist_ok=True)
             with open(index_path, "w", encoding="utf-8"):
                 pass
-            index = Index(index_path, self._empty_registry())
+            index = self._index(index_path)
 
             patch_text = "\n".join(
                 [
@@ -81,7 +82,7 @@ class SrsIndexHelperTest(unittest.TestCase):
             os.makedirs(os.path.dirname(index_path), exist_ok=True)
             with open(index_path, "w", encoding="utf-8"):
                 pass
-            index = Index(index_path, self._empty_registry())
+            index = self._index(index_path)
 
             shifted = index._remap_line_range(3, 3, [(1, 0, 1, 2)])
             overlapped = index._remap_line_range(3, 3, [(3, 1, 3, 1)])
@@ -100,7 +101,6 @@ class SrsIndexHelperTest(unittest.TestCase):
             with open(note_path, "w", encoding="utf-8") as handle:
                 handle.write("one\ntwo\nthree\n")
 
-            index = Index(index_path, self._empty_registry())
             high = _StaticParser(
                 parser_id="high",
                 priority=10,
@@ -111,11 +111,13 @@ class SrsIndexHelperTest(unittest.TestCase):
                 priority=0,
                 rows=[(2, 2, "two\n"), (3, 3, "three\n")],
             )
-            index.parser_registry = ParserRegistry(parsers={})
-            index.parser_registry.register(high)
-            index.parser_registry.register(low)
-
-            rows = index._collect_parser_rows("/note.md")
+            parser_registry = ParserRegistry(parsers={})
+            parser_registry.register(high)
+            parser_registry.register(low)
+            rows = IndexCardStore(index_path).collect_parser_rows(
+                "/note.md",
+                parser_registry,
+            )
 
         self.assertEqual([("high", 1, 2), ("low", 3, 3)], rows)
 
@@ -125,7 +127,7 @@ class SrsIndexHelperTest(unittest.TestCase):
             os.makedirs(os.path.dirname(index_path), exist_ok=True)
             with open(index_path, "w", encoding="utf-8"):
                 pass
-            index = Index(index_path, self._empty_registry())
+            index = self._index(index_path)
 
             self.assertIsNone(index._read_note_text("/missing.md"))
 
@@ -141,7 +143,7 @@ class SrsIndexHelperTest(unittest.TestCase):
             os.makedirs(os.path.dirname(index_path), exist_ok=True)
             with open(index_path, "w", encoding="utf-8"):
                 pass
-            index = Index(index_path, self._empty_registry())
+            index = self._index(index_path)
 
             self.assertFalse(index._is_note_path("/.srs"))
             self.assertFalse(index._is_note_path("/.srs/1.json"))
