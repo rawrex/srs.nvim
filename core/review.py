@@ -7,17 +7,16 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from core import util
 from rich.console import Console
 
-from core.config import load_review_config
 from card.parsers import build_parser_registry
+from core import util
+from core.config import load_review_config
 from core.session import ReviewSession
 from ui.ui import ReviewUI, SessionEntryUI
 
 
 def main() -> int:
-    ui: ReviewUI | None = None
     try:
         repo_root = util.get_repo_root()
         if not repo_root:
@@ -38,11 +37,8 @@ def main() -> int:
         )
         return session.run()
     except KeyboardInterrupt:
-        if ui:
-            ui.print_message("\nInterrupted.")
-        else:
-            print("\nInterrupted.")
-        return 130
+        print("\nExit.")
+        return 0
 
 
 if __name__ == "__main__":
