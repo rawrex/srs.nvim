@@ -1,10 +1,23 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from core import util
 
 
 class UtilTest(unittest.TestCase):
+    def test_run_git_disables_quotepath_for_non_ascii_paths(self) -> None:
+        completed = Mock(returncode=0, stdout="ok", stderr="")
+        with patch("core.util.subprocess.run", return_value=completed) as run:
+            code, out, err = util.run_git(["ls-files"], cwd="/repo")
+
+        self.assertEqual((0, "ok", ""), (code, out, err))
+        run.assert_called_once_with(
+            ["git", "-c", "core.quotepath=false", "ls-files"],
+            cwd="/repo",
+            text=True,
+            capture_output=True,
+        )
+
     def test_get_repo_root_returns_stripped_path_on_success(self) -> None:
         with patch(
             "core.util.run_git",
