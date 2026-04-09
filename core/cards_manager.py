@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 
 from core.card import Card
 from core.index.index import Index
-from core.index.storage import parse_storage_json, write_metadata_file
+from core.index.storage import parse_storage_json
 from core.parsers import ParserRegistry
 
 IndexRow = tuple[str, str, str, int, int]
@@ -42,9 +42,6 @@ class CardsManager:
         )
         self._add_unclaimed_note_context(note_context_blocks, claimed_lines_by_note)
         return self._filter_due_cards(cards_with_paths, note_context_blocks, now)
-
-    def save_reviewed_card(self, card: Card) -> None:
-        write_metadata_file(card.card_path, card.metadata)
 
     def estimate_due_cards_duration_minutes(
         self, due_cards: list[DueCard]
