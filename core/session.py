@@ -50,12 +50,18 @@ class ReviewSession:
             )
             self.session_entry_ui.show_start_menu(total, estimated_minutes)
         try:
-            for idx, card in enumerate(cards, start=1):
+            for idx, due_card in enumerate(cards, start=1):
+                card = due_card.card
+                note_context_blocks = due_card.note_context_blocks
                 question_title = f"\n[{idx}/{total}] {card.note_filename}"
 
                 # Step 1: question + reveals.
                 question_started_ns = time.monotonic_ns()
-                self.ui.run_question_step(question_title, card)
+                self.ui.run_question_step(
+                    question_title,
+                    card,
+                    note_context_blocks=note_context_blocks,
+                )
 
                 review_duration_ms = max(
                     0, (time.monotonic_ns() - question_started_ns) // 1_000_000
@@ -69,7 +75,12 @@ class ReviewSession:
                 # Step 2: answer view.
                 suggested_rating = card.suggested_rating()
                 answer_view = card.answer_view()
-                self.ui.show_answer_step(answer_title, card, answer_view)
+                self.ui.show_answer_step(
+                    answer_title,
+                    card,
+                    answer_view,
+                    note_context_blocks=note_context_blocks,
+                )
 
                 # Step 3: rating.
                 self.ui.print_message("")

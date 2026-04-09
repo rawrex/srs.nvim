@@ -6,6 +6,7 @@ from fsrs import Rating
 
 from core.config import ReviewConfig
 from card.parsers import build_parser_registry
+from core.cards_manager import DueCard
 from core.session import ReviewSession
 from tests.setup_test_helpers import temporary_session_repo
 
@@ -118,7 +119,10 @@ class ReviewSessionRunTest(unittest.TestCase):
                 patch.object(
                     session.cards_manager,
                     "load_due_cards",
-                    return_value=[card_1, card_2],
+                    return_value=[
+                        DueCard(card=card_1, note_context_blocks={}),
+                        DueCard(card=card_2, note_context_blocks={}),
+                    ],
                 ),
                 patch.object(session.cards_manager, "save_reviewed_card") as save_card,
                 patch("core.session.time.monotonic_ns") as monotonic_ns,
@@ -171,7 +175,9 @@ class ReviewSessionRunTest(unittest.TestCase):
 
             with (
                 patch.object(
-                    session.cards_manager, "load_due_cards", return_value=[card]
+                    session.cards_manager,
+                    "load_due_cards",
+                    return_value=[DueCard(card=card, note_context_blocks={})],
                 ),
                 patch.object(session.cards_manager, "save_reviewed_card"),
                 patch("core.session.time.monotonic_ns", side_effect=[0, 1_000_000]),
@@ -235,7 +241,10 @@ class ReviewSessionRunTest(unittest.TestCase):
                 patch.object(
                     session.cards_manager,
                     "load_due_cards",
-                    return_value=[card_1, card_2],
+                    return_value=[
+                        DueCard(card=card_1, note_context_blocks={}),
+                        DueCard(card=card_2, note_context_blocks={}),
+                    ],
                 ),
                 patch.object(session.cards_manager, "save_reviewed_card"),
                 patch(
@@ -295,7 +304,10 @@ class ReviewSessionRunTest(unittest.TestCase):
                 patch.object(
                     session.cards_manager,
                     "load_due_cards",
-                    return_value=[card_1, card_2],
+                    return_value=[
+                        DueCard(card=card_1, note_context_blocks={}),
+                        DueCard(card=card_2, note_context_blocks={}),
+                    ],
                 ),
                 patch.object(session.cards_manager, "save_reviewed_card"),
                 patch(

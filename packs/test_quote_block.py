@@ -18,7 +18,6 @@ class QuoteBlockPackTest(unittest.TestCase):
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             start_line=5,
             end_line=8,
-            note_blocks={(5, 8): block_text},
         )
 
         self.assertEqual(
@@ -58,7 +57,6 @@ class QuoteBlockPackTest(unittest.TestCase):
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             start_line=5,
             end_line=8,
-            note_blocks={(5, 8): block_text},
         )
 
         self.assertEqual(
@@ -76,7 +74,6 @@ class QuoteBlockPackTest(unittest.TestCase):
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             start_line=5,
             end_line=8,
-            note_blocks={(5, 8): block_text},
         )
 
         self.assertEqual(
@@ -101,7 +98,6 @@ class QuoteBlockPackTest(unittest.TestCase):
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             start_line=5,
             end_line=8,
-            note_blocks={(5, 8): block_text},
         )
 
         self.assertEqual(

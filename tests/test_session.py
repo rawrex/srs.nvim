@@ -93,7 +93,7 @@ class ReviewSessionTest(unittest.TestCase):
                 cards = session.cards_manager.load_due_cards()
 
             self.assertEqual(1, len(cards))
-            blocks = cards[0].note_blocks
+            blocks = cards[0].note_context_blocks
             self.assertIn((1, 1), blocks)
             self.assertIn((2, 2), blocks)
             self.assertIn((3, 3), blocks)

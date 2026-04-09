@@ -96,16 +96,16 @@ class ClozePackTest(unittest.TestCase):
         self.assertNotIn("[A]", frames[1])
 
     def test_prompt_cloze_reveal_renders_masked_context_without_labels(self) -> None:
-        note_blocks = {
+        note_context_blocks = {
             (1, 1): "# One\nFirst ~{hidden} block.\n",
-            (4, 4): "# Two\nSecond [a]~{context cloze} block.\n",
+            (4, 4): "# Two\nSecond ▇▇▇▇▇▇▇▇▇▇▇▇▇ block.\n",
         }
         console = FakeConsole()
         card = ClozeCard(
             note_id="1",
             note_path="/tmp/note.md",
             card_path="/tmp/1.json",
-            note_text=note_blocks[(1, 1)],
+            note_text=note_context_blocks[(1, 1)],
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             reveal_mode=RevealMode.WHOLE,
             cloze_open="~{",
@@ -113,7 +113,6 @@ class ClozePackTest(unittest.TestCase):
             mask_char="▇",
             start_line=1,
             end_line=1,
-            note_blocks=note_blocks,
         )
         ui = ReviewUI(
             config=ReviewConfig(),
@@ -124,7 +123,11 @@ class ClozePackTest(unittest.TestCase):
             patch("ui.ui.os.system", return_value=0),
             patch("ui.ui.read_single_key", side_effect=["\n"]),
         ):
-            ui.run_question_step("title", card)
+            ui.run_question_step(
+                "title",
+                card,
+                note_context_blocks=note_context_blocks,
+            )
 
         calls = [
             item.markup
@@ -139,7 +142,7 @@ class ClozePackTest(unittest.TestCase):
         self.assertIn("▇▇▇▇▇▇▇▇▇▇▇▇▇", rendered)
 
     def test_prompt_cloze_reveal_hides_context_when_disabled(self) -> None:
-        note_blocks = {
+        note_context_blocks = {
             (1, 1): "# One\nFirst ~{hidden} block.\n",
             (4, 4): "# Two\nSecond ~{context cloze} block.\n",
         }
@@ -148,7 +151,7 @@ class ClozePackTest(unittest.TestCase):
             note_id="1",
             note_path="/tmp/note.md",
             card_path="/tmp/1.json",
-            note_text=note_blocks[(1, 1)],
+            note_text=note_context_blocks[(1, 1)],
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             reveal_mode=RevealMode.WHOLE,
             cloze_open="~{",
@@ -156,7 +159,6 @@ class ClozePackTest(unittest.TestCase):
             mask_char="▇",
             start_line=1,
             end_line=1,
-            note_blocks=note_blocks,
         )
         ui = ReviewUI(
             config=ReviewConfig(show_context=False),
@@ -167,7 +169,11 @@ class ClozePackTest(unittest.TestCase):
             patch("ui.ui.os.system", return_value=0),
             patch("ui.ui.read_single_key", side_effect=["\n"]),
         ):
-            ui.run_question_step("title", card)
+            ui.run_question_step(
+                "title",
+                card,
+                note_context_blocks=note_context_blocks,
+            )
 
         calls = [
             item.markup
@@ -179,8 +185,8 @@ class ClozePackTest(unittest.TestCase):
         self.assertIn("[a]", rendered)
         self.assertNotIn("Second", rendered)
 
-    def test_reveal_all_keeps_context_masked(self) -> None:
-        note_blocks = {
+    def test_reveal_all_reveals_primary_block_only(self) -> None:
+        note_context_blocks = {
             (1, 1): "# One\nFirst ~{hidden} block.\n",
             (4, 4): "# Two\nSecond ~{context cloze} block.\n",
         }
@@ -188,7 +194,7 @@ class ClozePackTest(unittest.TestCase):
             note_id="1",
             note_path="/tmp/note.md",
             card_path="/tmp/1.json",
-            note_text=note_blocks[(1, 1)],
+            note_text=note_context_blocks[(1, 1)],
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             reveal_mode=RevealMode.WHOLE,
             cloze_open="~{",
@@ -196,17 +202,13 @@ class ClozePackTest(unittest.TestCase):
             mask_char="▇",
             start_line=1,
             end_line=1,
-            note_blocks=note_blocks,
         )
 
         view = card.reveal_for_label(REVEAL_ALL_LABEL)
         self.assertIsNotNone(view)
         assert view is not None
-        self.assertEqual(2, len(view.blocks))
+        self.assertEqual(1, len(view.blocks))
         self.assertIn("First `hidden` block.", view.primary_block().text)
-        context = next(block.text for block in view.blocks if not block.is_primary)
-        self.assertNotIn("context cloze", context)
-        self.assertIn("▇▇▇▇▇▇▇▇▇▇▇▇▇", context)
 
     def test_context_view_masks_primary_cloze_without_labels(self) -> None:
         card = ClozeCard(

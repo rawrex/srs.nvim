@@ -1,6 +1,6 @@
 import re
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, ClassVar, Dict, List, Tuple
+from typing import TYPE_CHECKING, ClassVar, List, Tuple
 
 from card.api import NoteParser
 from card.card import Card, CardView, REVEAL_ALL_LABEL, ViewBlock
@@ -38,25 +38,15 @@ class QuoteBlockCard(Card):
         return self.note_text
 
     def _build_view(self, current_block: str) -> CardView:
-        blocks: List[ViewBlock] = []
-        note_blocks = self.note_blocks or {
-            (self.start_line, self.end_line): self.note_text
-        }
-        for line_range in sorted(note_blocks):
-            start_line, _end_line = line_range
-            text = (
-                self._strip_callout_heading(current_block)
-                if line_range == (self.start_line, self.end_line)
-                else note_blocks[line_range]
-            )
-            blocks.append(
+        return CardView(
+            blocks=[
                 ViewBlock(
-                    start_line=start_line,
-                    text=text,
-                    is_primary=line_range == (self.start_line, self.end_line),
+                    start_line=self.start_line,
+                    text=self._strip_callout_heading(current_block),
+                    is_primary=True,
                 )
-            )
-        return CardView(blocks=blocks)
+            ]
+        )
 
     def _strip_callout_heading(self, block: str) -> str:
         lines = block.splitlines(keepends=True)
@@ -118,7 +108,6 @@ class QuoteBlockParser(NoteParser):
         note_text: str,
         start_line: int,
         end_line: int,
-        note_blocks: Dict[Tuple[int, int], str],
         card_path: str,
         metadata: Metadata,
     ) -> Card:
@@ -129,7 +118,6 @@ class QuoteBlockParser(NoteParser):
             note_text=note_text,
             start_line=start_line,
             end_line=end_line,
-            note_blocks=note_blocks,
             metadata=metadata,
         )
 

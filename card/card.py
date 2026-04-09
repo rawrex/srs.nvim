@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 from fsrs import Card as SchedulerCard
 from fsrs import Rating
@@ -57,7 +57,6 @@ class Card(ABC):
     metadata: Metadata
     start_line: int = 1
     end_line: int = 1
-    note_blocks: Dict[Tuple[int, int], str] = field(default_factory=dict)
 
     @property
     def note_filename(self) -> str:

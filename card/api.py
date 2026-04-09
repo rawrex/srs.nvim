@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import ClassVar, Dict, List, Tuple
+from typing import ClassVar, List, Tuple
 
 from card.card import Card
 from core.index.storage import Metadata
@@ -21,7 +21,6 @@ class NoteParser(ABC):
         note_text: str,
         start_line: int,
         end_line: int,
-        note_blocks: Dict[Tuple[int, int], str],
         card_path: str,
         metadata: Metadata,
     ) -> Card:

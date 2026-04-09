@@ -1,6 +1,6 @@
 import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, ClassVar, Dict, List, Tuple
+from typing import TYPE_CHECKING, ClassVar, List, Tuple
 
 from card.api import NoteParser
 from card.card import REVEAL_ALL_LABEL, Card, CardView
@@ -45,10 +45,7 @@ class QuoteBlockClozeCard(ClozeCard, QuoteBlockCard):
         lines = self._question_block().splitlines(keepends=True)
         first_line = lines[0] if lines else self._question_block()
         first_line = self._strip_callout_heading(first_line)
-        return self._build_view(
-            current_block=self._with_block_open_label(first_line),
-            mask_context=False,
-        )
+        return self._build_view(current_block=self._with_block_open_label(first_line))
 
     def answer_view(self) -> CardView:
         self.block_opened = True
@@ -59,14 +56,10 @@ class QuoteBlockClozeCard(ClozeCard, QuoteBlockCard):
         lines = masked_block.splitlines(keepends=True)
         first_line = lines[0] if lines else masked_block
         collapsed_block = first_line + ("\n" * (len(lines) - 1))
-        return self._build_view(current_block=collapsed_block, mask_context=True)
+        return self._build_view(current_block=collapsed_block)
 
-    def _build_view(self, current_block: str, mask_context: bool) -> CardView:
-        return ClozeCard._build_view(
-            self,
-            self._strip_callout_heading(current_block),
-            mask_context,
-        )
+    def _build_view(self, current_block: str) -> CardView:
+        return ClozeCard._build_view(self, self._strip_callout_heading(current_block))
 
     def _with_block_open_label(self, first_line: str) -> str:
         if first_line.startswith(">"):
@@ -126,7 +119,6 @@ class QuoteBlockClozeParser(ClozeParser, QuoteBlockParser, NoteParser):
         note_text: str,
         start_line: int,
         end_line: int,
-        note_blocks: Dict[Tuple[int, int], str],
         card_path: str,
         metadata: Metadata,
     ) -> Card:
@@ -137,7 +129,6 @@ class QuoteBlockClozeParser(ClozeParser, QuoteBlockParser, NoteParser):
             note_text=note_text,
             start_line=start_line,
             end_line=end_line,
-            note_blocks=note_blocks,
             metadata=metadata,
             reveal_mode=self.reveal_mode,
             cloze_open=self.cloze_open,

@@ -29,7 +29,6 @@ class _Parser(NoteParser):
         note_text: str,
         start_line: int,
         end_line: int,
-        note_blocks,
         card_path: str,
         metadata,
     ):

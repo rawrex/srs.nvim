@@ -164,7 +164,7 @@ class ClozeCard(Card):
 
     def question_view(self) -> CardView:
         current = self._question_block()
-        return self._build_view(current_block=current, mask_context=True)
+        return self._build_view(current_block=current)
 
     def answer_view(self) -> CardView:
         if self.reveal_mode == RevealMode.INCREMENTAL:
@@ -173,12 +173,11 @@ class ClozeCard(Card):
         else:
             for idx in range(len(self.whole_revealed)):
                 self.whole_revealed[idx] = True
-        return self._build_view(current_block=self._question_block(), mask_context=True)
+        return self._build_view(current_block=self._question_block())
 
     def context_view(self) -> CardView:
         return self._build_view(
-            current_block=self._masked_context_block(self.note_text),
-            mask_context=True,
+            current_block=self._masked_context_block(self.note_text)
         )
 
     def _question_block(self) -> str:
@@ -201,29 +200,16 @@ class ClozeCard(Card):
             parts.append(self.text_parts[idx + 1])
         return "".join(parts)
 
-    def _build_view(self, current_block: str, mask_context: bool) -> CardView:
-        blocks: List[ViewBlock] = []
-        note_blocks = self.note_blocks or {
-            (self.start_line, self.end_line): self.note_text
-        }
-        for line_range in sorted(note_blocks):
-            start_line, _end_line = line_range
-            if line_range == (self.start_line, self.end_line):
-                blocks.append(
-                    ViewBlock(
-                        start_line=start_line,
-                        text=current_block,
-                        is_primary=True,
-                    )
+    def _build_view(self, current_block: str) -> CardView:
+        return CardView(
+            blocks=[
+                ViewBlock(
+                    start_line=self.start_line,
+                    text=current_block,
+                    is_primary=True,
                 )
-                continue
-            block = note_blocks[line_range]
-            if mask_context:
-                block = self._masked_context_block(block)
-            blocks.append(
-                ViewBlock(start_line=start_line, text=block, is_primary=False)
-            )
-        return CardView(blocks=blocks)
+            ]
+        )
 
     def _masked_context_block(self, block: str) -> str:
         text_parts, clozes = parse_note_clozes(block, self.cloze_open, self.cloze_close)
@@ -277,7 +263,6 @@ class ClozeParser(NoteParser):
         note_text: str,
         start_line: int,
         end_line: int,
-        note_blocks: Dict[Tuple[int, int], str],
         card_path: str,
         metadata: Metadata,
     ) -> Card:
@@ -288,7 +273,6 @@ class ClozeParser(NoteParser):
             note_text=note_text,
             start_line=start_line,
             end_line=end_line,
-            note_blocks=note_blocks,
             metadata=metadata,
             reveal_mode=self.reveal_mode,
             cloze_open=self.cloze_open,

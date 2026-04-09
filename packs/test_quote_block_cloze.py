@@ -70,7 +70,6 @@ class QuoteBlockClozePackTest(unittest.TestCase):
             mask_char="▇",
             start_line=3,
             end_line=4,
-            note_blocks={(3, 4): block_text},
         )
 
         question = card.question_view().primary_block().text
@@ -106,7 +105,6 @@ class QuoteBlockClozePackTest(unittest.TestCase):
             mask_char="▇",
             start_line=3,
             end_line=4,
-            note_blocks={(3, 4): block_text},
         )
 
         card.reveal_for_label("a")
@@ -129,7 +127,6 @@ class QuoteBlockClozePackTest(unittest.TestCase):
             mask_char="▇",
             start_line=3,
             end_line=4,
-            note_blocks={(3, 4): block_text},
         )
 
         context = card.context_view().primary_block().text
@@ -153,7 +150,6 @@ class QuoteBlockClozePackTest(unittest.TestCase):
             mask_char="▇",
             start_line=3,
             end_line=4,
-            note_blocks={(3, 4): block_text},
         )
 
         answer = card.answer_view().primary_block().text
