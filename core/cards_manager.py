@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from card.card import Card
 from card.parsers import ParserRegistry
 from core.index.index import Index
-from core.index.storage import parse_storage_json
+from core.index.storage import parse_storage_json, write_metadata_file
 
 IndexRow = tuple[str, str, str, int, int]
 LineRange = tuple[int, int]
@@ -38,7 +38,7 @@ class CardsManager:
         return self._filter_due_cards(cards_with_paths, note_context_blocks, now)
 
     def save_reviewed_card(self, card: Card) -> None:
-        card.save_storage_file()
+        write_metadata_file(card.card_path, card.metadata)
 
     def estimate_due_cards_duration_minutes(
         self, due_cards: list[DueCard]

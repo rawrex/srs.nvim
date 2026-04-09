@@ -2,13 +2,12 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Dict, List
+from typing import List
 
 from fsrs import Card as SchedulerCard
 from fsrs import Rating
 
-from core.index.storage import Metadata, write_metadata_file
-
+from core.index.storage import Metadata
 
 __all__ = [
     "SchedulerCard",
@@ -67,12 +66,6 @@ class Card(ABC):
         if due.tzinfo is None:
             due = due.replace(tzinfo=timezone.utc)
         return due <= now
-
-    def to_storage_dict(self) -> Dict[str, object]:
-        return self.metadata.to_storage_dict()
-
-    def save_storage_file(self) -> None:
-        write_metadata_file(self.card_path, self.metadata)
 
     @abstractmethod
     def reveal_for_label(self, label: str) -> CardView | None:
