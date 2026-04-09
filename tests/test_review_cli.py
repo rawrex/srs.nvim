@@ -48,19 +48,18 @@ class ReviewCliTest(unittest.TestCase):
         session.run.assert_called_once_with()
 
     def test_main_handles_keyboard_interrupt_after_ui_creation(self) -> None:
-        ui = Mock()
-
         with (
             patch("core.review.util.get_repo_root", return_value="/repo"),
             patch("core.review.load_review_config", return_value=ReviewConfig()),
             patch("core.review.build_parser_registry", return_value=Mock()),
-            patch("core.review.ReviewUI", return_value=ui),
+            patch("core.review.ReviewUI", return_value=Mock()),
             patch("core.review.ReviewSession", side_effect=KeyboardInterrupt),
+            patch("builtins.print") as print_mock,
         ):
             code = review.main()
 
-        self.assertEqual(130, code)
-        ui.print_message.assert_called_once_with("\nInterrupted.")
+        self.assertEqual(0, code)
+        print_mock.assert_called_once_with("\nExit.")
 
 
 if __name__ == "__main__":
