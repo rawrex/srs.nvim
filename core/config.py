@@ -33,7 +33,6 @@ class ReviewConfig:
     rating_buttons: dict[Rating, str] = field(
         default_factory=lambda: DEFAULT_RATING_BUTTONS.copy()
     )
-    between_notes_timeout_ms: int = 0
     show_context: bool = True
     media: str | None = None
     cloze: ClozeConfig = field(default_factory=ClozeConfig)
@@ -70,7 +69,7 @@ def load_review_config(repo_root: str) -> ReviewConfig:
     scheduler_raw = _dict_or_empty(scheduler_value)
 
     rating_buttons = _parse_rating_buttons(review_raw.get("rating_buttons"))
-    between_notes_timeout_ms, show_context = _parse_review_flags(review_raw, defaults)
+    show_context = _parse_review_flags(review_raw, defaults)
     cloze_config = _parse_cloze_config(cloze_raw, defaults.cloze)
     media = _parse_media_directory(
         raw.get("media"),
@@ -106,7 +105,6 @@ def load_review_config(repo_root: str) -> ReviewConfig:
 
     return ReviewConfig(
         rating_buttons=rating_buttons,
-        between_notes_timeout_ms=between_notes_timeout_ms,
         show_context=show_context,
         media=media,
         cloze=cloze_config,
@@ -141,18 +139,13 @@ def _dict_or_empty(value: object) -> dict[str, object]:
 def _parse_review_flags(
     review_raw: dict[str, object],
     defaults: ReviewConfig,
-) -> tuple[int, bool]:
-    between_notes_timeout_ms = defaults.between_notes_timeout_ms
-    timeout_raw = review_raw.get("between_notes_timeout_ms")
-    if isinstance(timeout_raw, int) and timeout_raw >= 0:
-        between_notes_timeout_ms = timeout_raw
-
+) -> bool:
     show_context = defaults.show_context
     show_context_raw = review_raw.get("show_context")
     if isinstance(show_context_raw, bool):
         show_context = show_context_raw
 
-    return between_notes_timeout_ms, show_context
+    return show_context
 
 
 def _parse_cloze_config(

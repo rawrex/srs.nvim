@@ -78,9 +78,9 @@ class ReviewSessionRunTest(unittest.TestCase):
         self.assertEqual(0, code)
         ui.print_message.assert_called_once_with("No due cards.")
 
-    def test_run_reviews_cards_persists_and_sleeps_between_notes(self) -> None:
+    def test_run_reviews_cards_and_persists(self) -> None:
         with temporary_session_repo(with_index=True) as repo_root:
-            config = ReviewConfig(between_notes_timeout_ms=200)
+            config = ReviewConfig()
             ui = Mock()
             session_entry_ui = Mock()
             ui.prompt_rating_step.return_value = Rating.Good
@@ -126,7 +126,6 @@ class ReviewSessionRunTest(unittest.TestCase):
                 ),
                 patch.object(session.cards_manager, "save_reviewed_card") as save_card,
                 patch("core.session.time.monotonic_ns") as monotonic_ns,
-                patch("core.session.time.sleep") as sleep_mock,
             ):
                 monotonic_ns.side_effect = [
                     0,
@@ -142,7 +141,6 @@ class ReviewSessionRunTest(unittest.TestCase):
         self.assertEqual([log_1], card_1.metadata.review_logs)
         self.assertEqual([log_2], card_2.metadata.review_logs)
         self.assertEqual(2, save_card.call_count)
-        sleep_mock.assert_called_once_with(0.2)
         self.assertEqual(2, scheduler.review_card.call_count)
         session_entry_ui.show_start_menu.assert_called_once_with(2, None)
 

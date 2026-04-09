@@ -21,7 +21,6 @@ class ReviewSession:
         self.repo_root = repo_root
         self.ui = ui
         self.session_entry_ui = session_entry_ui
-        self.between_notes_timeout_ms = config.between_notes_timeout_ms
         self.scheduler = scheduler
         self.cards_manager = CardsManager(
             repo_root=repo_root,
@@ -88,7 +87,5 @@ class ReviewSession:
             card.metadata.review_logs.append(review_log)
             self.cards_manager.save_reviewed_card(card)
             self.ui.print_message("Saved")
-            if idx < total and self.between_notes_timeout_ms > 0:
-                time.sleep(self.between_notes_timeout_ms / 1000)
 
         return 0

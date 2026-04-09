@@ -1,7 +1,6 @@
 {
     "media": "_",
     "review": {
-        "between_notes_timeout_ms": 0,
         "rating_buttons": {
             "Again": "n",
             "Easy": "o",
