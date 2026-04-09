@@ -2,12 +2,12 @@ import re
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, ClassVar, List, Tuple
 
-from card.api import NoteParser
-from card.card import Card, CardView, REVEAL_ALL_LABEL, ViewBlock
+from core.api import NoteParser
+from core.card import Card, CardView, REVEAL_ALL_LABEL, ViewBlock
 from core.index.storage import Metadata
 
 if TYPE_CHECKING:
-    from card.parsers import ParserRegistry
+    from core.parsers import ParserRegistry
 
 
 QUOTE_BLOCK_PARSER_ID = "quote_block"

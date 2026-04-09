@@ -6,7 +6,7 @@ from unittest.mock import patch
 from fsrs import Scheduler
 
 from core.config import ReviewConfig
-from card.parsers import build_parser_registry
+from core.parsers import build_parser_registry
 from packs.cloze import ClozeCard
 from core.session import ReviewSession
 from tests.setup_test_helpers import temporary_session_repo
@@ -89,7 +89,7 @@ class ReviewSessionTest(unittest.TestCase):
                 scheduler=ReviewConfig().build_scheduler(),
             )
 
-            with patch("card.card.Card.is_due", return_value=True):
+            with patch("core.card.Card.is_due", return_value=True):
                 cards = session.cards_manager.load_due_cards()
 
             self.assertEqual(1, len(cards))

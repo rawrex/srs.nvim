@@ -4,7 +4,7 @@ from unittest.mock import patch
 from fsrs import Rating
 from rich.markdown import Markdown
 
-from card.card import REVEAL_ALL_LABEL, RevealMode, SchedulerCard
+from core.card import REVEAL_ALL_LABEL, RevealMode, SchedulerCard
 from core.config import ReviewConfig
 from packs.cloze import (
     ClozeCard,

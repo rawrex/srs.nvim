@@ -6,7 +6,7 @@ from unittest.mock import patch
 from fsrs import Rating
 from rich.markdown import Markdown
 
-from card.card import CardView, ViewBlock
+from core.card import CardView, ViewBlock
 from core.config import ReviewConfig
 from ui.ui import ReviewUI, SessionEntryUI
 

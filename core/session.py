@@ -4,10 +4,10 @@ import time
 from fsrs import Scheduler
 
 from core import util
-from card.card import Card
+from core.card import Card
 from core.cards_manager import CardsManager
 from core.config import ReviewConfig
-from card.parsers import ParserRegistry
+from core.parsers import ParserRegistry
 from ui.ui import ReviewUI, SessionEntryUI
 
 

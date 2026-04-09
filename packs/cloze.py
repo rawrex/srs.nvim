@@ -7,14 +7,14 @@ from typing import TYPE_CHECKING, ClassVar, Dict, List, Tuple
 from fsrs import Card as SchedulerCard
 from fsrs import Rating
 
-from card.card import Card, CardView, REVEAL_ALL_LABEL, RevealMode, ViewBlock
-from card.api import NoteParser
+from core.card import Card, CardView, REVEAL_ALL_LABEL, RevealMode, ViewBlock
+from core.api import NoteParser
 from core.autograde import suggest_rating
 from core.index.storage import Metadata
 from core.config import ReviewConfig
 
 if TYPE_CHECKING:
-    from card.parsers import ParserRegistry
+    from core.parsers import ParserRegistry
 
 
 CLOZE_PARSER_ID = "cloze"

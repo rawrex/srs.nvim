@@ -2,15 +2,15 @@ import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar, List, Tuple
 
-from card.api import NoteParser
-from card.card import REVEAL_ALL_LABEL, Card, CardView
+from core.api import NoteParser
+from core.card import REVEAL_ALL_LABEL, Card, CardView
 from core.config import ReviewConfig
 from core.index.storage import Metadata
 from packs.cloze import ClozeCard, ClozeParser, LABEL_CHARS
 from packs.quote_block import QuoteBlockCard, QuoteBlockParser
 
 if TYPE_CHECKING:
-    from card.parsers import ParserRegistry
+    from core.parsers import ParserRegistry
 
 
 QUOTE_BLOCK_CLOZE_PARSER_ID = "quote_block_cloze"

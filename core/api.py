@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import ClassVar, List, Tuple
 
-from card.card import Card
+from core.card import Card
 from core.index.storage import Metadata
 
 

@@ -6,7 +6,7 @@ import unittest
 from fsrs import Rating
 from fsrs import Scheduler
 
-from card.card import RevealMode
+from core.card import RevealMode
 from core.config import DEFAULT_RATING_BUTTONS, load_review_config
 
 

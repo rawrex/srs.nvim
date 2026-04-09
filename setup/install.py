@@ -11,7 +11,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 common = import_module("setup.common")
-build_parser_registry = import_module("card.parsers").build_parser_registry
+build_parser_registry = import_module("core.parsers").build_parser_registry
 load_review_config = import_module("core.config").load_review_config
 Index = import_module("core.index.index").Index
 find_repeat_tracked_paths = import_module(

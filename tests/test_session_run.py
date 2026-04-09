@@ -5,7 +5,7 @@ from unittest.mock import Mock, patch
 from fsrs import Rating
 
 from core.config import ReviewConfig
-from card.parsers import build_parser_registry
+from core.parsers import build_parser_registry
 from core.cards_manager import DueCard
 from core.session import ReviewSession
 from tests.setup_test_helpers import temporary_session_repo

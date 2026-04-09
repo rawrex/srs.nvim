@@ -2,8 +2,8 @@ import os
 import tempfile
 import unittest
 
-from card.api import NoteParser
-from card.parsers import ParserRegistry
+from core.api import NoteParser
+from core.parsers import ParserRegistry
 from core.index.index import Index, IndexRowReader
 
 

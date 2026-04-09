@@ -3,8 +3,9 @@ import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from card.card import Card
-from card.parsers import ParserRegistry
+from core.card import Card
+from core.parsers import ParserRegistry
+
 from core.index.index import Index
 from core.index.storage import parse_storage_json, write_metadata_file
 

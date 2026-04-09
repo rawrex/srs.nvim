@@ -11,7 +11,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from core import util
 from hooks.handler import Handler
 from core.config import load_review_config
-from card.parsers import build_parser_registry
+from core.parsers import build_parser_registry
 from core.index.index import Index, IndexUpdateAbortError
 
 

@@ -1,6 +1,6 @@
 import unittest
 
-from card.card import REVEAL_ALL_LABEL, SchedulerCard
+from core.card import REVEAL_ALL_LABEL, SchedulerCard
 from packs.quote_block import QuoteBlockCard, QuoteBlockParser
 from core.index.storage import Metadata
 

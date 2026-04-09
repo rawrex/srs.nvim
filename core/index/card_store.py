@@ -1,7 +1,7 @@
 import os
 
-from card.card import SchedulerCard
-from card.parsers import ParserRegistry
+from core.card import SchedulerCard
+from core.parsers import ParserRegistry
 from core import util
 from core.index.model import IndexRowTuple
 from core.index.storage import Metadata, write_metadata_file

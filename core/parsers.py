@@ -3,8 +3,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict
 
-from .api import NoteParser
 from core.config import ReviewConfig
+
+from .api import NoteParser
 
 
 @dataclass

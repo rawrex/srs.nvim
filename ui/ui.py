@@ -9,7 +9,7 @@ from fsrs import Rating
 from rich.console import Console
 from rich.markdown import Markdown
 
-from card.card import Card, CardView
+from core.card import Card, CardView
 from core.config import ReviewConfig
 
 WIKI_IMAGE_RE = re.compile(r"!\[\[[^\]]+\]\]")

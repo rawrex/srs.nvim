@@ -2,7 +2,7 @@ import unittest
 
 from fsrs import Rating
 
-from card.card import REVEAL_ALL_LABEL, RevealMode, SchedulerCard
+from core.card import REVEAL_ALL_LABEL, RevealMode, SchedulerCard
 from core.index.storage import Metadata
 from packs.quote_block_cloze import QuoteBlockClozeCard, QuoteBlockClozeParser
 

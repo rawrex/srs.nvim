@@ -9,7 +9,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from rich.console import Console
 
-from card.parsers import build_parser_registry
+from core.parsers import build_parser_registry
 from core import util
 from core.config import load_review_config
 from core.session import ReviewSession

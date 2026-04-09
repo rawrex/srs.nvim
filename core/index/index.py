@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import os
 
-from card.parsers import ParserRegistry
+from core.parsers import ParserRegistry
 from core import util
 from core.index.card_store import IndexCardStore
 from core.index.hunks import HunkParser, remap_line_range
