@@ -124,7 +124,7 @@ class ReviewSessionRunTest(unittest.TestCase):
                         DueCard(card=card_2, note_context_blocks={}),
                     ],
                 ),
-                patch.object(session.cards_manager, "save_reviewed_card") as save_card,
+                patch("core.session.write_metadata_file") as write_metadata,
                 patch("core.session.time.monotonic_ns") as monotonic_ns,
             ):
                 monotonic_ns.side_effect = [
@@ -140,7 +140,7 @@ class ReviewSessionRunTest(unittest.TestCase):
         self.assertEqual(new_card_2, card_2.metadata.scheduler_card)
         self.assertEqual([log_1], card_1.metadata.review_logs)
         self.assertEqual([log_2], card_2.metadata.review_logs)
-        self.assertEqual(2, save_card.call_count)
+        self.assertEqual(2, write_metadata.call_count)
         self.assertEqual(2, scheduler.review_card.call_count)
         session_entry_ui.show_start_menu.assert_called_once_with(2, None)
 
@@ -185,7 +185,7 @@ class ReviewSessionRunTest(unittest.TestCase):
                         DueCard(card=card_2, note_context_blocks={}),
                     ],
                 ),
-                patch.object(session.cards_manager, "save_reviewed_card"),
+                patch("core.session.write_metadata_file"),
                 patch(
                     "core.session.time.monotonic_ns",
                     side_effect=[0, 1_000_000, 2_000_000, 3_000_000],
@@ -238,7 +238,7 @@ class ReviewSessionRunTest(unittest.TestCase):
                         DueCard(card=card_2, note_context_blocks={}),
                     ],
                 ),
-                patch.object(session.cards_manager, "save_reviewed_card"),
+                patch("core.session.write_metadata_file"),
                 patch(
                     "core.session.time.monotonic_ns",
                     side_effect=[0, 1_000_000, 2_000_000, 3_000_000],
