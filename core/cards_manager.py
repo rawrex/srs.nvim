@@ -27,7 +27,7 @@ class CardsManager:
         now = datetime.now(timezone.utc)
         index_rows = Index(
             os.path.join(self.repo_root, ".srs", "index.txt"),
-            parser_registry=self.parser_registry,
+            collect_parser_rows=lambda _indexed_path: [],
         ).read_rows()
 
         claimed_lines_by_note: dict[str, set[int]] = {}

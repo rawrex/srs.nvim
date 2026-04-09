@@ -14,6 +14,7 @@ common = import_module("setup.common")
 build_parser_registry = import_module("core.parsers").build_parser_registry
 load_review_config = import_module("core.config").load_review_config
 Index = import_module("core.index.index").Index
+IndexCardStore = import_module("core.index.card_store").IndexCardStore
 find_repeat_tracked_paths = import_module(
     "core.index.tracking"
 ).find_repeat_tracked_paths
@@ -53,7 +54,14 @@ def ensure_srs_index(repo_root: str) -> bool:
 def initialize_index_from_repeat_markers(repo_root: str, index_path: str) -> int:
     config = load_review_config(repo_root)
     parser_registry = build_parser_registry(config)
-    index = Index(index_path, parser_registry)
+    card_store = IndexCardStore(index_path)
+    index = Index(
+        index_path,
+        collect_parser_rows=lambda indexed_path: card_store.collect_parser_rows(
+            indexed_path,
+            parser_registry,
+        ),
+    )
     tracked_paths = set(find_repeat_tracked_paths(repo_root))
     return index.add_missing_tracked_paths(tracked_paths)
 

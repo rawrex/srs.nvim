@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import os
+from collections.abc import Callable
 
-from core.parsers import ParserRegistry
 from core import util
 from core.index.card_store import IndexCardStore
 from core.index.hunks import HunkParser, remap_line_range
@@ -23,20 +23,16 @@ from core.index.row_codec import (
 
 
 class Index:
-    def __init__(self, path: str, parser_registry: ParserRegistry) -> None:
+    def __init__(
+        self,
+        path: str,
+        collect_parser_rows: Callable[[str], list[tuple[str, int, int]]],
+    ) -> None:
         self.path = path
-        self._parser_registry = parser_registry
+        self._collect_parser_rows = collect_parser_rows
         self.row_reader = IndexRowReader()
         self.hunk_parser = HunkParser()
         self.card_store = IndexCardStore(path)
-
-    @property
-    def parser_registry(self) -> ParserRegistry:
-        return self._parser_registry
-
-    @parser_registry.setter
-    def parser_registry(self, parser_registry: ParserRegistry) -> None:
-        self._parser_registry = parser_registry
 
     def apply_diff(
         self,
@@ -74,7 +70,10 @@ class Index:
             self._stage_paths(repo_root, touched_paths)
         return changed
 
-    def add_missing_tracked_paths(self, tracked_paths: set[str]) -> int:
+    def add_missing_tracked_paths(
+        self,
+        tracked_paths: set[str],
+    ) -> int:
         lines = self._read()
         original_count = len(lines)
         existing_paths = set(self._rows_by_path(lines))
@@ -113,7 +112,10 @@ class Index:
             changes.renames,
             changes.deletes,
         )
-        updated, added_new, added_paths = self._apply_adds(updated, changes.adds)
+        updated, added_new, added_paths = self._apply_adds(
+            updated,
+            changes.adds,
+        )
         updated, remapped_modified, remapped_paths = self._apply_modifies(
             updated,
             changes.modifies,
@@ -224,7 +226,10 @@ class Index:
 
         return updated, changed, touched_paths
 
-    def _sync_tracked_paths(self, tracked_paths: set[str]) -> tuple[bool, set[str]]:
+    def _sync_tracked_paths(
+        self,
+        tracked_paths: set[str],
+    ) -> tuple[bool, set[str]]:
         lines = self._read()
         updated: list[str] = []
         changed = False
@@ -285,7 +290,11 @@ class Index:
     ) -> tuple[int, int] | None:
         return remap_line_range(start_line, end_line, hunks)
 
-    def _add_new(self, new_path: str, updated: list[str]) -> set[str]:
+    def _add_new(
+        self,
+        new_path: str,
+        updated: list[str],
+    ) -> set[str]:
         touched_card_paths: set[str] = set()
         for parser_id, start_line, end_line in self._collect_parser_rows(new_path):
             row, touched_path = self._create_card_row(parser_id, start_line, end_line)
@@ -312,9 +321,6 @@ class Index:
 
     def _remove_card_file(self, note_id: str) -> str | None:
         return self.card_store.remove_card_file(note_id)
-
-    def _collect_parser_rows(self, indexed_path: str) -> list[tuple[str, int, int]]:
-        return self.card_store.collect_parser_rows(indexed_path, self.parser_registry)
 
     def _read_note_text(self, indexed_path: str) -> str | None:
         return self.card_store.read_note_text(indexed_path)
