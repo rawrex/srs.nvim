@@ -11,21 +11,48 @@ class HandlerTest(unittest.TestCase):
         index = Mock()
 
         with (
-            patch.object(
-                handler, "diff_name_status_cached", return_value="M\tnote.md\n"
-            ),
-            patch.object(handler, "diff_patch_cached", return_value=""),
+            patch.object(handler, "is_rev_exists", return_value=True),
             patch.object(
                 handler,
-                "_tracked_paths_from_git_index",
+                "_handle_cached_diff",
+                wraps=handler._handle_cached_diff,
+            ) as handle_cached_diff,
+            patch(
+                "hooks.handler.tracked_paths_from_repo_paths",
                 return_value={"/note.md"},
             ),
+            patch(
+                "hooks.handler.util.run_git",
+                side_effect=[
+                    (0, "M\tnote.md\n", ""),
+                    (0, "", ""),
+                    (0, "note.md\n", ""),
+                ],
+            ) as run_git,
         ):
             handler.handle_pre_commit(index)
 
+        handle_cached_diff.assert_called_once_with(index)
         index.apply_diff.assert_called_once_with("M\tnote.md\n", "", repo_root="/repo")
         index.sync_tracked_paths.assert_called_once_with(
             {"/note.md"}, repo_root="/repo"
+        )
+        self.assertEqual(
+            [
+                call(["diff", "--cached", "--name-status", "-M", "-C"], cwd="/repo"),
+                call(
+                    [
+                        "diff",
+                        "--cached",
+                        "--unified=0",
+                        "--ignore-space-at-eol",
+                        "--ignore-cr-at-eol",
+                    ],
+                    cwd="/repo",
+                ),
+                call(["ls-files"], cwd="/repo"),
+            ],
+            run_git.call_args_list,
         )
 
     def test_handle_post_checkout_ignores_short_args(self) -> None:
@@ -74,71 +101,112 @@ class HandlerTest(unittest.TestCase):
             apply_ref_diff.call_args_list,
         )
 
-    def test_tracked_paths_from_git_index_respects_repeat_and_norepeat(self) -> None:
+    def test_handle_pre_commit_uses_repeat_scan_when_ls_files_fails(self) -> None:
         handler = Handler("/repo")
-
-        ls_files = "\n".join(
-            [
-                "notes/.repeat",
-                "notes/top.md",
-                "notes/sub/.norepeat",
-                "notes/sub/sub.md",
-                "notes/sub/deep/.repeat",
-                "notes/sub/deep/deep.md",
-                "outside.md",
-            ]
-        )
-
-        with patch("hooks.handler.util.run_git", return_value=(0, ls_files, "")):
-            tracked_paths = handler._tracked_paths_from_git_index()
-
-        self.assertEqual(
-            {"/notes/top.md", "/notes/sub/deep/deep.md"},
-            tracked_paths,
-        )
-
-    def test_diff_patch_ignores_eol_whitespace_noise(self) -> None:
-        handler = Handler("/repo")
-
-        with patch(
-            "hooks.handler.util.run_git", return_value=(0, "patch", "")
-        ) as run_git:
-            result = handler.diff_patch("old", "new")
-
-        self.assertEqual("patch", result)
-        run_git.assert_called_once_with(
-            [
-                "diff",
-                "--unified=0",
-                "--ignore-space-at-eol",
-                "--ignore-cr-at-eol",
-                "old",
-                "new",
-            ],
-            cwd="/repo",
-        )
-
-    def test_diff_patch_cached_ignores_eol_whitespace_noise(self) -> None:
-        handler = Handler("/repo")
+        index = Mock()
 
         with (
             patch.object(handler, "is_rev_exists", return_value=True),
             patch(
-                "hooks.handler.util.run_git", return_value=(0, "patch", "")
+                "hooks.handler.find_repeat_tracked_paths",
+                return_value=["/notes/top.md", "/notes/sub/deep/deep.md"],
+            ) as find_repeat,
+            patch(
+                "hooks.handler.util.run_git",
+                side_effect=[
+                    (0, "M\tnote.md\n", ""),
+                    (0, "", ""),
+                    (1, "", "boom"),
+                ],
+            ),
+        ):
+            handler.handle_pre_commit(index)
+
+        find_repeat.assert_called_once_with("/repo")
+        index.sync_tracked_paths.assert_called_once_with(
+            {"/notes/top.md", "/notes/sub/deep/deep.md"}, repo_root="/repo"
+        )
+
+    def test_apply_ref_diff_ignores_eol_whitespace_noise(self) -> None:
+        handler = Handler("/repo")
+        index = Mock()
+
+        with (
+            patch("hooks.handler.find_repeat_tracked_paths", return_value=[]),
+            patch(
+                "hooks.handler.util.run_git",
+                side_effect=[
+                    (0, "M\tnote.md\n", ""),
+                    (0, "patch", ""),
+                ],
             ) as run_git,
         ):
-            result = handler.diff_patch_cached()
+            handler._apply_ref_diff(index, "old", "new")
 
-        self.assertEqual("patch", result)
-        run_git.assert_called_once_with(
+        self.assertEqual(
             [
-                "diff",
-                "--cached",
-                "--unified=0",
-                "--ignore-space-at-eol",
-                "--ignore-cr-at-eol",
+                call(
+                    ["diff", "--name-status", "-M", "-C", "old", "new"],
+                    cwd="/repo",
+                ),
+                call(
+                    [
+                        "diff",
+                        "--unified=0",
+                        "--ignore-space-at-eol",
+                        "--ignore-cr-at-eol",
+                        "old",
+                        "new",
+                    ],
+                    cwd="/repo",
+                ),
             ],
-            cwd="/repo",
+            run_git.call_args_list,
+        )
+        index.apply_diff.assert_called_once_with("M\tnote.md\n", "", repo_root="/repo")
+        index.sync_tracked_paths.assert_called_once_with(set(), repo_root="")
+
+    def test_handle_pre_commit_adds_root_flag_when_head_missing(self) -> None:
+        handler = Handler("/repo")
+        index = Mock()
+
+        with (
+            patch.object(handler, "is_rev_exists", return_value=False),
+            patch(
+                "hooks.handler.tracked_paths_from_repo_paths",
+                return_value={"/note.md"},
+            ),
+            patch(
+                "hooks.handler.util.run_git",
+                side_effect=[
+                    (0, "A\tnote.md\n", ""),
+                    (0, "patch", ""),
+                    (0, "note.md\n", ""),
+                ],
+            ) as run_git,
+        ):
+            handler.handle_pre_commit(index)
+
+        self.assertEqual(
+            call(
+                ["diff", "--cached", "--name-status", "-M", "-C", "--root"],
+                cwd="/repo",
+            ),
+            run_git.call_args_list[0],
+        )
+        self.assertEqual(
+            call(
+                [
+                    "diff",
+                    "--cached",
+                    "--unified=0",
+                    "--ignore-space-at-eol",
+                    "--ignore-cr-at-eol",
+                    "--root",
+                ],
+                cwd="/repo",
+            ),
+            run_git.call_args_list[1],
         )
 
 
