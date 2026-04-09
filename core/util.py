@@ -4,7 +4,12 @@ import subprocess
 
 
 def run_git(args: list[str], cwd: str) -> tuple[int, str, str]:
-    result = subprocess.run(["git"] + args, cwd=cwd, text=True, capture_output=True)
+    result = subprocess.run(
+        ["git", "-c", "core.quotepath=false"] + args,
+        cwd=cwd,
+        text=True,
+        capture_output=True,
+    )
     return result.returncode, result.stdout, result.stderr
 
 
