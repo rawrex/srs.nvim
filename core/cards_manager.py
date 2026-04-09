@@ -25,8 +25,18 @@ class CardsManager:
 
     def load_due_cards(self) -> list[DueCard]:
         now = datetime.now(timezone.utc)
-        index_rows = self._read_index_rows()
-        claimed_lines_by_note = self._collect_claimed_lines_by_note(index_rows)
+        index_rows = Index(
+            os.path.join(self.repo_root, ".srs", "index.txt"),
+            parser_registry=self.parser_registry,
+        ).read_rows()
+
+        claimed_lines_by_note: dict[str, set[int]] = {}
+        for _, indexed_path, _, start_line, end_line in index_rows:
+            note_path = self._note_abs_path(indexed_path)
+            claimed_lines_by_note.setdefault(note_path, set()).update(
+                range(start_line, end_line + 1)
+            )
+
         cards_with_paths, note_context_blocks = self._build_cards_with_note_context(
             index_rows
         )
@@ -51,26 +61,6 @@ class CardsManager:
             total_duration_ms += review_duration
 
         return math.ceil(total_duration_ms / 60_000)
-
-    def _read_index_rows(self) -> list[IndexRow]:
-        return list(
-            Index(
-                os.path.join(self.repo_root, ".srs", "index.txt"),
-                parser_registry=self.parser_registry,
-            ).read_rows()
-        )
-
-    def _collect_claimed_lines_by_note(
-        self,
-        index_rows: list[IndexRow],
-    ) -> dict[str, set[int]]:
-        claimed_lines_by_note: dict[str, set[int]] = {}
-        for _note_id, indexed_path, _parser_id, start_line, end_line in index_rows:
-            note_path = self._note_abs_path(indexed_path)
-            claimed_lines_by_note.setdefault(note_path, set()).update(
-                range(start_line, end_line + 1)
-            )
-        return claimed_lines_by_note
 
     def _build_cards_with_note_context(
         self,
