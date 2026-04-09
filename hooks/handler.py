@@ -16,41 +16,20 @@ class Handler:
         )
         return code == 0
 
-    def diff_name_status(self, old: str, new: str) -> str:
-        code, out, _err = util.run_git(
-            ["diff", "--name-status", "-M", "-C", old, new],
-            cwd=self.repository_root,
-        )
-        if code == 0:
-            return out
-        return ""
+    def handle_pre_commit(self, index: Index) -> None:
+        self._handle_cached_diff(index)
 
-    def diff_name_status_cached(self) -> str:
+    def handle_pre_merge_commit(self, index: Index) -> None:
+        self._handle_cached_diff(index)
+
+    def _handle_cached_diff(self, index: Index) -> None:
         args = ["diff", "--cached", "--name-status", "-M", "-C"]
         if not self.is_rev_exists("HEAD"):
             args.append("--root")
-        code, out, _err = util.run_git(args, cwd=self.repository_root)
+        code, diff_text, _ = util.run_git(args, cwd=self.repository_root)
         if code != 0:
-            return ""
-        return out
+            diff_text = ""
 
-    def diff_patch(self, old: str, new: str) -> str:
-        code, out, _err = util.run_git(
-            [
-                "diff",
-                "--unified=0",
-                "--ignore-space-at-eol",
-                "--ignore-cr-at-eol",
-                old,
-                new,
-            ],
-            cwd=self.repository_root,
-        )
-        if code == 0:
-            return out
-        return ""
-
-    def diff_patch_cached(self) -> str:
         args = [
             "diff",
             "--cached",
@@ -60,22 +39,18 @@ class Handler:
         ]
         if not self.is_rev_exists("HEAD"):
             args.append("--root")
-        code, out, _err = util.run_git(args, cwd=self.repository_root)
+        code, patch_text, _ = util.run_git(args, cwd=self.repository_root)
         if code != 0:
-            return ""
-        return out
+            patch_text = ""
 
-    def handle_pre_commit(self, index: Index) -> None:
-        self._handle_cached_diff(index)
-
-    def handle_pre_merge_commit(self, index: Index) -> None:
-        self._handle_cached_diff(index)
-
-    def _handle_cached_diff(self, index: Index) -> None:
-        diff_text = self.diff_name_status_cached()
-        patch_text = self.diff_patch_cached()
         index.apply_diff(diff_text, patch_text, repo_root=self.repository_root)
-        tracked_paths = self._tracked_paths_from_git_index()
+
+        code, out, _err = util.run_git(["ls-files"], cwd=self.repository_root)
+        if code != 0:
+            tracked_paths = set(find_repeat_tracked_paths(self.repository_root))
+        else:
+            repo_paths = [line.strip() for line in out.splitlines() if line.strip()]
+            tracked_paths = tracked_paths_from_repo_paths(repo_paths)
         index.sync_tracked_paths(tracked_paths, repo_root=self.repository_root)
 
     def handle_post_checkout(self, index: Index, args: list[str]) -> None:
@@ -96,18 +71,29 @@ class Handler:
             self._apply_ref_diff(index, old_ref, new_ref)
 
     def _apply_ref_diff(self, index: Index, old_ref: str, new_ref: str) -> None:
-        diff_text = self.diff_name_status(old_ref, new_ref)
-        patch_text = self.diff_patch(old_ref, new_ref)
+        code, diff_text, _ = util.run_git(
+            ["diff", "--name-status", "-M", "-C", old_ref, new_ref],
+            cwd=self.repository_root,
+        )
+        if code != 0:
+            diff_text = ""
+
+        code, patch_text, _ = util.run_git(
+            [
+                "diff",
+                "--unified=0",
+                "--ignore-space-at-eol",
+                "--ignore-cr-at-eol",
+                old_ref,
+                new_ref,
+            ],
+            cwd=self.repository_root,
+        )
+        if code == 0:
+            patch_text = ""
+
         index.apply_diff(diff_text, patch_text, repo_root=self.repository_root)
         index.sync_tracked_paths(
             set(find_repeat_tracked_paths(self.repository_root)),
             repo_root="",
         )
-
-    def _tracked_paths_from_git_index(self) -> set[str]:
-        code, out, _err = util.run_git(["ls-files"], cwd=self.repository_root)
-        if code != 0:
-            return set(find_repeat_tracked_paths(self.repository_root))
-
-        repo_paths = [line.strip() for line in out.splitlines() if line.strip()]
-        return tracked_paths_from_repo_paths(repo_paths)
