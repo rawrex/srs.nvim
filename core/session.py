@@ -8,7 +8,7 @@ from core.card import Card
 from core.cards_manager import CardsManager
 from core.config import ReviewConfig
 from core.parsers import ParserRegistry
-from ui.ui import ReviewUI, SessionEntryUI
+from core.ui import ReviewUI, SessionEntryUI
 
 
 class ReviewSession:

@@ -7,7 +7,7 @@ def __getattr__(name: str):
 
         return ReviewSession
     if name == "ReviewUI":
-        from ui.ui import ReviewUI
+        from .ui import ReviewUI
 
         return ReviewUI
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

@@ -8,7 +8,7 @@ from rich.markdown import Markdown
 
 from core.card import CardView, ViewBlock
 from core.config import ReviewConfig
-from ui.ui import ReviewUI, SessionEntryUI
+from core.ui import ReviewUI, SessionEntryUI
 
 
 class _FakeConsole:
@@ -24,7 +24,7 @@ class ReviewUiRatingTest(unittest.TestCase):
         console = _FakeConsole()
         ui = ReviewUI(config=ReviewConfig(), console=console)  # type: ignore[arg-type]
 
-        with patch("ui.ui.read_single_key", return_value="\n"):
+        with patch("core.ui.read_single_key", return_value="\n"):
             rating = ui.prompt_rating_step(default_rating=Rating.Good)
 
         self.assertEqual(Rating.Good, rating)
@@ -37,7 +37,7 @@ class ReviewUiRatingTest(unittest.TestCase):
         console = _FakeConsole()
         ui = ReviewUI(config=ReviewConfig(), console=console)  # type: ignore[arg-type]
 
-        with patch("ui.ui.read_single_key", side_effect=["\n", "i"]):
+        with patch("core.ui.read_single_key", side_effect=["\n", "i"]):
             rating = ui.prompt_rating_step(default_rating=None)
 
         self.assertEqual(Rating.Good, rating)
@@ -47,7 +47,7 @@ class ReviewUiRatingTest(unittest.TestCase):
         self,
     ) -> None:
         console = _FakeConsole()
-        with patch("ui.ui.shutil.which", return_value=None):
+        with patch("core.ui.shutil.which", return_value=None):
             ui = ReviewUI(
                 config=ReviewConfig(media="/repo/.attachments"),
                 console=console,
@@ -62,7 +62,7 @@ class ReviewUiRatingTest(unittest.TestCase):
 
     def test_print_markdown_with_images_supports_wiki_image_syntax(self) -> None:
         console = _FakeConsole()
-        with patch("ui.ui.shutil.which", return_value=None):
+        with patch("core.ui.shutil.which", return_value=None):
             ui = ReviewUI(
                 config=ReviewConfig(media="/repo/.attachments"),
                 console=console,
@@ -77,7 +77,7 @@ class ReviewUiRatingTest(unittest.TestCase):
 
     def test_print_markdown_with_images_supports_wiki_image_in_blockquote(self) -> None:
         console = _FakeConsole()
-        with patch("ui.ui.shutil.which", return_value=None):
+        with patch("core.ui.shutil.which", return_value=None):
             ui = ReviewUI(
                 config=ReviewConfig(media="/repo/.attachments"),
                 console=console,
@@ -96,13 +96,13 @@ class ReviewUiRatingTest(unittest.TestCase):
         console = _FakeConsole()
         completed = Mock(returncode=0, stdout="ASCII ART\n")
         with (
-            patch("ui.ui.shutil.which", return_value="/usr/bin/chafa"),
+            patch("core.ui.shutil.which", return_value="/usr/bin/chafa"),
             patch(
-                "ui.ui.shutil.get_terminal_size",
+                "core.ui.shutil.get_terminal_size",
                 return_value=os.terminal_size((100, 40)),
             ),
-            patch("ui.ui.os.path.exists", return_value=True),
-            patch("ui.ui.subprocess.run", return_value=completed),
+            patch("core.ui.os.path.exists", return_value=True),
+            patch("core.ui.subprocess.run", return_value=completed),
         ):
             ui = ReviewUI(
                 config=ReviewConfig(media="/repo/.attachments"),
@@ -139,13 +139,13 @@ class ReviewUiRatingTest(unittest.TestCase):
         console = _FakeConsole()
         completed = Mock(returncode=0, stdout="ASCII ART\n")
         with (
-            patch("ui.ui.shutil.which", return_value="/usr/bin/chafa"),
+            patch("core.ui.shutil.which", return_value="/usr/bin/chafa"),
             patch(
-                "ui.ui.shutil.get_terminal_size",
+                "core.ui.shutil.get_terminal_size",
                 return_value=os.terminal_size((100, 40)),
             ),
-            patch("ui.ui.os.path.exists", return_value=True),
-            patch("ui.ui.subprocess.run", return_value=completed) as run_mock,
+            patch("core.ui.os.path.exists", return_value=True),
+            patch("core.ui.subprocess.run", return_value=completed) as run_mock,
         ):
             ui = ReviewUI(
                 config=ReviewConfig(media="/repo/.attachments"),
@@ -224,7 +224,7 @@ class ReviewUiRatingTest(unittest.TestCase):
         )
 
         with patch(
-            "ui.ui.shutil.get_terminal_size",
+            "core.ui.shutil.get_terminal_size",
             return_value=os.terminal_size((80, 8)),
         ):
             viewport = ui._center_viewport_on_line(text, target_line_index=4)
@@ -251,8 +251,8 @@ class SessionEntryUiTest(unittest.TestCase):
         ui = SessionEntryUI(console=console)  # type: ignore[arg-type]
 
         with (
-            patch("ui.ui.os.system", return_value=0),
-            patch("ui.ui.read_single_key", return_value="\n"),
+            patch("core.ui.os.system", return_value=0),
+            patch("core.ui.read_single_key", return_value="\n"),
         ):
             ui.show_start_menu(due_cards_count=3, estimated_minutes=None)
 
@@ -265,8 +265,8 @@ class SessionEntryUiTest(unittest.TestCase):
         ui = SessionEntryUI(console=console)  # type: ignore[arg-type]
 
         with (
-            patch("ui.ui.os.system", return_value=0),
-            patch("ui.ui.read_single_key", side_effect=["x", "\n"]),
+            patch("core.ui.os.system", return_value=0),
+            patch("core.ui.read_single_key", side_effect=["x", "\n"]),
         ):
             ui.show_start_menu(due_cards_count=1, estimated_minutes=None)
 
@@ -280,8 +280,8 @@ class SessionEntryUiTest(unittest.TestCase):
         ui = SessionEntryUI(console=console)  # type: ignore[arg-type]
 
         with (
-            patch("ui.ui.os.system", return_value=0),
-            patch("ui.ui.read_single_key", return_value="\n"),
+            patch("core.ui.os.system", return_value=0),
+            patch("core.ui.read_single_key", return_value="\n"),
         ):
             ui.show_start_menu(due_cards_count=3, estimated_minutes=7)
 

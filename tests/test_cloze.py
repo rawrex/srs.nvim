@@ -13,7 +13,7 @@ from packs.cloze import (
     parse_note_clozes,
 )
 from core.index.storage import Metadata
-from ui.ui import ReviewUI
+from core.ui import ReviewUI
 
 
 class FakeConsole:
@@ -80,8 +80,8 @@ class ClozePackTest(unittest.TestCase):
         ui = ReviewUI(config=ReviewConfig(), console=console)  # type: ignore[arg-type]
 
         with (
-            patch("ui.ui.os.system", return_value=0),
-            patch("ui.ui.read_single_key", side_effect=["A", "\n"]),
+            patch("core.ui.os.system", return_value=0),
+            patch("core.ui.read_single_key", side_effect=["A", "\n"]),
         ):
             ui.run_question_step("title", card)
 
@@ -120,8 +120,8 @@ class ClozePackTest(unittest.TestCase):
         )
 
         with (
-            patch("ui.ui.os.system", return_value=0),
-            patch("ui.ui.read_single_key", side_effect=["\n"]),
+            patch("core.ui.os.system", return_value=0),
+            patch("core.ui.read_single_key", side_effect=["\n"]),
         ):
             ui.run_question_step(
                 "title",
@@ -166,8 +166,8 @@ class ClozePackTest(unittest.TestCase):
         )
 
         with (
-            patch("ui.ui.os.system", return_value=0),
-            patch("ui.ui.read_single_key", side_effect=["\n"]),
+            patch("core.ui.os.system", return_value=0),
+            patch("core.ui.read_single_key", side_effect=["\n"]),
         ):
             ui.run_question_step(
                 "title",

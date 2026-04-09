@@ -13,7 +13,7 @@ from core.parsers import build_parser_registry
 from core import util
 from core.config import load_review_config
 from core.session import ReviewSession
-from ui.ui import ReviewUI, SessionEntryUI
+from core.ui import ReviewUI, SessionEntryUI
 
 
 def main() -> int:
