@@ -67,9 +67,8 @@ def load_review_config(repo_root: str) -> ReviewConfig:
 
     review_raw = _dict_or_empty(raw.get("review"))
     cloze_raw = _dict_or_empty(raw.get("cloze"))
-    scheduler_raw = (
-        raw.get("scheduler") if isinstance(raw.get("scheduler"), dict) else None
-    )
+    scheduler_value = raw.get("scheduler")
+    scheduler_raw = _dict_or_empty(scheduler_value)
 
     rating_buttons = _parse_rating_buttons(review_raw.get("rating_buttons"))
     between_notes_timeout_ms, show_context, auto_stage_reviewed_cards = (
@@ -94,7 +93,7 @@ def load_review_config(repo_root: str) -> ReviewConfig:
     scheduler_relearning_steps = defaults.scheduler_relearning_steps
     scheduler_maximum_interval = defaults.scheduler_maximum_interval
     scheduler_enable_fuzzing = defaults.scheduler_enable_fuzzing
-    if scheduler_raw is not None:
+    if isinstance(scheduler_value, dict):
         parsed_scheduler = _parse_scheduler_config(scheduler_raw, defaults)
     else:
         parsed_scheduler = None
