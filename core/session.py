@@ -1,3 +1,4 @@
+import os
 import time
 
 from fsrs import Scheduler
@@ -28,7 +29,7 @@ class ReviewSession:
         )
 
     def run(self) -> int:
-        if not self.cards_manager.has_index():
+        if not os.path.exists(os.path.join(self.repo_root, ".srs", "index.txt")):
             self.ui.print_message("Missing index")
             return 1
 

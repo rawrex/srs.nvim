@@ -4,10 +4,9 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from core.card import Card
-from core.parsers import ParserRegistry
-
 from core.index.index import Index
 from core.index.storage import parse_storage_json, write_metadata_file
+from core.parsers import ParserRegistry
 
 IndexRow = tuple[str, str, str, int, int]
 LineRange = tuple[int, int]
@@ -23,10 +22,6 @@ class CardsManager:
     def __init__(self, repo_root: str, parser_registry: ParserRegistry) -> None:
         self.repo_root = repo_root
         self.parser_registry = parser_registry
-        self.index_path = os.path.join(repo_root, ".srs", "index.txt")
-
-    def has_index(self) -> bool:
-        return os.path.exists(self.index_path)
 
     def load_due_cards(self) -> list[DueCard]:
         now = datetime.now(timezone.utc)
@@ -59,7 +54,10 @@ class CardsManager:
 
     def _read_index_rows(self) -> list[IndexRow]:
         return list(
-            Index(self.index_path, parser_registry=self.parser_registry).read_rows()
+            Index(
+                os.path.join(self.repo_root, ".srs", "index.txt"),
+                parser_registry=self.parser_registry,
+            ).read_rows()
         )
 
     def _collect_claimed_lines_by_note(
