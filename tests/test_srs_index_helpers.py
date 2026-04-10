@@ -121,35 +121,70 @@ class SrsIndexHelperTest(unittest.TestCase):
 
         self.assertEqual([("high", 1, 2), ("low", 3, 3)], rows)
 
-    def test_read_note_text_returns_none_for_missing_or_unreadable(self) -> None:
+    def test_read_note_text_returns_none_for_missing_and_raises_for_bad_utf8(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
             index_path = os.path.join(repo_root, ".srs", "index.txt")
             os.makedirs(os.path.dirname(index_path), exist_ok=True)
             with open(index_path, "w", encoding="utf-8"):
                 pass
-            index = self._index(index_path)
+            store = IndexCardStore(index_path)
 
-            self.assertIsNone(index._read_note_text("/missing.md"))
+            self.assertIsNone(store.read_note_text("/missing.md"))
 
             bad_path = os.path.join(repo_root, "bad.md")
             with open(bad_path, "wb") as handle:
                 handle.write(b"\xff\xfe")
 
-            self.assertIsNone(index._read_note_text("/bad.md"))
+            with self.assertRaises(UnicodeDecodeError):
+                store.read_note_text("/bad.md")
 
-    def test_is_note_path_excludes_git_and_srs_internal_paths(self) -> None:
+    def test_repo_root_resolves_from_index_path(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
             index_path = os.path.join(repo_root, ".srs", "index.txt")
             os.makedirs(os.path.dirname(index_path), exist_ok=True)
             with open(index_path, "w", encoding="utf-8"):
                 pass
-            index = self._index(index_path)
+            store = IndexCardStore(index_path)
 
-            self.assertFalse(index._is_note_path("/.srs"))
-            self.assertFalse(index._is_note_path("/.srs/1.json"))
-            self.assertFalse(index._is_note_path("/.git"))
-            self.assertFalse(index._is_note_path("/.git/config"))
-            self.assertTrue(index._is_note_path("/notes/topic.md"))
+            self.assertEqual(repo_root, store.repo_root())
+
+    def test_index_file_path_is_repo_relative_and_normalized(self) -> None:
+        with tempfile.TemporaryDirectory() as repo_root:
+            index_path = os.path.join(repo_root, ".srs", "index.txt")
+            os.makedirs(os.path.dirname(index_path), exist_ok=True)
+            with open(index_path, "w", encoding="utf-8"):
+                pass
+
+            store = IndexCardStore(index_path)
+
+            self.assertEqual("/.srs/index.txt", store.index_file_path())
+
+    def test_create_and_remove_card_row_manage_card_file(self) -> None:
+        with tempfile.TemporaryDirectory() as repo_root:
+            index_path = os.path.join(repo_root, ".srs", "index.txt")
+            srs_dir = os.path.dirname(index_path)
+            os.makedirs(srs_dir, exist_ok=True)
+            with open(index_path, "w", encoding="utf-8"):
+                pass
+
+            store = IndexCardStore(index_path)
+
+            row, card_path = store.create_card_row("cloze", 2, 4)
+            note_id, parser_id, start_line, end_line = row
+
+            self.assertEqual("cloze", parser_id)
+            self.assertEqual(2, start_line)
+            self.assertEqual(4, end_line)
+            self.assertEqual(store.card_path(note_id), card_path)
+            self.assertTrue(os.path.exists(os.path.join(srs_dir, f"{note_id}.json")))
+
+            removed = store.remove_card_file(note_id)
+            self.assertEqual(card_path, removed)
+            self.assertFalse(os.path.exists(os.path.join(srs_dir, f"{note_id}.json")))
+
+            self.assertIsNone(store.remove_card_file(note_id))
 
 
 if __name__ == "__main__":
