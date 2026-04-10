@@ -5,7 +5,6 @@ import unittest
 from core.api import NoteParser
 from core.parsers import ParserRegistry
 from core.index.index import Index, IndexRowReader
-from core.index.card_store import IndexCardStore
 
 
 class _StaticParser(NoteParser):
@@ -35,7 +34,7 @@ class _StaticParser(NoteParser):
 
 class SrsIndexHelperTest(unittest.TestCase):
     def _index(self, index_path: str) -> Index:
-        return Index(index_path, collect_parser_rows=lambda _indexed_path: [])
+        return Index(index_path, parser_registry=ParserRegistry(parsers={}))
 
     def test_index_row_reader_parses_valid_row_and_rejects_invalid(self) -> None:
         reader = IndexRowReader()
@@ -114,7 +113,8 @@ class SrsIndexHelperTest(unittest.TestCase):
             parser_registry = ParserRegistry(parsers={})
             parser_registry.register(high)
             parser_registry.register(low)
-            rows = IndexCardStore(index_path).collect_parser_rows(
+            index = self._index(index_path)
+            rows = index.collect_parser_rows(
                 "/note.md",
                 parser_registry,
             )
@@ -129,16 +129,16 @@ class SrsIndexHelperTest(unittest.TestCase):
             os.makedirs(os.path.dirname(index_path), exist_ok=True)
             with open(index_path, "w", encoding="utf-8"):
                 pass
-            store = IndexCardStore(index_path)
+            index = self._index(index_path)
 
-            self.assertIsNone(store.read_note_text("/missing.md"))
+            self.assertIsNone(index.read_note_text("/missing.md"))
 
             bad_path = os.path.join(repo_root, "bad.md")
             with open(bad_path, "wb") as handle:
                 handle.write(b"\xff\xfe")
 
             with self.assertRaises(UnicodeDecodeError):
-                store.read_note_text("/bad.md")
+                index.read_note_text("/bad.md")
 
     def test_repo_root_resolves_from_index_path(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
@@ -146,9 +146,9 @@ class SrsIndexHelperTest(unittest.TestCase):
             os.makedirs(os.path.dirname(index_path), exist_ok=True)
             with open(index_path, "w", encoding="utf-8"):
                 pass
-            store = IndexCardStore(index_path)
+            index = self._index(index_path)
 
-            self.assertEqual(repo_root, store.repo_root())
+            self.assertEqual(repo_root, index.repo_root())
 
     def test_index_file_path_is_repo_relative_and_normalized(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
@@ -157,9 +157,9 @@ class SrsIndexHelperTest(unittest.TestCase):
             with open(index_path, "w", encoding="utf-8"):
                 pass
 
-            store = IndexCardStore(index_path)
+            index = self._index(index_path)
 
-            self.assertEqual("/.srs/index.txt", store.index_file_path())
+            self.assertEqual("/.srs/index.txt", index.index_file_path())
 
     def test_create_and_remove_card_row_manage_card_file(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
@@ -169,22 +169,22 @@ class SrsIndexHelperTest(unittest.TestCase):
             with open(index_path, "w", encoding="utf-8"):
                 pass
 
-            store = IndexCardStore(index_path)
+            index = self._index(index_path)
 
-            row, card_path = store.create_card_row("cloze", 2, 4)
+            row, card_path = index.create_card_row("cloze", 2, 4)
             note_id, parser_id, start_line, end_line = row
 
             self.assertEqual("cloze", parser_id)
             self.assertEqual(2, start_line)
             self.assertEqual(4, end_line)
-            self.assertEqual(store.card_path(note_id), card_path)
+            self.assertEqual(index.card_path(note_id), card_path)
             self.assertTrue(os.path.exists(os.path.join(srs_dir, f"{note_id}.json")))
 
-            removed = store.remove_card_file(note_id)
+            removed = index.remove_card_file(note_id)
             self.assertEqual(card_path, removed)
             self.assertFalse(os.path.exists(os.path.join(srs_dir, f"{note_id}.json")))
 
-            self.assertIsNone(store.remove_card_file(note_id))
+            self.assertIsNone(index.remove_card_file(note_id))
 
 
 if __name__ == "__main__":

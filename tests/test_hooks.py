@@ -40,7 +40,7 @@ class HooksCliTest(unittest.TestCase):
         self.assertEqual(0, code)
         index_cls.assert_called_once_with(
             "/repo/.srs/index.txt",
-            collect_parser_rows=ANY,
+            parser_registry=ANY,
         )
         handler.handle_pre_merge_commit.assert_called_once()
 
