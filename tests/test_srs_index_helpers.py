@@ -3,8 +3,8 @@ import tempfile
 import unittest
 
 from core.api import NoteParser
-from core.parsers import ParserRegistry
 from core.index.index import Index, IndexRowReader
+from core.parsers import ParserRegistry
 
 
 class _StaticParser(NoteParser):
@@ -113,10 +113,9 @@ class SrsIndexHelperTest(unittest.TestCase):
             parser_registry = ParserRegistry(parsers={})
             parser_registry.register(high)
             parser_registry.register(low)
-            index = self._index(index_path)
+            index = Index(index_path, parser_registry=parser_registry)
             rows = index.collect_parser_rows(
                 "/note.md",
-                parser_registry,
             )
 
         self.assertEqual([("high", 1, 2), ("low", 3, 3)], rows)
