@@ -26,8 +26,8 @@ class CardsManager:
     def load_due_cards(self) -> list[DueCard]:
         now = datetime.now(timezone.utc)
         index_rows = Index(
-            os.path.join(self.repo_root, ".srs", "index.txt"),
-            collect_parser_rows=lambda _indexed_path: [],
+            path=os.path.join(self.repo_root, ".srs", "index.txt"),
+            parser_registry=self.parser_registry,
         ).read_rows()
 
         claimed_lines_by_note: dict[str, set[int]] = {}

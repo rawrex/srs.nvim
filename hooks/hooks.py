@@ -12,7 +12,6 @@ from core import util
 from hooks.handler import Handler
 from core.config import load_review_config
 from core.parsers import build_parser_registry
-from core.index.card_store import IndexCardStore
 from core.index.index import Index, IndexUpdateAbortError
 
 
@@ -31,14 +30,7 @@ def main() -> int:
 
     config = load_review_config(repo_root)
     parser_registry = build_parser_registry(config)
-    card_store = IndexCardStore(index_path)
-    index = Index(
-        index_path,
-        collect_parser_rows=lambda indexed_path: card_store.collect_parser_rows(
-            indexed_path,
-            parser_registry,
-        ),
-    )
+    index = Index(index_path, parser_registry=parser_registry)
     handler = Handler(repo_root)
 
     try:
