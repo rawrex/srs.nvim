@@ -11,14 +11,6 @@ class IndexCardStore:
     def __init__(self, index_path: str) -> None:
         self.index_path = index_path
 
-    def is_note_path(self, indexed_path: str) -> bool:
-        return not (
-            indexed_path.startswith("/.srs/")
-            or indexed_path == "/.srs"
-            or indexed_path.startswith("/.git/")
-            or indexed_path == "/.git"
-        )
-
     def index_file_path(self) -> str:
         rel_path = os.path.relpath(self.index_path, self.repo_root())
         return util.normalize_path(rel_path)
@@ -61,7 +53,8 @@ class IndexCardStore:
         scheduler_card = SchedulerCard()
         metadata = Metadata(scheduler_card=scheduler_card, review_logs=[])
         card_id = str(scheduler_card.card_id)
-        self._write_card_file(card_id, metadata)
+        card_path = self._card_abs_path(card_id)
+        write_metadata(card_path, metadata)
         return (card_id, parser_id, start_line, end_line), self.card_path(card_id)
 
     def card_path(self, note_id: str) -> str:
@@ -73,19 +66,9 @@ class IndexCardStore:
     def _card_abs_path(self, note_id: str) -> str:
         return os.path.join(os.path.dirname(self.index_path), f"{note_id}.json")
 
-    def _note_abs_path(self, indexed_path: str) -> str:
-        return os.path.join(self.repo_root(), indexed_path.lstrip("/"))
-
     def read_note_text(self, indexed_path: str) -> str | None:
-        note_path = self._note_abs_path(indexed_path)
-        if not os.path.exists(note_path):
-            return None
-        try:
+        note_path = os.path.join(self.repo_root(), indexed_path.lstrip("/"))
+        if os.path.exists(note_path):
             with open(note_path, "r", encoding="utf-8") as handle:
                 return handle.read()
-        except (OSError, UnicodeDecodeError):
-            return None
-
-    def _write_card_file(self, card_id: str, metadata: Metadata) -> None:
-        card_path = self._card_abs_path(card_id)
-        write_metadata(card_path, metadata)
+        return None

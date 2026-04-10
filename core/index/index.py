@@ -326,7 +326,12 @@ class Index:
         return self.card_store.read_note_text(indexed_path)
 
     def _is_note_path(self, indexed_path: str) -> bool:
-        return self.card_store.is_note_path(indexed_path)
+        return not (
+            indexed_path.startswith("/.srs/")
+            or indexed_path == "/.srs"
+            or indexed_path.startswith("/.git/")
+            or indexed_path == "/.git"
+        )
 
     def _index_file_path(self) -> str:
         return self.card_store.index_file_path()

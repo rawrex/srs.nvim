@@ -1,7 +1,7 @@
 import json
 import os
 from dataclasses import dataclass, field
-from typing import Dict, List
+from typing import List
 
 from fsrs import Card as SchedulerCard
 from fsrs import ReviewLog
