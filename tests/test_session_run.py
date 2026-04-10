@@ -124,7 +124,7 @@ class ReviewSessionRunTest(unittest.TestCase):
                         DueCard(card=card_2, note_context_blocks={}),
                     ],
                 ),
-                patch("core.session.write_metadata_file") as write_metadata,
+                patch("core.session.write_metadata") as write_metadata,
                 patch("core.session.time.monotonic_ns") as monotonic_ns,
             ):
                 monotonic_ns.side_effect = [
@@ -185,7 +185,7 @@ class ReviewSessionRunTest(unittest.TestCase):
                         DueCard(card=card_2, note_context_blocks={}),
                     ],
                 ),
-                patch("core.session.write_metadata_file"),
+                patch("core.session.write_metadata"),
                 patch(
                     "core.session.time.monotonic_ns",
                     side_effect=[0, 1_000_000, 2_000_000, 3_000_000],
@@ -238,7 +238,7 @@ class ReviewSessionRunTest(unittest.TestCase):
                         DueCard(card=card_2, note_context_blocks={}),
                     ],
                 ),
-                patch("core.session.write_metadata_file"),
+                patch("core.session.write_metadata"),
                 patch(
                     "core.session.time.monotonic_ns",
                     side_effect=[0, 1_000_000, 2_000_000, 3_000_000],

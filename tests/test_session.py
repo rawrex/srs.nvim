@@ -3,11 +3,11 @@ import os
 import unittest
 from unittest.mock import patch
 
+from fsrs import Card as SchedulerCard
 from fsrs import Scheduler
 
 from core.config import ReviewConfig
 from core.parsers import build_parser_registry
-from packs.cloze import ClozeCard
 from core.session import ReviewSession
 from tests.setup_test_helpers import temporary_session_repo
 
@@ -78,7 +78,7 @@ class ReviewSessionTest(unittest.TestCase):
             with open(
                 os.path.join(repo_root, ".srs", "1.json"), "w", encoding="utf-8"
             ) as handle:
-                json.dump(ClozeCard.new_storage_dict(), handle)
+                json.dump(json.loads(SchedulerCard().to_json()), handle)
 
             session = ReviewSession(
                 repo_root=repo_root,

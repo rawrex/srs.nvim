@@ -6,46 +6,39 @@ import unittest
 from fsrs import Card as SchedulerCard
 from fsrs import Rating, Scheduler
 
-from core.index.storage import (
-    REVIEW_LOGS_KEY,
-    Metadata,
-    parse_storage_json,
-    storage_dict_for_scheduler_card,
-    write_metadata_file,
-    write_storage_file,
-)
+from core.index.storage import REVIEW_LOGS_KEY, Metadata, read_metadata, write_metadata
 
 
 class StorageTest(unittest.TestCase):
-    def test_parse_storage_json_ignores_non_dict_review_logs(self) -> None:
+    def test_read_metadata_ignores_non_dict_review_logs(self) -> None:
         scheduler = Scheduler()
         updated_card, review_log = scheduler.review_card(
             SchedulerCard(),
             Rating.Good,
             review_duration=321,
         )
-        payload = storage_dict_for_scheduler_card(updated_card)
+        payload = json.loads(updated_card.to_json())
         payload[REVIEW_LOGS_KEY] = ["bad", 1, review_log.to_dict()]
 
-        metadata = parse_storage_json(json.dumps(payload))
+        metadata = read_metadata(json.dumps(payload))
 
         self.assertEqual(1, len(metadata.review_logs))
         self.assertEqual(review_log.to_dict(), metadata.review_logs[0].to_dict())
 
-    def test_write_storage_file_uses_atomic_replace_with_newline(self) -> None:
+    def test_write_metadata_uses_atomic_replace_with_newline(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             card_path = os.path.join(temp_dir, "1.json")
+            metadata = Metadata(scheduler_card=SchedulerCard(), review_logs=[])
 
-            write_storage_file(card_path, {"b": 2, "a": 1})
+            write_metadata(card_path, metadata)
 
             self.assertTrue(os.path.exists(card_path))
             self.assertFalse(os.path.exists(card_path + ".tmp"))
             with open(card_path, "r", encoding="utf-8") as handle:
                 raw_text = handle.read()
             self.assertTrue(raw_text.endswith("\n"))
-            self.assertEqual({"a": 1, "b": 2}, json.loads(raw_text))
 
-    def test_write_metadata_file_persists_review_logs(self) -> None:
+    def test_write_metadata_persists_review_logs(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             card_path = os.path.join(temp_dir, "2.json")
             scheduler = Scheduler()
@@ -59,7 +52,7 @@ class StorageTest(unittest.TestCase):
                 review_logs=[review_log],
             )
 
-            write_metadata_file(card_path, metadata)
+            write_metadata(card_path, metadata)
 
             with open(card_path, "r", encoding="utf-8") as handle:
                 stored = json.load(handle)
