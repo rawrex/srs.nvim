@@ -2,8 +2,8 @@ import re
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, ClassVar, List, Tuple
 
-from core.api import NoteParser
-from core.card import Card, CardView, REVEAL_ALL_LABEL, ViewBlock
+from core.api import Parser
+from core.card import REVEAL_ALL_LABEL, Card, CardView, ViewBlock
 from core.index.storage import Metadata
 
 if TYPE_CHECKING:
@@ -64,7 +64,7 @@ class QuoteBlockCard(Card):
 
 
 @dataclass(frozen=True)
-class QuoteBlockParser(NoteParser):
+class QuoteBlockParser(Parser):
     parser_id: ClassVar[str] = QUOTE_BLOCK_PARSER_ID
     priority: ClassVar[int] = 10
 

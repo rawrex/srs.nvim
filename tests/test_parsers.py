@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from core.api import NoteParser
+from core.api import Parser
 from core.config import ReviewConfig
 from core.parsers import (
     ParserRegistry,
@@ -15,7 +15,7 @@ from core.parsers import (
 )
 
 
-class _Parser(NoteParser):
+class _Parser(Parser):
     parser_id = ""
     priority = 0
 

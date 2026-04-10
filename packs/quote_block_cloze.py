@@ -2,11 +2,11 @@ import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar, List, Tuple
 
-from core.api import NoteParser
+from core.api import Parser
 from core.card import REVEAL_ALL_LABEL, Card, CardView
 from core.config import ReviewConfig
 from core.index.storage import Metadata
-from packs.cloze import ClozeCard, ClozeParser, LABEL_CHARS
+from packs.cloze import LABEL_CHARS, ClozeCard, ClozeParser
 from packs.quote_block import QuoteBlockCard, QuoteBlockParser
 
 if TYPE_CHECKING:
@@ -70,7 +70,7 @@ class QuoteBlockClozeCard(ClozeCard, QuoteBlockCard):
 
 
 @dataclass(frozen=True)
-class QuoteBlockClozeParser(ClozeParser, QuoteBlockParser, NoteParser):
+class QuoteBlockClozeParser(ClozeParser, QuoteBlockParser, Parser):
     parser_id: ClassVar[str] = QUOTE_BLOCK_CLOZE_PARSER_ID
     priority: ClassVar[int] = 20
 

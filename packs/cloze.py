@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, ClassVar, Dict, List, Tuple
 
 from fsrs import Rating
 
-from core.api import NoteParser
+from core.api import Parser
 from core.autograde import suggest_rating
 from core.card import REVEAL_ALL_LABEL, Card, CardView, RevealMode, ViewBlock
 from core.config import ReviewConfig
@@ -230,7 +230,7 @@ class ClozeCard(Card):
 
 
 @dataclass(frozen=True)
-class ClozeParser(NoteParser):
+class ClozeParser(Parser):
     parser_id: ClassVar[str] = CLOZE_PARSER_ID
     priority: ClassVar[int] = 0
     reveal_mode: RevealMode

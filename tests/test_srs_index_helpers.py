@@ -2,12 +2,12 @@ import os
 import tempfile
 import unittest
 
-from core.api import NoteParser
+from core.api import Parser
 from core.index.index import Index, IndexRowReader
 from core.parsers import ParserRegistry
 
 
-class _StaticParser(NoteParser):
+class _StaticParser(Parser):
     parser_id = ""
     priority = 0
 

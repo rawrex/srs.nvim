@@ -5,7 +5,7 @@ from core.card import Card
 from core.index.storage import Metadata
 
 
-class NoteParser(ABC):
+class Parser(ABC):
     parser_id: ClassVar[str]
     priority: ClassVar[int] = 0
 
