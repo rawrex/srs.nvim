@@ -325,9 +325,6 @@ class Index:
     def _collect_parser_rows(self, indexed_path: str) -> list[tuple[str, int, int]]:
         return self.collect_parser_rows(indexed_path)
 
-    def _read_note_text(self, indexed_path: str) -> str | None:
-        return self.read_note_text(indexed_path)
-
     def _is_note_path(self, indexed_path: str) -> bool:
         return not (
             indexed_path.startswith("/.srs/")
