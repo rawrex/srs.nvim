@@ -31,10 +31,6 @@ class Index:
     ) -> None:
         self.path = path
         self.parser_registry = parser_registry
-        self._collect_parser_rows = lambda indexed_path: self.collect_parser_rows(
-            indexed_path,
-            parser_registry,
-        )
         self.row_reader = IndexRowReader()
         self.hunk_parser = HunkParser()
 
@@ -326,6 +322,9 @@ class Index:
     def _remove_card_file(self, note_id: str) -> str | None:
         return self.remove_card_file(note_id)
 
+    def _collect_parser_rows(self, indexed_path: str) -> list[tuple[str, int, int]]:
+        return self.collect_parser_rows(indexed_path)
+
     def _read_note_text(self, indexed_path: str) -> str | None:
         return self.read_note_text(indexed_path)
 
@@ -352,7 +351,8 @@ class Index:
         return None
 
     def collect_parser_rows(
-        self, indexed_path: str, parser_registry: ParserRegistry
+        self,
+        indexed_path: str,
     ) -> list[tuple[str, int, int]]:
         note_text = self.read_note_text(indexed_path)
         if note_text is None:
@@ -360,7 +360,7 @@ class Index:
 
         selected: list[tuple[str, int, int]] = []
         claimed: list[tuple[int, int]] = []
-        for parser in parser_registry.ordered():
+        for parser in self.parser_registry.ordered():
             cards = parser.split_note_into_cards(note_text)
             for start_line, end_line, _ in cards:
                 if any(
