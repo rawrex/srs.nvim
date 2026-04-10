@@ -4,14 +4,13 @@ import string
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, ClassVar, Dict, List, Tuple
 
-from fsrs import Card as SchedulerCard
 from fsrs import Rating
 
-from core.card import Card, CardView, REVEAL_ALL_LABEL, RevealMode, ViewBlock
 from core.api import NoteParser
 from core.autograde import suggest_rating
-from core.index.storage import Metadata
+from core.card import REVEAL_ALL_LABEL, Card, CardView, RevealMode, ViewBlock
 from core.config import ReviewConfig
+from core.index.storage import Metadata
 
 if TYPE_CHECKING:
     from core.parsers import ParserRegistry
@@ -120,11 +119,6 @@ class ClozeCard(Card):
         self.incremental_states = [
             build_incremental_reveal_state(hidden) for hidden in self.clozes
         ]
-
-    @classmethod
-    def new_storage_dict(cls) -> Dict[str, object]:
-        metadata = Metadata(scheduler_card=SchedulerCard(), review_logs=[])
-        return metadata.to_storage_dict()
 
     def reveal_for_label(self, label: str) -> CardView | None:
         if label == REVEAL_ALL_LABEL:

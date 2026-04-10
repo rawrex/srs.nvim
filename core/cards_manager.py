@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 
 from core.card import Card
 from core.index.index import Index
-from core.index.storage import parse_storage_json
+from core.index.storage import read_metadata
 from core.parsers import ParserRegistry
 
 IndexRow = tuple[str, str, str, int, int]
@@ -106,7 +106,7 @@ class CardsManager:
         card_path = os.path.join(self.repo_root, ".srs", f"{note_id}.json")
         with open(card_path, "r", encoding="utf-8") as handle:
             raw_text = handle.read()
-        metadata = parse_storage_json(raw_text)
+        metadata = read_metadata(raw_text)
         parser = self.parser_registry.get(parser_id)
         return parser.build_card(
             note_id=note_id,

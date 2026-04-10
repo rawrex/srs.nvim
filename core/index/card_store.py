@@ -1,10 +1,10 @@
 import os
 
-from core.card import SchedulerCard
-from core.parsers import ParserRegistry
 from core import util
+from core.card import SchedulerCard
 from core.index.model import IndexRowTuple
-from core.index.storage import Metadata, write_metadata_file
+from core.index.storage import Metadata, write_metadata
+from core.parsers import ParserRegistry
 
 
 class IndexCardStore:
@@ -88,4 +88,4 @@ class IndexCardStore:
 
     def _write_card_file(self, card_id: str, metadata: Metadata) -> None:
         card_path = self._card_abs_path(card_id)
-        write_metadata_file(card_path, metadata)
+        write_metadata(card_path, metadata)

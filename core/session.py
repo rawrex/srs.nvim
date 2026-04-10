@@ -5,7 +5,7 @@ from fsrs import Scheduler
 
 from core.cards_manager import CardsManager
 from core.config import ReviewConfig
-from core.index.storage import write_metadata_file
+from core.index.storage import write_metadata
 from core.parsers import ParserRegistry
 from core.ui import ReviewUI, SessionEntryUI
 
@@ -87,7 +87,7 @@ class ReviewSession:
             )
             card.metadata.scheduler_card = updated_card
             card.metadata.review_logs.append(review_log)
-            write_metadata_file(card.card_path, card.metadata)
+            write_metadata(card.card_path, card.metadata)
             self.ui.print_message("Saved")
 
         return 0
