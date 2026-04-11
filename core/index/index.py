@@ -152,7 +152,7 @@ class Index:
             if row.path in renames:
                 changed = True
                 updated.append(
-                    self._format_row(
+                    format_row(
                         row.note_id,
                         renames[row.path],
                         row.parser_id,
@@ -300,7 +300,7 @@ class Index:
             row, touched_path = self._create_card_row(parser_id, start_line, end_line)
             note_id, row_parser_id, row_start_line, row_end_line = row
             updated.append(
-                self._format_row(
+                format_row(
                     note_id,
                     new_path,
                     row_parser_id,
@@ -401,16 +401,6 @@ class Index:
 
     def _rows_by_path(self, lines: list[str]) -> PathRows:
         return rows_by_path(lines, row_reader=self.row_reader)
-
-    def _format_row(
-        self,
-        note_id: str,
-        indexed_path: str,
-        parser_id: str,
-        start_line: int,
-        end_line: int,
-    ) -> str:
-        return format_row(note_id, indexed_path, parser_id, start_line, end_line)
 
 
 __all__ = ["Index", "IndexUpdateAbortError", "IndexRowReader"]
