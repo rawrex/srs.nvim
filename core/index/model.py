@@ -33,7 +33,7 @@ class IndexUpdateResult:
 
 
 @dataclass(frozen=True)
-class IndexRow:
+class IndexEntry:
     note_id: str
     path: str
     parser_id: str

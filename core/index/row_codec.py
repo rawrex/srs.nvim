@@ -1,17 +1,17 @@
 import re
 
-from core.index.model import IndexRow, IndexRowTuple, PathRows
+from core.index.model import IndexEntry, IndexRowTuple, PathRows
 
 
 class IndexRowReader:
     def __init__(self) -> None:
         self.row_re = re.compile(r"^'([^']*)','([^']*)','([^']*)','(\d+)','(\d+)'\s*$")
 
-    def parse(self, raw_line: str) -> IndexRow | None:
+    def parse(self, raw_line: str) -> IndexEntry | None:
         match = self.row_re.match(raw_line.rstrip("\n"))
         if not match:
             return None
-        return IndexRow(
+        return IndexEntry(
             note_id=match.group(1),
             path=match.group(2),
             parser_id=match.group(3),
