@@ -6,13 +6,7 @@ from unittest.mock import Mock, patch
 
 from core.api import Parser
 from core.config import ReviewConfig
-from core.parsers import (
-    ParserRegistry,
-    _build_parser_registry,
-    _load_pack_module,
-    _load_registered_packs,
-    _pack_module_names,
-)
+from core.parsers import ParserRegistry, _load_pack_module, _load_registered_packs, _pack_module_names
 
 
 class _Parser(Parser):
@@ -92,20 +86,6 @@ class ParsersTest(unittest.TestCase):
             _load_registered_packs(registry, ReviewConfig())
 
         register_pack.assert_called_once_with(registry, ReviewConfig())
-
-    def test_build_parser_registry_raises_when_no_packs_register(self) -> None:
-        with patch("core.parsers._load_registered_packs"):
-            with self.assertRaises(RuntimeError):
-                _build_parser_registry(ReviewConfig())
-
-    def test_build_parser_registry_returns_registry_with_parsers(self) -> None:
-        def fake_load(registry: ParserRegistry, _config: ReviewConfig) -> None:
-            registry.register(_LowParser())
-
-        with patch("core.parsers._load_registered_packs", side_effect=fake_load):
-            registry = _build_parser_registry(ReviewConfig())
-
-        self.assertIn("z_low", registry.parsers)
 
 
 if __name__ == "__main__":

@@ -113,7 +113,7 @@ class ReviewUI:
     ) -> tuple[list[str], int]:
         if note_context_blocks:
             return self._rendered_context_blocks_for_card(
-                note_context_blocks, card.start_line, card.end_line, primary_block
+                note_context_blocks, card.index_entry.start_line, card.index_entry.end_line, primary_block
             )
 
         rendered_blocks = [primary_block if block.is_primary else block.text for block in view.blocks]

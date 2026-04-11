@@ -55,11 +55,11 @@ class Index:
             self._write(lines)
         return len(lines) - original_count
 
-    def read_rows(self) -> list[tuple[str, str, str, int, int]]:
-        rows: list[tuple[str, str, str, int, int]] = []
+    def read_rows(self) -> list[IndexEntry]:
+        rows: list[IndexEntry] = []
         for raw_line in self._read():
             if entry := self._parse(raw_line):
-                rows.append((entry.card_id, entry.note_path, entry.parser_id, entry.start_line, entry.end_line))
+                rows.append(entry)
         return rows
 
     def _update_index_lines(self, lines: list[str], changes: DiffChangeSet) -> IndexUpdateResult:

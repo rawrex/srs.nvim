@@ -10,6 +10,7 @@ from core.api import Parser
 from core.autograde import suggest_rating
 from core.card import REVEAL_ALL_LABEL, Card, CardView, RevealMode, ViewBlock
 from core.config import ReviewConfig
+from core.index.model import IndexEntry
 from core.index.storage import Metadata
 
 if TYPE_CHECKING:
@@ -169,7 +170,7 @@ class ClozeCard(Card):
         return "".join(parts)
 
     def _build_view(self, current_block: str) -> CardView:
-        return CardView(blocks=[ViewBlock(start_line=self.start_line, text=current_block, is_primary=True)])
+        return CardView(blocks=[ViewBlock(start_line=self.index_entry.start_line, text=current_block, is_primary=True)])
 
     def _masked_context_block(self, block: str) -> str:
         text_parts, clozes = parse_note_clozes(block, self.cloze_open, self.cloze_close)
@@ -209,23 +210,10 @@ class ClozeParser(Parser):
                 cards.append((line_number, line_number, line))
         return cards
 
-    def build_card(
-        self,
-        note_id: str,
-        note_path: str,
-        note_text: str,
-        start_line: int,
-        end_line: int,
-        card_path: str,
-        metadata: Metadata,
-    ) -> Card:
+    def build_card(self, note_text: str, index_entry: IndexEntry, metadata: Metadata) -> Card:
         return ClozeCard(
-            note_id=note_id,
-            note_path=note_path,
-            card_path=card_path,
             note_text=note_text,
-            start_line=start_line,
-            end_line=end_line,
+            index_entry=index_entry,
             metadata=metadata,
             reveal_mode=self.reveal_mode,
             cloze_open=self.cloze_open,

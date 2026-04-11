@@ -66,7 +66,9 @@ class ReviewSession:
             )
             card.metadata.scheduler_card = updated_card
             card.metadata.review_logs.append(review_log)
-            write_metadata(card.card_path, card.metadata)
+
+            # TODO shoeld be moved into the Card
+            write_metadata(os.path.join(self.repo_root, ".srs", f"{card.index_entry.card_id}.json"), card.metadata)
             self.ui.print_message("Saved")
 
         return 0

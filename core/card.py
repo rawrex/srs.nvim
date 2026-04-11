@@ -7,6 +7,7 @@ from typing import List
 from fsrs import Card as SchedulerCard
 from fsrs import Rating
 
+from core.index.model import IndexEntry
 from core.index.storage import Metadata
 
 __all__ = ["SchedulerCard", "REVEAL_ALL_LABEL", "RevealMode", "ViewBlock", "CardView", "Card"]
@@ -42,17 +43,13 @@ class CardView:
 
 @dataclass(kw_only=True)
 class Card(ABC):
-    note_id: str
-    note_path: str
-    card_path: str
     note_text: str
+    index_entry: IndexEntry
     metadata: Metadata
-    start_line: int = 1
-    end_line: int = 1
 
     @property
     def note_filename(self) -> str:
-        return self.note_path.rsplit("/", 1)[-1]
+        return self.index_entry.note_path.rsplit("/", 1)[-1]
 
     def is_due(self, now: datetime) -> bool:
         due = self.metadata.scheduler_card.due

@@ -5,10 +5,10 @@ from datetime import datetime, timezone
 
 from core.card import Card
 from core.index.index import Index
+from core.index.model import IndexEntry
 from core.index.storage import read_metadata
 from core.parsers import ParserRegistry
 
-IndexRow = tuple[str, str, str, int, int]
 LineRange = tuple[int, int]
 
 
@@ -30,9 +30,9 @@ class CardsManager:
         ).read_rows()
 
         claimed_lines_by_note: dict[str, set[int]] = {}
-        for _, indexed_path, _, start_line, end_line in index_rows:
-            note_path = self._note_abs_path(indexed_path)
-            claimed_lines_by_note.setdefault(note_path, set()).update(range(start_line, end_line + 1))
+        for entry in index_rows:
+            note_path = self._note_abs_path(entry.note_path)
+            claimed_lines_by_note.setdefault(note_path, set()).update(range(entry.start_line, entry.end_line + 1))
 
         cards_with_paths, note_context_blocks = self._build_cards_with_note_context(index_rows)
         self._add_unclaimed_note_context(note_context_blocks, claimed_lines_by_note)
@@ -53,56 +53,33 @@ class CardsManager:
         return math.ceil(total_duration_ms / 60_000)
 
     def _build_cards_with_note_context(
-        self, index_rows: list[IndexRow]
+        self, index_entries: list[IndexEntry]
     ) -> tuple[list[tuple[Card, str]], dict[str, dict[LineRange, str]]]:
         cards_with_paths: list[tuple[Card, str]] = []
         note_context_blocks: dict[str, dict[LineRange, str]] = {}
-        parser_blocks_cache: dict[tuple[str, str], dict[LineRange, str]] = {}
 
-        for note_id, indexed_path, parser_id, start_line, end_line in index_rows:
-            note_path = self._note_abs_path(indexed_path)
-            cache_key = (note_path, parser_id)
-            parser_blocks = parser_blocks_cache.get(cache_key)
-            if parser_blocks is None:
-                parser_blocks = self._read_parser_blocks(note_path, parser_id)
-                parser_blocks_cache[cache_key] = parser_blocks
-
-            note_text = parser_blocks.get((start_line, end_line))
+        for entry in index_entries:
+            note_path = self._note_abs_path(entry.note_path)
+            parser_blocks = self._read_parser_blocks(note_path, entry.parser_id)
+            note_text = parser_blocks.get((entry.start_line, entry.end_line))
             if note_text is None:
                 continue
 
-            card = self._build_card(
-                note_id=note_id,
-                note_path=note_path,
-                parser_id=parser_id,
-                start_line=start_line,
-                end_line=end_line,
-                note_text=note_text,
-            )
-            note_context_blocks.setdefault(note_path, {})[(start_line, end_line)] = (
+            card = self._build_card(note_text=note_text, index_entry=entry)
+            note_context_blocks.setdefault(note_path, {})[(entry.start_line, entry.end_line)] = (
                 card.context_view().primary_block().text
             )
             cards_with_paths.append((card, note_path))
 
         return cards_with_paths, note_context_blocks
 
-    def _build_card(
-        self, note_id: str, note_path: str, parser_id: str, start_line: int, end_line: int, note_text: str
-    ) -> Card:
-        card_path = os.path.join(self.repo_root, ".srs", f"{note_id}.json")
+    def _build_card(self, note_text: str, index_entry: IndexEntry) -> Card:
+        card_path = os.path.join(self.repo_root, ".srs", f"{index_entry.card_id}.json")
         with open(card_path, "r", encoding="utf-8") as handle:
             raw_text = handle.read()
         metadata = read_metadata(raw_text)
-        parser = self.parser_registry.get(parser_id)
-        return parser.build_card(
-            note_id=note_id,
-            note_path=note_path,
-            note_text=note_text,
-            start_line=start_line,
-            end_line=end_line,
-            card_path=card_path,
-            metadata=metadata,
-        )
+        parser = self.parser_registry.get(index_entry.parser_id)
+        return parser.build_card(note_text=note_text, index_entry=index_entry, metadata=metadata)
 
     def _add_unclaimed_note_context(
         self, note_context_blocks: dict[str, dict[LineRange, str]], claimed_lines_by_note: dict[str, set[int]]

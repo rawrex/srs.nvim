@@ -3,11 +3,21 @@ import unittest
 from fsrs import Rating
 
 from core.card import REVEAL_ALL_LABEL, RevealMode, SchedulerCard
+from core.index.model import IndexEntry
 from core.index.storage import Metadata
 from packs.quote_block_cloze import QuoteBlockClozeCard, QuoteBlockClozeParser
 
 
 class QuoteBlockClozePackTest(unittest.TestCase):
+    def _entry(self, start_line: int = 3, end_line: int = 4) -> IndexEntry:
+        return IndexEntry(
+            card_id="1",
+            note_path="/tmp/note.md",
+            parser_id="quote_block_cloze",
+            start_line=start_line,
+            end_line=end_line,
+        )
+
     def test_parser_claims_only_quoted_blocks_with_clozes(self) -> None:
         note_text = "Intro\n> plain quote\n> still plain\nMiddle\n> quoted start\n> includes ~{cloze}\nEnd\n"
         parser = QuoteBlockClozeParser(reveal_mode=RevealMode.WHOLE, cloze_open="~{", cloze_close="}", mask_char="▇")
@@ -27,17 +37,13 @@ class QuoteBlockClozePackTest(unittest.TestCase):
     def test_card_uses_label_to_open_block_and_labels_for_clozes(self) -> None:
         block_text = ">[!code]- Example\n>let x = ~{1};\n"
         card = QuoteBlockClozeCard(
-            note_id="1",
-            note_path="/tmp/note.md",
-            card_path="/tmp/1.json",
             note_text=block_text,
+            index_entry=self._entry(),
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             reveal_mode=RevealMode.WHOLE,
             cloze_open="~{",
             cloze_close="}",
             mask_char="▇",
-            start_line=3,
-            end_line=4,
         )
 
         question = card.question_view().primary_block().text
@@ -62,17 +68,13 @@ class QuoteBlockClozePackTest(unittest.TestCase):
     def test_suggested_rating_for_quote_block_cloze_uses_only_clozes(self) -> None:
         block_text = ">[!code]- Example\n>let x = ~{ab}; and y = ~{cd};\n"
         card = QuoteBlockClozeCard(
-            note_id="1",
-            note_path="/tmp/note.md",
-            card_path="/tmp/1.json",
             note_text=block_text,
+            index_entry=self._entry(),
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             reveal_mode=RevealMode.WHOLE,
             cloze_open="~{",
             cloze_close="}",
             mask_char="▇",
-            start_line=3,
-            end_line=4,
         )
 
         card.reveal_for_label("a")
@@ -84,17 +86,13 @@ class QuoteBlockClozePackTest(unittest.TestCase):
     def test_context_view_hides_labels_and_keeps_block_closed(self) -> None:
         block_text = ">[!code]- Example\n>let x = ~{1};\n"
         card = QuoteBlockClozeCard(
-            note_id="1",
-            note_path="/tmp/note.md",
-            card_path="/tmp/1.json",
             note_text=block_text,
+            index_entry=self._entry(),
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             reveal_mode=RevealMode.WHOLE,
             cloze_open="~{",
             cloze_close="}",
             mask_char="▇",
-            start_line=3,
-            end_line=4,
         )
 
         context = card.context_view().primary_block().text
@@ -107,17 +105,13 @@ class QuoteBlockClozePackTest(unittest.TestCase):
     def test_answer_view_keeps_revealed_callout_content(self) -> None:
         block_text = ">[!code]- Example\n>let x = ~{1};\n"
         card = QuoteBlockClozeCard(
-            note_id="1",
-            note_path="/tmp/note.md",
-            card_path="/tmp/1.json",
             note_text=block_text,
+            index_entry=self._entry(),
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             reveal_mode=RevealMode.WHOLE,
             cloze_open="~{",
             cloze_close="}",
             mask_char="▇",
-            start_line=3,
-            end_line=4,
         )
 
         answer = card.answer_view().primary_block().text

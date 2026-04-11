@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import ClassVar, List, Tuple
 
 from core.card import Card
+from core.index.model import IndexEntry
 from core.index.storage import Metadata
 
 
@@ -14,14 +15,5 @@ class Parser(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def build_card(
-        self,
-        note_id: str,
-        note_path: str,
-        note_text: str,
-        start_line: int,
-        end_line: int,
-        card_path: str,
-        metadata: Metadata,
-    ) -> Card:
+    def build_card(self, note_text: str, index_entry: IndexEntry, metadata: Metadata) -> Card:
         raise NotImplementedError

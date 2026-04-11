@@ -6,6 +6,7 @@ from rich.markdown import Markdown
 
 from core.card import REVEAL_ALL_LABEL, RevealMode, SchedulerCard
 from core.config import ReviewConfig
+from core.index.model import IndexEntry
 from packs.cloze import ClozeCard, ClozeParser, mask_hidden_text, parse_note_clozes
 from core.index.storage import Metadata
 from core.ui import ReviewUI
@@ -20,6 +21,11 @@ class FakeConsole:
 
 
 class ClozePackTest(unittest.TestCase):
+    def _entry(self, start_line: int = 1, end_line: int = 1) -> IndexEntry:
+        return IndexEntry(
+            card_id="1", note_path="/tmp/note.md", parser_id="cloze", start_line=start_line, end_line=end_line
+        )
+
     def test_question_and_reveal_all_views(self) -> None:
         note = "# Title\nThe ~{capital of France} is Paris."
 
@@ -27,10 +33,8 @@ class ClozePackTest(unittest.TestCase):
         self.assertEqual(["capital of France"], clozes)
 
         card = ClozeCard(
-            note_id="1",
-            note_path="/tmp/note.md",
-            card_path="/tmp/1.json",
             note_text=note,
+            index_entry=self._entry(),
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             reveal_mode=RevealMode.WHOLE,
             cloze_open="~{",
@@ -60,10 +64,8 @@ class ClozePackTest(unittest.TestCase):
         note = " ".join(f"~{{c{i}}}" for i in range(27))
         console = FakeConsole()
         card = ClozeCard(
-            note_id="1",
-            note_path="/tmp/note.md",
-            card_path="/tmp/1.json",
             note_text=note,
+            index_entry=self._entry(),
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             reveal_mode=RevealMode.WHOLE,
             cloze_open="~{",
@@ -88,17 +90,13 @@ class ClozePackTest(unittest.TestCase):
         }
         console = FakeConsole()
         card = ClozeCard(
-            note_id="1",
-            note_path="/tmp/note.md",
-            card_path="/tmp/1.json",
             note_text=note_context_blocks[(1, 1)],
+            index_entry=self._entry(start_line=1, end_line=1),
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             reveal_mode=RevealMode.WHOLE,
             cloze_open="~{",
             cloze_close="}",
             mask_char="▇",
-            start_line=1,
-            end_line=1,
         )
         ui = ReviewUI(
             config=ReviewConfig(),
@@ -123,17 +121,13 @@ class ClozePackTest(unittest.TestCase):
         }
         console = FakeConsole()
         card = ClozeCard(
-            note_id="1",
-            note_path="/tmp/note.md",
-            card_path="/tmp/1.json",
             note_text=note_context_blocks[(1, 1)],
+            index_entry=self._entry(start_line=1, end_line=1),
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             reveal_mode=RevealMode.WHOLE,
             cloze_open="~{",
             cloze_close="}",
             mask_char="▇",
-            start_line=1,
-            end_line=1,
         )
         ui = ReviewUI(
             config=ReviewConfig(show_context=False),
@@ -155,17 +149,13 @@ class ClozePackTest(unittest.TestCase):
             (4, 4): "# Two\nSecond ~{context cloze} block.\n",
         }
         card = ClozeCard(
-            note_id="1",
-            note_path="/tmp/note.md",
-            card_path="/tmp/1.json",
             note_text=note_context_blocks[(1, 1)],
+            index_entry=self._entry(start_line=1, end_line=1),
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             reveal_mode=RevealMode.WHOLE,
             cloze_open="~{",
             cloze_close="}",
             mask_char="▇",
-            start_line=1,
-            end_line=1,
         )
 
         view = card.reveal_for_label(REVEAL_ALL_LABEL)
@@ -176,10 +166,8 @@ class ClozePackTest(unittest.TestCase):
 
     def test_context_view_masks_primary_cloze_without_labels(self) -> None:
         card = ClozeCard(
-            note_id="1",
-            note_path="/tmp/note.md",
-            card_path="/tmp/1.json",
             note_text="Term [a]~{hidden}",
+            index_entry=self._entry(),
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             reveal_mode=RevealMode.WHOLE,
             cloze_open="~{",
@@ -206,10 +194,8 @@ class ClozePackTest(unittest.TestCase):
 
     def test_suggested_rating_supports_single_cloze_cards(self) -> None:
         card = ClozeCard(
-            note_id="1",
-            note_path="/tmp/note.md",
-            card_path="/tmp/1.json",
             note_text="A ~{single} B",
+            index_entry=self._entry(),
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             reveal_mode=RevealMode.WHOLE,
             cloze_open="~{",
@@ -223,10 +209,8 @@ class ClozePackTest(unittest.TestCase):
 
     def test_suggested_rating_uses_partial_incremental_reveal_ratio(self) -> None:
         card = ClozeCard(
-            note_id="1",
-            note_path="/tmp/note.md",
-            card_path="/tmp/1.json",
             note_text="A ~{abcd} B ~{efgh}",
+            index_entry=self._entry(),
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             reveal_mode=RevealMode.INCREMENTAL,
             cloze_open="~{",

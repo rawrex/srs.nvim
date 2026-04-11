@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, ClassVar, List, Tuple
 
 from core.api import Parser
 from core.card import REVEAL_ALL_LABEL, Card, CardView, ViewBlock
+from core.index.model import IndexEntry
 from core.index.storage import Metadata
 
 if TYPE_CHECKING:
@@ -40,7 +41,11 @@ class QuoteBlockCard(Card):
     def _build_view(self, current_block: str) -> CardView:
         return CardView(
             blocks=[
-                ViewBlock(start_line=self.start_line, text=self._strip_callout_heading(current_block), is_primary=True)
+                ViewBlock(
+                    start_line=self.index_entry.start_line,
+                    text=self._strip_callout_heading(current_block),
+                    is_primary=True,
+                )
             ]
         )
 
@@ -89,25 +94,8 @@ class QuoteBlockParser(Parser):
 
         return cards
 
-    def build_card(
-        self,
-        note_id: str,
-        note_path: str,
-        note_text: str,
-        start_line: int,
-        end_line: int,
-        card_path: str,
-        metadata: Metadata,
-    ) -> Card:
-        return QuoteBlockCard(
-            note_id=note_id,
-            note_path=note_path,
-            card_path=card_path,
-            note_text=note_text,
-            start_line=start_line,
-            end_line=end_line,
-            metadata=metadata,
-        )
+    def build_card(self, note_text: str, index_entry: IndexEntry, metadata: Metadata) -> Card:
+        return QuoteBlockCard(note_text=note_text, index_entry=index_entry, metadata=metadata)
 
 
 def register_pack(registry: "ParserRegistry", _config: object) -> None:

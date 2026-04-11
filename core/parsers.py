@@ -70,8 +70,4 @@ def build_parser_registry(config: ReviewConfig) -> ParserRegistry:
     return registry
 
 
-def _build_parser_registry(config: ReviewConfig) -> ParserRegistry:
-    return build_parser_registry(config)
-
-
 __all__ = ["ParserRegistry", "build_parser_registry"]

@@ -1,12 +1,11 @@
-import os
 import unittest
 from unittest.mock import Mock, patch
 
 from fsrs import Rating
 
+from core.cards_manager import DueCard
 from core.config import ReviewConfig
 from core.parsers import build_parser_registry
-from core.cards_manager import DueCard
 from core.session import ReviewSession
 from tests.setup_test_helpers import temporary_session_repo
 
@@ -22,10 +21,16 @@ class _DummyReviewLog:
         self.review_duration = review_duration
 
 
+class _DummyIndexEntry:
+    def __init__(self, card_id: str, note_path: str) -> None:
+        self.card_id = card_id
+        self.note_path = note_path
+
+
 class _DummyCard:
-    def __init__(self, note_filename: str, scheduler_card: object, card_path: str) -> None:
+    def __init__(self, note_filename: str, scheduler_card: object, card_id: str) -> None:
         self.note_filename = note_filename
-        self.card_path = card_path
+        self.index_entry = _DummyIndexEntry(card_id=card_id, note_path=f"/{note_filename}")
         self.metadata = _DummyMetadata(scheduler_card)
 
     def suggested_rating(self) -> Rating | None:
@@ -103,8 +108,8 @@ class ReviewSessionRunTest(unittest.TestCase):
             scheduler.review_card.side_effect = [(new_card_1, log_1), (new_card_2, log_2)]
             session.scheduler = scheduler
 
-            card_1 = _DummyCard("one.md", old_card_1, os.path.join(repo_root, ".srs", "1.json"))
-            card_2 = _DummyCard("two.md", old_card_2, os.path.join(repo_root, ".srs", "2.json"))
+            card_1 = _DummyCard("one.md", old_card_1, "1")
+            card_2 = _DummyCard("two.md", old_card_2, "2")
 
             with (
                 patch.object(
@@ -151,8 +156,8 @@ class ReviewSessionRunTest(unittest.TestCase):
             scheduler.review_card.return_value = (object(), object())
             session.scheduler = scheduler
 
-            card_1 = _DummyCard("one.md", object(), os.path.join(repo_root, ".srs", "1.json"))
-            card_2 = _DummyCard("two.md", object(), os.path.join(repo_root, ".srs", "2.json"))
+            card_1 = _DummyCard("one.md", object(), "1")
+            card_2 = _DummyCard("two.md", object(), "2")
 
             with (
                 patch.object(
@@ -192,8 +197,8 @@ class ReviewSessionRunTest(unittest.TestCase):
             scheduler.review_card.side_effect = [(object(), object()), (object(), object())]
             session.scheduler = scheduler
 
-            card_1 = _DummyCard("one.md", object(), os.path.join(repo_root, ".srs", "1.json"))
-            card_2 = _DummyCard("two.md", object(), os.path.join(repo_root, ".srs", "2.json"))
+            card_1 = _DummyCard("one.md", object(), "1")
+            card_2 = _DummyCard("two.md", object(), "2")
             card_1.metadata.review_logs = [_DummyReviewLog(review_duration=30_000)]
             card_2.metadata.review_logs = [_DummyReviewLog(review_duration=40_000)]
 
