@@ -2,12 +2,7 @@
 import os
 
 from core import util
-from setup.common import (
-    EXCLUDE_FROM_TRACKING,
-    NOREPEAT_MARKER_NAME,
-    REPEAT_MARKER_NAME,
-    SRS_DIR_NAME,
-)
+from setup.common import EXCLUDE_FROM_TRACKING, NOREPEAT_MARKER_NAME, REPEAT_MARKER_NAME
 
 
 def _to_indexed_path(repo_root: str, abs_path: str) -> str:
@@ -15,11 +10,7 @@ def _to_indexed_path(repo_root: str, abs_path: str) -> str:
     return util.normalize_path(rel_path.replace(os.sep, "/"))
 
 
-def is_directory_tracked(
-    directory: str,
-    repeat_dirs: set[str],
-    norepeat_dirs: set[str],
-) -> bool:
+def is_directory_tracked(directory: str, repeat_dirs: set[str], norepeat_dirs: set[str]) -> bool:
     tracked = "" in repeat_dirs
     if "" in norepeat_dirs:
         tracked = False

@@ -11,7 +11,7 @@ INDEX_FILE_NAME = "index.txt"
 REPEAT_MARKER_NAME = ".repeat"
 NOREPEAT_MARKER_NAME = ".norepeat"
 
-EXCLUDE = [SRS_DIR_NAME, ".git"]
+EXCLUDE_FROM_TRACKING = [SRS_DIR_NAME, ".git"]
 
 
 @dataclass(frozen=True)
