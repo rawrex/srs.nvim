@@ -1,6 +1,6 @@
 import re
 
-from core.index.model import IndexEntry, IndexRowTuple, PathRows
+from core.index.model import IndexEntry, PathRows
 
 
 class IndexRowReader:
@@ -29,15 +29,6 @@ def format_row(
     return f"'{note_id}','{indexed_path}','{parser_id}','{start_line}','{end_line}'\n"
 
 
-def format_rows_for_path(indexed_path: str, rows: list[IndexRowTuple]) -> list[str]:
-    return [
-        format_row(note_id, indexed_path, parser_id, start_line, end_line)
-        for note_id, parser_id, start_line, end_line in sorted(
-            rows, key=lambda row: (row[2], row[3])
-        )
-    ]
-
-
 def rows_by_path(lines: list[str], row_reader: IndexRowReader) -> PathRows:
     grouped: PathRows = {}
     for line in lines:
@@ -48,30 +39,3 @@ def rows_by_path(lines: list[str], row_reader: IndexRowReader) -> PathRows:
             (row.card_id, row.parser_id, row.start_line, row.end_line)
         )
     return grouped
-
-
-def replace_rows_for_path(
-    lines: list[str],
-    indexed_path: str,
-    replacement_rows: list[IndexRowTuple],
-    row_reader: IndexRowReader,
-) -> list[str]:
-    updated: list[str] = []
-    inserted = False
-    replacement_lines = format_rows_for_path(indexed_path, replacement_rows)
-
-    for line in lines:
-        row = row_reader.parse(line)
-        if row is None:
-            updated.append(line)
-            continue
-        if row.note_path != indexed_path:
-            updated.append(line)
-            continue
-        if not inserted:
-            updated.extend(replacement_lines)
-            inserted = True
-
-    if not inserted:
-        updated.extend(replacement_lines)
-    return updated
