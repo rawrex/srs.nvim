@@ -5,10 +5,13 @@ from dataclasses import dataclass
 from core import util
 
 HOOKS = ["pre-commit", "pre-merge-commit", "post-checkout", "post-rewrite"]
+
 SRS_DIR_NAME = ".srs"
 INDEX_FILE_NAME = "index.txt"
 REPEAT_MARKER_NAME = ".repeat"
 NOREPEAT_MARKER_NAME = ".norepeat"
+
+EXCLUDE_FROM_TRACKING = [SRS_DIR_NAME, ".git"]
 
 
 @dataclass(frozen=True)

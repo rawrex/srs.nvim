@@ -2,7 +2,12 @@
 import os
 
 from core import util
-from setup.common import NOREPEAT_MARKER_NAME, REPEAT_MARKER_NAME, SRS_DIR_NAME
+from setup.common import (
+    EXCLUDE_FROM_TRACKING,
+    NOREPEAT_MARKER_NAME,
+    REPEAT_MARKER_NAME,
+    SRS_DIR_NAME,
+)
 
 
 def _to_indexed_path(repo_root: str, abs_path: str) -> str:
@@ -68,10 +73,9 @@ def find_repeat_tracked_paths(repo_root: str) -> list[str]:
 
         for entry in entries:
             if entry.is_dir(follow_symlinks=False):
-                if entry.name in {".git", SRS_DIR_NAME}:
+                if entry.name not in EXCLUDE_FROM_TRACKING:
+                    walk(entry.path, tracked_here)
                     continue
-                walk(entry.path, tracked_here)
-                continue
             if not tracked_here:
                 continue
             if entry.name in {REPEAT_MARKER_NAME, NOREPEAT_MARKER_NAME}:
