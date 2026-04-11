@@ -6,7 +6,6 @@ from core.card import SchedulerCard
 from core.index.model import (
     DiffChangeSet,
     IndexRowTuple,
-    IndexUpdateAbortError,
     IndexUpdateResult,
     PathRows,
 )
@@ -47,7 +46,7 @@ class Index:
 
         self._write(result.lines)
         touched_paths = set(result.touched_paths)
-        touched_paths.add(self._index_file_path())
+        touched_paths.add(self.index_file_path())
         if repo_root:
             self._stage_paths(repo_root, touched_paths)
             return True
@@ -135,7 +134,7 @@ class Index:
                 continue
             if row.path in deletes:
                 changed = True
-                removed_path = self._remove_card_file(row.note_id)
+                removed_path = self.remove_card_file(row.note_id)
                 if removed_path is not None:
                     touched_paths.add(removed_path)
                 continue
@@ -192,7 +191,7 @@ class Index:
                 continue
 
             changed = True
-            removed_path = self._remove_card_file(row.note_id)
+            removed_path = self.remove_card_file(row.note_id)
             if removed_path is not None:
                 touched_paths.add(removed_path)
 
@@ -208,7 +207,7 @@ class Index:
 
         if changed:
             self._write(updated)
-            touched_paths.add(self._index_file_path())
+            touched_paths.add(self.index_file_path())
         return changed, touched_paths
 
     def _stage_paths(self, repo_root: str, indexed_paths: set[str]) -> None:
@@ -232,8 +231,8 @@ class Index:
         updated: list[str],
     ) -> set[str]:
         touched_card_paths: set[str] = set()
-        for parser_id, start_line, end_line in self._collect_parser_rows(new_path):
-            row, touched_path = self._create_card_row(parser_id, start_line, end_line)
+        for parser_id, start_line, end_line in self.collect_parser_rows(new_path):
+            row, touched_path = self.create_card_row(parser_id, start_line, end_line)
             note_id, row_parser_id, row_start_line, row_end_line = row
             updated.append(
                 format_row(
@@ -247,20 +246,6 @@ class Index:
             touched_card_paths.add(touched_path)
         return touched_card_paths
 
-    def _create_card_row(
-        self,
-        parser_id: str,
-        start_line: int,
-        end_line: int,
-    ) -> tuple[IndexRowTuple, str]:
-        return self.create_card_row(parser_id, start_line, end_line)
-
-    def _remove_card_file(self, note_id: str) -> str | None:
-        return self.remove_card_file(note_id)
-
-    def _collect_parser_rows(self, indexed_path: str) -> list[tuple[str, int, int]]:
-        return self.collect_parser_rows(indexed_path)
-
     def _is_note_path(self, indexed_path: str) -> bool:
         return not (
             indexed_path.startswith("/.srs/")
@@ -268,9 +253,6 @@ class Index:
             or indexed_path.startswith("/.git/")
             or indexed_path == "/.git"
         )
-
-    def _index_file_path(self) -> str:
-        return self.index_file_path()
 
     def index_file_path(self) -> str:
         rel_path = os.path.relpath(self.path, self.repo_root())
@@ -342,4 +324,4 @@ class Index:
         return rows_by_path(lines, row_reader=self.row_reader)
 
 
-__all__ = ["Index", "IndexUpdateAbortError", "IndexRowReader"]
+__all__ = ["Index", "IndexRowReader"]

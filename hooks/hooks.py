@@ -12,7 +12,7 @@ from core import util
 from hooks.handler import Handler
 from core.config import load_review_config
 from core.parsers import build_parser_registry
-from core.index.index import Index, IndexUpdateAbortError
+from core.index.index import Index
 
 
 def main() -> int:
@@ -33,18 +33,14 @@ def main() -> int:
     index = Index(index_path, parser_registry=parser_registry)
     handler = Handler(repo_root)
 
-    try:
-        if event == "pre-commit":
-            handler.handle_pre_commit(index)
-        elif event == "pre-merge-commit":
-            handler.handle_pre_merge_commit(index)
-        elif event == "post-checkout":
-            handler.handle_post_checkout(index, sys.argv[2:])
-        elif event == "post-rewrite":
-            handler.handle_post_rewrite(index)
-    except IndexUpdateAbortError as error:
-        print(str(error), file=sys.stderr)
-        return 1
+    if event == "pre-commit":
+        handler.handle_pre_commit(index)
+    elif event == "pre-merge-commit":
+        handler.handle_pre_merge_commit(index)
+    elif event == "post-checkout":
+        handler.handle_post_checkout(index, sys.argv[2:])
+    elif event == "post-rewrite":
+        handler.handle_post_rewrite(index)
     return 0
 
 

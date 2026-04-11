@@ -11,20 +11,18 @@ class DiffChangeSet:
     renames: dict[str, str]
     deletes: set[str]
     adds: set[str]
-    modifies: set[str]
 
     @classmethod
     def from_diff_text(cls, diff_text: str) -> "DiffChangeSet":
-        renames, deletes, adds, modifies = util.parse_diff(diff_text)
+        renames, deletes, adds = util.parse_diff(diff_text)
         return cls(
             renames=renames,
             deletes=deletes,
             adds=adds,
-            modifies=modifies,
         )
 
     def has_changes(self) -> bool:
-        return bool(self.renames or self.deletes or self.adds or self.modifies)
+        return bool(self.renames or self.deletes or self.adds)
 
 
 @dataclass(frozen=True)
@@ -41,7 +39,3 @@ class IndexRow:
     parser_id: str
     start_line: int
     end_line: int
-
-
-class IndexUpdateAbortError(Exception):
-    pass

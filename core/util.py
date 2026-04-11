@@ -28,11 +28,10 @@ def normalize_path(path: str) -> str:
     return "/" + path
 
 
-def parse_diff(text: str) -> tuple[dict[str, str], set[str], set[str], set[str]]:
+def parse_diff(text: str) -> tuple[dict[str, str], set[str], set[str]]:
     renames: dict[str, str] = {}
     deletes: set[str] = set()
     adds: set[str] = set()
-    modifies: set[str] = set()
     for line in text.splitlines():
         if not line.strip():
             continue
@@ -49,6 +48,4 @@ def parse_diff(text: str) -> tuple[dict[str, str], set[str], set[str], set[str]]
             deletes.add(normalize_path(parts[1]))
         elif code == "A" and len(parts) >= 2:
             adds.add(normalize_path(parts[1]))
-        elif code == "M" and len(parts) >= 2:
-            modifies.add(normalize_path(parts[1]))
-    return renames, deletes, adds, modifies
+    return renames, deletes, adds

@@ -46,12 +46,11 @@ class UtilTest(unittest.TestCase):
             ]
         )
 
-        renames, deletes, adds, modifies = util.parse_diff(diff_text)
+        renames, deletes, adds = util.parse_diff(diff_text)
 
         self.assertEqual({"/old.md": "/new.md"}, renames)
         self.assertEqual({"/gone.md"}, deletes)
         self.assertEqual({"/copied.md", "/added.md"}, adds)
-        self.assertEqual({"/changed.md"}, modifies)
 
 
 if __name__ == "__main__":

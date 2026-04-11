@@ -1,4 +1,3 @@
-import io
 import unittest
 from unittest.mock import ANY, Mock, patch
 
@@ -76,24 +75,6 @@ class HooksCliTest(unittest.TestCase):
 
         self.assertEqual(0, code)
         handler.handle_post_rewrite.assert_called_once()
-
-    def test_main_returns_1_and_prints_error_on_abort(self) -> None:
-        handler = Mock()
-        handler.handle_pre_commit.side_effect = hooks.IndexUpdateAbortError("boom")
-        stderr = io.StringIO()
-
-        with (
-            patch.object(hooks.sys, "argv", ["hooks.py", "pre-commit"]),
-            patch.object(hooks.sys, "stderr", stderr),
-            patch("hooks.hooks.util.get_repo_root", return_value="/repo"),
-            patch("hooks.hooks.os.path.exists", return_value=True),
-            patch("hooks.hooks.Index", return_value=object()),
-            patch("hooks.hooks.Handler", return_value=handler),
-        ):
-            code = hooks.main()
-
-        self.assertEqual(1, code)
-        self.assertIn("boom", stderr.getvalue())
 
 
 if __name__ == "__main__":
