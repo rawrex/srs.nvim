@@ -25,7 +25,6 @@ class HandlerTest(unittest.TestCase):
                 "hooks.handler.util.run_git",
                 side_effect=[
                     (0, "M\tnote.md\n", ""),
-                    (0, "", ""),
                     (0, "note.md\n", ""),
                 ],
             ) as run_git,
@@ -35,7 +34,6 @@ class HandlerTest(unittest.TestCase):
         handle_cached_diff.assert_called_once_with(index)
         index.apply_diff.assert_called_once_with(
             "M\tnote.md\n",
-            "",
             repo_root="/repo",
         )
         index.sync_tracked_paths.assert_called_once_with(
@@ -45,16 +43,6 @@ class HandlerTest(unittest.TestCase):
         self.assertEqual(
             [
                 call(["diff", "--cached", "--name-status", "-M", "-C"], cwd="/repo"),
-                call(
-                    [
-                        "diff",
-                        "--cached",
-                        "--unified=0",
-                        "--ignore-space-at-eol",
-                        "--ignore-cr-at-eol",
-                    ],
-                    cwd="/repo",
-                ),
                 call(["ls-files"], cwd="/repo"),
             ],
             run_git.call_args_list,
@@ -120,7 +108,6 @@ class HandlerTest(unittest.TestCase):
                 "hooks.handler.util.run_git",
                 side_effect=[
                     (0, "M\tnote.md\n", ""),
-                    (0, "", ""),
                     (1, "", "boom"),
                 ],
             ),
@@ -143,35 +130,17 @@ class HandlerTest(unittest.TestCase):
                 "hooks.handler.util.run_git",
                 side_effect=[
                     (0, "M\tnote.md\n", ""),
-                    (0, "patch", ""),
                 ],
             ) as run_git,
         ):
             handler._apply_ref_diff(index, "old", "new")
 
         self.assertEqual(
-            [
-                call(
-                    ["diff", "--name-status", "-M", "-C", "old", "new"],
-                    cwd="/repo",
-                ),
-                call(
-                    [
-                        "diff",
-                        "--unified=0",
-                        "--ignore-space-at-eol",
-                        "--ignore-cr-at-eol",
-                        "old",
-                        "new",
-                    ],
-                    cwd="/repo",
-                ),
-            ],
+            [call(["diff", "--name-status", "-M", "-C", "old", "new"], cwd="/repo")],
             run_git.call_args_list,
         )
         index.apply_diff.assert_called_once_with(
             "M\tnote.md\n",
-            "",
             repo_root="/repo",
         )
         index.sync_tracked_paths.assert_called_once_with(
@@ -193,7 +162,6 @@ class HandlerTest(unittest.TestCase):
                 "hooks.handler.util.run_git",
                 side_effect=[
                     (0, "A\tnote.md\n", ""),
-                    (0, "patch", ""),
                     (0, "note.md\n", ""),
                 ],
             ) as run_git,
@@ -206,20 +174,6 @@ class HandlerTest(unittest.TestCase):
                 cwd="/repo",
             ),
             run_git.call_args_list[0],
-        )
-        self.assertEqual(
-            call(
-                [
-                    "diff",
-                    "--cached",
-                    "--unified=0",
-                    "--ignore-space-at-eol",
-                    "--ignore-cr-at-eol",
-                    "--root",
-                ],
-                cwd="/repo",
-            ),
-            run_git.call_args_list[1],
         )
 
 

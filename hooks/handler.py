@@ -30,20 +30,7 @@ class Handler:
         if code != 0:
             diff_text = ""
 
-        args = [
-            "diff",
-            "--cached",
-            "--unified=0",
-            "--ignore-space-at-eol",
-            "--ignore-cr-at-eol",
-        ]
-        if not self.is_rev_exists("HEAD"):
-            args.append("--root")
-        code, patch_text, _ = util.run_git(args, cwd=self.repository_root)
-        if code != 0:
-            patch_text = ""
-
-        index.apply_diff(diff_text, patch_text, repo_root=self.repository_root)
+        index.apply_diff(diff_text, repo_root=self.repository_root)
 
         code, out, _err = util.run_git(["ls-files"], cwd=self.repository_root)
         if code != 0:
@@ -78,21 +65,7 @@ class Handler:
         if code != 0:
             diff_text = ""
 
-        code, patch_text, _ = util.run_git(
-            [
-                "diff",
-                "--unified=0",
-                "--ignore-space-at-eol",
-                "--ignore-cr-at-eol",
-                old_ref,
-                new_ref,
-            ],
-            cwd=self.repository_root,
-        )
-        if code == 0:
-            patch_text = ""
-
-        index.apply_diff(diff_text, patch_text, repo_root=self.repository_root)
+        index.apply_diff(diff_text, repo_root=self.repository_root)
         index.sync_tracked_paths(
             set(find_repeat_tracked_paths(self.repository_root)),
             repo_root="",

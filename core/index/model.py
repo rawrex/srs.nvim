@@ -2,7 +2,6 @@ from dataclasses import dataclass
 
 from core import util
 
-Hunk = tuple[int, int, int, int]
 IndexRowTuple = tuple[str, str, int, int]
 PathRows = dict[str, list[IndexRowTuple]]
 
@@ -26,14 +25,6 @@ class DiffChangeSet:
 
     def has_changes(self) -> bool:
         return bool(self.renames or self.deletes or self.adds or self.modifies)
-
-
-@dataclass(frozen=True)
-class PathRemapResult:
-    rows: list[IndexRowTuple]
-    changed: bool
-    touched_paths: set[str]
-    error_message: str | None = None
 
 
 @dataclass(frozen=True)

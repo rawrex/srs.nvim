@@ -50,45 +50,6 @@ class SrsIndexHelperTest(unittest.TestCase):
         self.assertEqual(3, row.end_line)
         self.assertIsNone(reader.parse("bad-row"))
 
-    def test_parse_modified_hunks_groups_hunks_by_normalized_path(self) -> None:
-        with tempfile.TemporaryDirectory() as repo_root:
-            index_path = os.path.join(repo_root, ".srs", "index.txt")
-            os.makedirs(os.path.dirname(index_path), exist_ok=True)
-            with open(index_path, "w", encoding="utf-8"):
-                pass
-            index = self._index(index_path)
-
-            patch_text = "\n".join(
-                [
-                    "diff --git a/note.md b/note.md",
-                    "+++ b/note.md",
-                    "@@ -1,1 +1,2 @@",
-                    "@@ -4 +5 @@",
-                    "diff --git a/other.md b/other.md",
-                    "+++ b/other.md",
-                    "@@ -2,0 +2,1 @@",
-                ]
-            )
-
-            hunks = index._parse_modified_hunks(patch_text)
-
-        self.assertEqual([(1, 1, 1, 2), (4, 1, 5, 1)], hunks["/note.md"])
-        self.assertEqual([(2, 0, 2, 1)], hunks["/other.md"])
-
-    def test_remap_line_range_handles_shift_and_overlap(self) -> None:
-        with tempfile.TemporaryDirectory() as repo_root:
-            index_path = os.path.join(repo_root, ".srs", "index.txt")
-            os.makedirs(os.path.dirname(index_path), exist_ok=True)
-            with open(index_path, "w", encoding="utf-8"):
-                pass
-            index = self._index(index_path)
-
-            shifted = index._remap_line_range(3, 3, [(1, 0, 1, 2)])
-            overlapped = index._remap_line_range(3, 3, [(3, 1, 3, 1)])
-
-        self.assertEqual((5, 5), shifted)
-        self.assertIsNone(overlapped)
-
     def test_collect_parser_rows_uses_priority_and_skips_overlaps(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
             index_path = os.path.join(repo_root, ".srs", "index.txt")
@@ -138,6 +99,20 @@ class SrsIndexHelperTest(unittest.TestCase):
 
             with self.assertRaises(UnicodeDecodeError):
                 index.read_note_text("/bad.md")
+
+    def test_collect_parser_rows_skips_bad_utf8_note(self) -> None:
+        with tempfile.TemporaryDirectory() as repo_root:
+            index_path = os.path.join(repo_root, ".srs", "index.txt")
+            os.makedirs(os.path.dirname(index_path), exist_ok=True)
+            with open(index_path, "w", encoding="utf-8"):
+                pass
+            index = self._index(index_path)
+
+            bad_path = os.path.join(repo_root, "bad.md")
+            with open(bad_path, "wb") as handle:
+                handle.write(b"\xff\xfe")
+
+            self.assertEqual([], index.collect_parser_rows("/bad.md"))
 
     def test_repo_root_resolves_from_index_path(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:

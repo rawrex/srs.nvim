@@ -3,20 +3,16 @@ import os
 
 from core import util
 from core.card import SchedulerCard
-from core.index.hunks import HunkParser, remap_line_range
 from core.index.model import (
     DiffChangeSet,
-    Hunk,
     IndexRowTuple,
     IndexUpdateAbortError,
     IndexUpdateResult,
     PathRows,
 )
-from core.index.remap import remap_rows_for_path
 from core.index.row_codec import (
     IndexRowReader,
     format_row,
-    replace_rows_for_path,
     rows_by_path,
 )
 from core.index.storage import Metadata, write_metadata
@@ -32,12 +28,10 @@ class Index:
         self.path = path
         self.parser_registry = parser_registry
         self.row_reader = IndexRowReader()
-        self.hunk_parser = HunkParser()
 
     def apply_diff(
         self,
         diff_text: str,
-        patch_text: str,
         repo_root: str,
     ) -> bool:
         changes = DiffChangeSet.from_diff_text(diff_text)
@@ -47,7 +41,6 @@ class Index:
         result = self._update_index_lines(
             self._read(),
             changes,
-            self._parse_modified_hunks(patch_text),
         )
         if not result.changed:
             return False
@@ -93,19 +86,22 @@ class Index:
     def read_rows(self) -> list[tuple[str, str, str, int, int]]:
         rows: list[tuple[str, str, str, int, int]] = []
         for raw_line in self._read():
-            row = self.row_reader.parse(raw_line)
-            if row is None:
-                continue
-            rows.append(
-                (row.note_id, row.path, row.parser_id, row.start_line, row.end_line)
-            )
+            if entry := self.row_reader.parse(raw_line):
+                rows.append(
+                    (
+                        entry.note_id,
+                        entry.path,
+                        entry.parser_id,
+                        entry.start_line,
+                        entry.end_line,
+                    )
+                )
         return rows
 
     def _update_index_lines(
         self,
         lines: list[str],
         changes: DiffChangeSet,
-        modified_hunks: dict[str, list[Hunk]],
     ) -> IndexUpdateResult:
         updated, deleted_or_renamed, touched_paths = self._apply_deletes_and_renames(
             lines,
@@ -116,14 +112,8 @@ class Index:
             updated,
             changes.adds,
         )
-        updated, remapped_modified, remapped_paths = self._apply_modifies(
-            updated,
-            changes.modifies,
-            modified_hunks,
-        )
         touched_paths.update(added_paths)
-        touched_paths.update(remapped_paths)
-        changed = deleted_or_renamed or added_new or remapped_modified
+        changed = deleted_or_renamed or added_new
         return IndexUpdateResult(
             lines=updated, changed=changed, touched_paths=touched_paths
         )
@@ -183,49 +173,6 @@ class Index:
 
         return lines, changed, touched_paths
 
-    def _apply_modifies(
-        self,
-        lines: list[str],
-        modifies: set[str],
-        modified_hunks: dict[str, list[Hunk]],
-    ) -> tuple[list[str], bool, set[str]]:
-        updated = lines
-        changed = False
-        touched_paths: set[str] = set()
-
-        for modified_path in sorted(modifies):
-            if not self._is_note_path(modified_path):
-                continue
-            grouped_rows = self._rows_by_path(updated)
-            path_rows = grouped_rows.get(modified_path)
-            if path_rows is None:
-                continue
-
-            remap_result = remap_rows_for_path(
-                modified_path=modified_path,
-                path_rows=path_rows,
-                hunks=modified_hunks.get(modified_path, []),
-                collect_parser_rows=self._collect_parser_rows,
-                create_card_row=self._create_card_row,
-                remove_card_file=self._remove_card_file,
-            )
-            if remap_result.error_message:
-                raise IndexUpdateAbortError(remap_result.error_message)
-
-            replacement = replace_rows_for_path(
-                lines=updated,
-                indexed_path=modified_path,
-                replacement_rows=remap_result.rows,
-                row_reader=self.row_reader,
-            )
-            if replacement != updated:
-                updated = replacement
-                changed = True
-            changed = changed or remap_result.changed
-            touched_paths.update(remap_result.touched_paths)
-
-        return updated, changed, touched_paths
-
     def _sync_tracked_paths(
         self,
         tracked_paths: set[str],
@@ -278,17 +225,6 @@ class Index:
         with open(tmp_path, "w", encoding="utf-8") as handle:
             handle.writelines(lines)
         os.replace(tmp_path, self.path)
-
-    def _parse_modified_hunks(self, patch_text: str) -> dict[str, list[Hunk]]:
-        return self.hunk_parser.parse_modified_hunks(patch_text)
-
-    def _remap_line_range(
-        self,
-        start_line: int,
-        end_line: int,
-        hunks: list[Hunk],
-    ) -> tuple[int, int] | None:
-        return remap_line_range(start_line, end_line, hunks)
 
     def _add_new(
         self,
@@ -351,7 +287,10 @@ class Index:
         self,
         indexed_path: str,
     ) -> list[tuple[str, int, int]]:
-        note_text = self.read_note_text(indexed_path)
+        try:
+            note_text = self.read_note_text(indexed_path)
+        except UnicodeDecodeError:
+            return []
         if note_text is None:
             return []
 
