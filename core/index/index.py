@@ -1,18 +1,15 @@
 #!/usr/bin/env python3
 import os
+import re
 
 from core import util
 from core.card import SchedulerCard
 from core.index.model import (
     DiffChangeSet,
+    IndexEntry,
     IndexRowTuple,
     IndexUpdateResult,
     PathRows,
-)
-from core.index.row_codec import (
-    IndexRowReader,
-    format_row,
-    rows_by_path,
 )
 from core.index.storage import Metadata, write_metadata
 from core.parsers import ParserRegistry
@@ -26,7 +23,7 @@ class Index:
     ) -> None:
         self.path = path
         self.parser_registry = parser_registry
-        self.row_reader = IndexRowReader()
+        self.row_re = re.compile(r"^'([^']*)','([^']*)','([^']*)','(\d+)','(\d+)'\s*$")
 
     def apply_diff(
         self,
@@ -85,7 +82,7 @@ class Index:
     def read_rows(self) -> list[tuple[str, str, str, int, int]]:
         rows: list[tuple[str, str, str, int, int]] = []
         for raw_line in self._read():
-            if entry := self.row_reader.parse(raw_line):
+            if entry := self._parse(raw_line):
                 rows.append(
                     (
                         entry.card_id,
@@ -128,7 +125,7 @@ class Index:
         touched_paths: set[str] = set()
 
         for line in lines:
-            row = self.row_reader.parse(line)
+            row = self._parse(line)
             if row is None:
                 updated.append(line)
                 continue
@@ -141,7 +138,7 @@ class Index:
             if row.note_path in renames:
                 changed = True
                 updated.append(
-                    format_row(
+                    self._format_row(
                         row.card_id,
                         renames[row.note_path],
                         row.parser_id,
@@ -182,7 +179,7 @@ class Index:
         touched_paths: set[str] = set()
 
         for line in lines:
-            row = self.row_reader.parse(line)
+            row = self._parse(line)
             if row is None:
                 updated.append(line)
                 continue
@@ -235,7 +232,7 @@ class Index:
             row, touched_path = self.create_card_row(parser_id, start_line, end_line)
             note_id, row_parser_id, row_start_line, row_end_line = row
             updated.append(
-                format_row(
+                self._format_row(
                     note_id,
                     new_path,
                     row_parser_id,
@@ -321,7 +318,37 @@ class Index:
         return None
 
     def _rows_by_path(self, lines: list[str]) -> PathRows:
-        return rows_by_path(lines, row_reader=self.row_reader)
+        grouped: PathRows = {}
+        for line in lines:
+            row = self._parse(line)
+            if row is None:
+                continue
+            grouped.setdefault(row.note_path, []).append(
+                (row.card_id, row.parser_id, row.start_line, row.end_line)
+            )
+        return grouped
 
+    def _parse(self, raw_line: str) -> IndexEntry | None:
+        if match := self.row_re.match(raw_line.rstrip("\n")):
+            return IndexEntry(
+                card_id=match.group(1),
+                note_path=match.group(2),
+                parser_id=match.group(3),
+                start_line=int(match.group(4)),
+                end_line=int(match.group(5)),
+            )
+        return None
 
-__all__ = ["Index", "IndexRowReader"]
+    def _format_row(
+        self,
+        note_id: str,
+        indexed_path: str,
+        parser_id: str,
+        start_line: int,
+        end_line: int,
+    ) -> str:
+        return (
+            f"'{note_id}','{indexed_path}','{parser_id}','{start_line}','{end_line}'\n"
+        )
+
+    __all__ = ["Index", "IndexRowReader"]

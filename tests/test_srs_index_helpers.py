@@ -3,7 +3,7 @@ import tempfile
 import unittest
 
 from core.api import Parser
-from core.index.index import Index, IndexRowReader
+from core.index.index import Index
 from core.parsers import ParserRegistry
 
 
@@ -36,10 +36,15 @@ class SrsIndexHelperTest(unittest.TestCase):
     def _index(self, index_path: str) -> Index:
         return Index(index_path, parser_registry=ParserRegistry(parsers={}))
 
-    def test_index_row_reader_parses_valid_row_and_rejects_invalid(self) -> None:
-        reader = IndexRowReader()
+    def test_index_parse_parses_valid_row_and_rejects_invalid(self) -> None:
+        with tempfile.TemporaryDirectory() as repo_root:
+            index_path = os.path.join(repo_root, ".srs", "index.txt")
+            os.makedirs(os.path.dirname(index_path), exist_ok=True)
+            with open(index_path, "w", encoding="utf-8"):
+                pass
+            index = self._index(index_path)
 
-        row = reader.parse("'1','/note.md','cloze','2','3'\n")
+        row = index._parse("'1','/note.md','cloze','2','3'\n")
 
         self.assertIsNotNone(row)
         assert row is not None
@@ -48,7 +53,7 @@ class SrsIndexHelperTest(unittest.TestCase):
         self.assertEqual("cloze", row.parser_id)
         self.assertEqual(2, row.start_line)
         self.assertEqual(3, row.end_line)
-        self.assertIsNone(reader.parse("bad-row"))
+        self.assertIsNone(index._parse("bad-row"))
 
     def test_collect_parser_rows_uses_priority_and_skips_overlaps(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
