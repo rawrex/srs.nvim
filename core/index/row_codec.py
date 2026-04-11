@@ -12,8 +12,8 @@ class IndexRowReader:
         if not match:
             return None
         return IndexEntry(
-            note_id=match.group(1),
-            path=match.group(2),
+            card_id=match.group(1),
+            note_path=match.group(2),
             parser_id=match.group(3),
             start_line=int(match.group(4)),
             end_line=int(match.group(5)),
@@ -45,8 +45,8 @@ def rows_by_path(lines: list[str], row_reader: IndexRowReader) -> PathRows:
         row = row_reader.parse(line)
         if row is None:
             continue
-        grouped.setdefault(row.path, []).append(
-            (row.note_id, row.parser_id, row.start_line, row.end_line)
+        grouped.setdefault(row.note_path, []).append(
+            (row.card_id, row.parser_id, row.start_line, row.end_line)
         )
     return grouped
 
@@ -66,7 +66,7 @@ def replace_rows_for_path(
         if row is None:
             updated.append(line)
             continue
-        if row.path != indexed_path:
+        if row.note_path != indexed_path:
             updated.append(line)
             continue
         if not inserted:

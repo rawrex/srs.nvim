@@ -43,8 +43,8 @@ class SrsIndexHelperTest(unittest.TestCase):
 
         self.assertIsNotNone(row)
         assert row is not None
-        self.assertEqual("1", row.note_id)
-        self.assertEqual("/note.md", row.path)
+        self.assertEqual("1", row.card_id)
+        self.assertEqual("/note.md", row.note_path)
         self.assertEqual("cloze", row.parser_id)
         self.assertEqual(2, row.start_line)
         self.assertEqual(3, row.end_line)

@@ -34,8 +34,8 @@ class IndexUpdateResult:
 
 @dataclass(frozen=True)
 class IndexEntry:
-    note_id: str
-    path: str
+    card_id: str
+    note_path: str
     parser_id: str
     start_line: int
     end_line: int

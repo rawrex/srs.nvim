@@ -88,8 +88,8 @@ class Index:
             if entry := self.row_reader.parse(raw_line):
                 rows.append(
                     (
-                        entry.note_id,
-                        entry.path,
+                        entry.card_id,
+                        entry.note_path,
                         entry.parser_id,
                         entry.start_line,
                         entry.end_line,
@@ -132,18 +132,18 @@ class Index:
             if row is None:
                 updated.append(line)
                 continue
-            if row.path in deletes:
+            if row.note_path in deletes:
                 changed = True
-                removed_path = self.remove_card_file(row.note_id)
+                removed_path = self.remove_card_file(row.card_id)
                 if removed_path is not None:
                     touched_paths.add(removed_path)
                 continue
-            if row.path in renames:
+            if row.note_path in renames:
                 changed = True
                 updated.append(
                     format_row(
-                        row.note_id,
-                        renames[row.path],
+                        row.card_id,
+                        renames[row.note_path],
                         row.parser_id,
                         row.start_line,
                         row.end_line,
@@ -186,12 +186,12 @@ class Index:
             if row is None:
                 updated.append(line)
                 continue
-            if not self._is_note_path(row.path) or row.path in tracked_paths:
+            if not self._is_note_path(row.note_path) or row.note_path in tracked_paths:
                 updated.append(line)
                 continue
 
             changed = True
-            removed_path = self.remove_card_file(row.note_id)
+            removed_path = self.remove_card_file(row.card_id)
             if removed_path is not None:
                 touched_paths.add(removed_path)
 
