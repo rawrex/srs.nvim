@@ -8,16 +8,15 @@ class IndexRowReader:
         self.row_re = re.compile(r"^'([^']*)','([^']*)','([^']*)','(\d+)','(\d+)'\s*$")
 
     def parse(self, raw_line: str) -> IndexEntry | None:
-        match = self.row_re.match(raw_line.rstrip("\n"))
-        if not match:
-            return None
-        return IndexEntry(
-            card_id=match.group(1),
-            note_path=match.group(2),
-            parser_id=match.group(3),
-            start_line=int(match.group(4)),
-            end_line=int(match.group(5)),
-        )
+        if match := self.row_re.match(raw_line.rstrip("\n")):
+            return IndexEntry(
+                card_id=match.group(1),
+                note_path=match.group(2),
+                parser_id=match.group(3),
+                start_line=int(match.group(4)),
+                end_line=int(match.group(5)),
+            )
+        return None
 
 
 def format_row(
