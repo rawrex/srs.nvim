@@ -7,10 +7,7 @@ from core.config import ReviewConfig
 
 class ReviewCliTest(unittest.TestCase):
     def test_main_returns_1_outside_git_repo(self) -> None:
-        with (
-            patch("core.review.util.get_repo_root", return_value=""),
-            patch("builtins.print") as print_mock,
-        ):
+        with patch("core.review.util.get_repo_root", return_value=""), patch("builtins.print") as print_mock:
             code = review.main()
 
         self.assertEqual(1, code)

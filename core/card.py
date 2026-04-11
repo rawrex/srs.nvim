@@ -9,14 +9,7 @@ from fsrs import Rating
 
 from core.index.storage import Metadata
 
-__all__ = [
-    "SchedulerCard",
-    "REVEAL_ALL_LABEL",
-    "RevealMode",
-    "ViewBlock",
-    "CardView",
-    "Card",
-]
+__all__ = ["SchedulerCard", "REVEAL_ALL_LABEL", "RevealMode", "ViewBlock", "CardView", "Card"]
 
 
 REVEAL_ALL_LABEL = ""

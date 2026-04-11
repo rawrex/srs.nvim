@@ -6,12 +6,7 @@ from rich.markdown import Markdown
 
 from core.card import REVEAL_ALL_LABEL, RevealMode, SchedulerCard
 from core.config import ReviewConfig
-from packs.cloze import (
-    ClozeCard,
-    ClozeParser,
-    mask_hidden_text,
-    parse_note_clozes,
-)
+from packs.cloze import ClozeCard, ClozeParser, mask_hidden_text, parse_note_clozes
 from core.index.storage import Metadata
 from core.ui import ReviewUI
 
@@ -52,9 +47,7 @@ class ClozePackTest(unittest.TestCase):
         final_view = card.reveal_for_label(REVEAL_ALL_LABEL)
         self.assertIsNotNone(final_view)
         assert final_view is not None
-        self.assertIn(
-            "The `capital of France` is Paris.", final_view.primary_block().text
-        )
+        self.assertIn("The `capital of France` is Paris.", final_view.primary_block().text)
         self.assertEqual(["# Title\nThe ", " is Paris."], text_parts)
 
     def test_mask_hidden_text_hides_spaces(self) -> None:
@@ -79,17 +72,10 @@ class ClozePackTest(unittest.TestCase):
         )
         ui = ReviewUI(config=ReviewConfig(), console=console)  # type: ignore[arg-type]
 
-        with (
-            patch("core.ui.os.system", return_value=0),
-            patch("core.ui.read_single_key", side_effect=["A", "\n"]),
-        ):
+        with patch("core.ui.os.system", return_value=0), patch("core.ui.read_single_key", side_effect=["A", "\n"]):
             ui.run_question_step("title", card)
 
-        frames = [
-            item.markup
-            for item, _kwargs in console.printed
-            if isinstance(item, Markdown)
-        ]
+        frames = [item.markup for item, _kwargs in console.printed if isinstance(item, Markdown)]
         self.assertGreaterEqual(len(frames), 2)
         self.assertIn("[A]", frames[0])
         self.assertIn("`c26`", frames[1])
@@ -119,21 +105,10 @@ class ClozePackTest(unittest.TestCase):
             console=console,  # type: ignore[arg-type]
         )
 
-        with (
-            patch("core.ui.os.system", return_value=0),
-            patch("core.ui.read_single_key", side_effect=["\n"]),
-        ):
-            ui.run_question_step(
-                "title",
-                card,
-                note_context_blocks=note_context_blocks,
-            )
+        with patch("core.ui.os.system", return_value=0), patch("core.ui.read_single_key", side_effect=["\n"]):
+            ui.run_question_step("title", card, note_context_blocks=note_context_blocks)
 
-        calls = [
-            item.markup
-            for item, _kwargs in console.printed
-            if isinstance(item, Markdown)
-        ]
+        calls = [item.markup for item, _kwargs in console.printed if isinstance(item, Markdown)]
         self.assertGreaterEqual(len(calls), 1)
         rendered = "".join(calls)
         self.assertIn("[a]", rendered)
@@ -165,21 +140,10 @@ class ClozePackTest(unittest.TestCase):
             console=console,  # type: ignore[arg-type]
         )
 
-        with (
-            patch("core.ui.os.system", return_value=0),
-            patch("core.ui.read_single_key", side_effect=["\n"]),
-        ):
-            ui.run_question_step(
-                "title",
-                card,
-                note_context_blocks=note_context_blocks,
-            )
+        with patch("core.ui.os.system", return_value=0), patch("core.ui.read_single_key", side_effect=["\n"]):
+            ui.run_question_step("title", card, note_context_blocks=note_context_blocks)
 
-        calls = [
-            item.markup
-            for item, _kwargs in console.printed
-            if isinstance(item, Markdown)
-        ]
+        calls = [item.markup for item, _kwargs in console.printed if isinstance(item, Markdown)]
         self.assertGreaterEqual(len(calls), 1)
         rendered = "".join(calls)
         self.assertIn("[a]", rendered)
@@ -230,29 +194,15 @@ class ClozePackTest(unittest.TestCase):
         self.assertNotIn("hidden", context)
 
     def test_parse_note_clozes_with_custom_syntax(self) -> None:
-        text_parts, clozes = parse_note_clozes(
-            "A <<one>> B", cloze_open="<<", cloze_close=">>"
-        )
+        text_parts, clozes = parse_note_clozes("A <<one>> B", cloze_open="<<", cloze_close=">>")
         self.assertEqual(["A ", " B"], text_parts)
         self.assertEqual(["one"], clozes)
 
     def test_split_note_into_cards_maps_each_cloze_line_to_a_card(self) -> None:
         note_text = "A\n  ~{B}\n    C\n~{D}\n\nE ~{F}\n"
-        parser = ClozeParser(
-            reveal_mode=RevealMode.WHOLE,
-            cloze_open="~{",
-            cloze_close="}",
-            mask_char="▇",
-        )
+        parser = ClozeParser(reveal_mode=RevealMode.WHOLE, cloze_open="~{", cloze_close="}", mask_char="▇")
         cards = parser.split_note_into_cards(note_text)
-        self.assertEqual(
-            [
-                (2, 2, "  ~{B}\n"),
-                (4, 4, "~{D}\n"),
-                (6, 6, "E ~{F}\n"),
-            ],
-            cards,
-        )
+        self.assertEqual([(2, 2, "  ~{B}\n"), (4, 4, "~{D}\n"), (6, 6, "E ~{F}\n")], cards)
 
     def test_suggested_rating_supports_single_cloze_cards(self) -> None:
         card = ClozeCard(

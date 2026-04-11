@@ -24,10 +24,7 @@ class ReviewSession:
         self.ui = ui
         self.session_entry_ui = session_entry_ui
         self.scheduler = scheduler
-        self.cards_manager = CardsManager(
-            repo_root=repo_root,
-            parser_registry=parser_registry,
-        )
+        self.cards_manager = CardsManager(repo_root=repo_root, parser_registry=parser_registry)
 
     def run(self) -> int:
         if not os.path.exists(os.path.join(self.repo_root, ".srs", "index.txt")):
@@ -41,9 +38,7 @@ class ReviewSession:
 
         total = len(cards)
         if self.session_entry_ui:
-            estimated_minutes = self.cards_manager.estimate_due_cards_duration_minutes(
-                cards
-            )
+            estimated_minutes = self.cards_manager.estimate_due_cards_duration_minutes(cards)
             self.session_entry_ui.show_start_menu(total, estimated_minutes)
         for idx, due_card in enumerate(cards, start=1):
             card = due_card.card
@@ -52,38 +47,22 @@ class ReviewSession:
 
             # Step 1: question + reveals.
             question_started_ns = time.monotonic_ns()
-            self.ui.run_question_step(
-                question_title,
-                card,
-                note_context_blocks=note_context_blocks,
-            )
+            self.ui.run_question_step(question_title, card, note_context_blocks=note_context_blocks)
 
-            review_duration_ms = max(
-                0, (time.monotonic_ns() - question_started_ns) // 1_000_000
-            )
+            review_duration_ms = max(0, (time.monotonic_ns() - question_started_ns) // 1_000_000)
             review_duration_s = review_duration_ms / 1000
-            answer_title = (
-                f"\n[{idx}/{total}] {card.note_filename} "
-                f"— answer ({review_duration_s:.1f}s)"
-            )
+            answer_title = f"\n[{idx}/{total}] {card.note_filename} — answer ({review_duration_s:.1f}s)"
 
             # Step 2: answer view.
             suggested_rating = card.suggested_rating()
             answer_view = card.answer_view()
-            self.ui.show_answer_step(
-                answer_title,
-                card,
-                answer_view,
-                note_context_blocks=note_context_blocks,
-            )
+            self.ui.show_answer_step(answer_title, card, answer_view, note_context_blocks=note_context_blocks)
 
             # Step 3: rating.
             self.ui.print_message("")
             rating = self.ui.prompt_rating_step(suggested_rating)
             updated_card, review_log = self.scheduler.review_card(
-                card.metadata.scheduler_card,
-                rating,
-                review_duration=int(review_duration_ms),
+                card.metadata.scheduler_card, rating, review_duration=int(review_duration_ms)
             )
             card.metadata.scheduler_card = updated_card
             card.metadata.review_logs.append(review_log)

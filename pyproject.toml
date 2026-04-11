@@ -1,0 +1,11 @@
+[tool.ruff]
+line-length = 120
+indent-width = 4
+
+[tool.ruff.format]
+quote-style = "preserve"
+skip-magic-trailing-comma = true
+docstring-code-format = false
+
+[tool.ruff.lint]
+ignore = ["E501"]   # don't complain about long lines

@@ -21,10 +21,7 @@ class HooksInstallIntegrationTest(unittest.TestCase):
         run_command(["git", "commit", "-m", message], cwd=repo_dir)
 
     def _setup_installed_repo(self, with_repeat_marker: bool):
-        return temporary_git_repo(
-            install=True,
-            with_repeat_marker=with_repeat_marker,
-        )
+        return temporary_git_repo(install=True, with_repeat_marker=with_repeat_marker)
 
     def test_marker_commits_start_and_stop_tracking_paths(self):
         with self._setup_installed_repo(with_repeat_marker=False) as repo_dir:
@@ -70,9 +67,7 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             run_command(["git", "rm", "notes/.repeat"], cwd=repo_dir)
             self._commit(repo_dir, "remove top marker")
             rows = self._read_index_rows(repo_dir)
-            self.assertEqual(
-                ["/notes/sub/deep/deep.md"], [path for _id, path, *_ in rows]
-            )
+            self.assertEqual(["/notes/sub/deep/deep.md"], [path for _id, path, *_ in rows])
 
     def test_install_bootstraps_index_from_repeat_marked_directories(self):
         with temporary_git_repo(install=False, with_repeat_marker=False) as repo_dir:
@@ -90,9 +85,7 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             (notes_dir / ".repeat").write_text("", encoding="utf-8")
             (excluded_dir / ".norepeat").write_text("", encoding="utf-8")
             (reenabled_dir / ".repeat").write_text("", encoding="utf-8")
-            (notes_dir / "top.md").write_text(
-                "One ~{card}\nTwo ~{card}\n", encoding="utf-8"
-            )
+            (notes_dir / "top.md").write_text("One ~{card}\nTwo ~{card}\n", encoding="utf-8")
             (nested_dir / "deep.md").write_text("Deep ~{card}\n", encoding="utf-8")
             (excluded_dir / "skip.md").write_text("Skip ~{card}\n", encoding="utf-8")
             (reenabled_dir / "again.md").write_text("Again ~{card}\n", encoding="utf-8")
@@ -104,17 +97,10 @@ class HooksInstallIntegrationTest(unittest.TestCase):
 
             self.assertEqual(4, len(rows))
             self.assertEqual(
-                [
-                    "/notes/excluded/reenabled/again.md",
-                    "/notes/nested/deep.md",
-                    "/notes/top.md",
-                    "/notes/top.md",
-                ],
+                ["/notes/excluded/reenabled/again.md", "/notes/nested/deep.md", "/notes/top.md", "/notes/top.md"],
                 sorted(path for _id, path, _parser_id, _start_line, _end_line in rows),
             )
-            self.assertTrue(
-                all(parser_id == "cloze" for _id, _path, parser_id, *_ in rows)
-            )
+            self.assertTrue(all(parser_id == "cloze" for _id, _path, parser_id, *_ in rows))
             self.assertTrue(all(note_id.isdigit() for note_id, *_ in rows))
 
             srs_dir = repo_dir / ".srs"
@@ -128,10 +114,7 @@ class HooksInstallIntegrationTest(unittest.TestCase):
         with self._setup_installed_repo(with_repeat_marker=True) as repo_dir:
             note_path = repo_dir / "note.md"
 
-            note_path.write_text(
-                "Intro ~{overview}\n>[!code]- Example\n>```cpp\n>int x = 1;\n>```\n",
-                encoding="utf-8",
-            )
+            note_path.write_text("Intro ~{overview}\n>[!code]- Example\n>```cpp\n>int x = 1;\n>```\n", encoding="utf-8")
             run_command(["git", "add", ".repeat", "note.md"], cwd=repo_dir)
             self._commit(repo_dir, "add quote block note")
 
@@ -154,33 +137,22 @@ class HooksInstallIntegrationTest(unittest.TestCase):
         with self._setup_installed_repo(with_repeat_marker=True) as repo_dir:
             srs_dir = repo_dir / ".srs"
             self.assertTrue(srs_dir.exists(), f"missing srs directory: {srs_dir}")
-            self.assertTrue(
-                (srs_dir / "index.txt").exists(),
-                f"missing index file: {srs_dir / 'index.txt'}",
-            )
+            self.assertTrue((srs_dir / "index.txt").exists(), f"missing index file: {srs_dir / 'index.txt'}")
 
             hooks_dir = repo_dir / ".git" / "hooks"
             for hook_name in HOOKS:
                 hook_path = hooks_dir / hook_name
                 self.assertTrue(hook_path.exists(), f"missing hook: {hook_path}")
-                self.assertTrue(
-                    os.access(hook_path, os.X_OK), f"hook not executable: {hook_path}"
-                )
+                self.assertTrue(os.access(hook_path, os.X_OK), f"hook not executable: {hook_path}")
 
             note_path = repo_dir / "note.md"
-            note_path.write_text(
-                "Top ~{one}\n  ~{detail}\nNext ~{two}\n",
-                encoding="utf-8",
-            )
+            note_path.write_text("Top ~{one}\n  ~{detail}\nNext ~{two}\n", encoding="utf-8")
 
             run_command(["git", "add", ".repeat", "note.md"], cwd=repo_dir)
             self._commit(repo_dir, "add note")
             rows = self._read_index_rows(repo_dir)
             self.assertEqual(len(rows), 3)
-            self.assertEqual(
-                sorted(start_line for _, _, _, start_line, _end_line in rows),
-                [1, 2, 3],
-            )
+            self.assertEqual(sorted(start_line for _, _, _, start_line, _end_line in rows), [1, 2, 3])
             created_ids = []
             for created_id, created_path, parser_id, _start_line, _end_line in rows:
                 self.assertEqual(created_path, "/note.md")
@@ -208,28 +180,21 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             self._commit(repo_dir, "append note")
             rows = self._read_index_rows(repo_dir)
             self.assertEqual(len(rows), 3)
-            self.assertEqual(
-                sorted(start_line for _, _, _, start_line, _end_line in rows),
-                [1, 2, 3],
-            )
+            self.assertEqual(sorted(start_line for _, _, _, start_line, _end_line in rows), [1, 2, 3])
             for existing_id in created_ids:
                 self.assertIn(existing_id, [row[0] for row in rows])
 
             prev_blob = run_command(
-                ["git", "rev-parse", f"HEAD^:.srs/{unchanged_card_id}.json"],
-                cwd=repo_dir,
+                ["git", "rev-parse", f"HEAD^:.srs/{unchanged_card_id}.json"], cwd=repo_dir
             ).stdout.strip()
             head_blob = run_command(
-                ["git", "rev-parse", f"HEAD:.srs/{unchanged_card_id}.json"],
-                cwd=repo_dir,
+                ["git", "rev-parse", f"HEAD:.srs/{unchanged_card_id}.json"], cwd=repo_dir
             ).stdout.strip()
             self.assertEqual(prev_blob, head_blob)
             tracked_files = tracked_head_files(repo_dir)
             for created_id in created_ids:
                 self.assertIn(f".srs/{created_id}.json", tracked_files)
-            self.assertTrue(
-                all(not path.startswith("/.srs/") for _, path, _, _, _ in rows)
-            )
+            self.assertTrue(all(not path.startswith("/.srs/") for _, path, _, _, _ in rows))
 
             run_command(["git", "mv", "note.md", "renamed.md"], cwd=repo_dir)
             self._commit(repo_dir, "rename note")

@@ -9,12 +9,7 @@ from fsrs import Scheduler
 from core.card import RevealMode
 
 
-DEFAULT_RATING_BUTTONS: dict[Rating, str] = {
-    Rating.Again: "n",
-    Rating.Hard: "e",
-    Rating.Good: "i",
-    Rating.Easy: "o",
-}
+DEFAULT_RATING_BUTTONS: dict[Rating, str] = {Rating.Again: "n", Rating.Hard: "e", Rating.Good: "i", Rating.Easy: "o"}
 
 
 DEFAULT_SCHEDULER = Scheduler()
@@ -30,18 +25,14 @@ class ClozeConfig:
 
 @dataclass(frozen=True)
 class ReviewConfig:
-    rating_buttons: dict[Rating, str] = field(
-        default_factory=lambda: DEFAULT_RATING_BUTTONS.copy()
-    )
+    rating_buttons: dict[Rating, str] = field(default_factory=lambda: DEFAULT_RATING_BUTTONS.copy())
     show_context: bool = True
     media: str | None = None
     cloze: ClozeConfig = field(default_factory=ClozeConfig)
     scheduler_parameters: tuple[float, ...] = DEFAULT_SCHEDULER.parameters
     scheduler_desired_retention: float = DEFAULT_SCHEDULER.desired_retention
     scheduler_learning_steps: tuple[timedelta, ...] = DEFAULT_SCHEDULER.learning_steps
-    scheduler_relearning_steps: tuple[timedelta, ...] = (
-        DEFAULT_SCHEDULER.relearning_steps
-    )
+    scheduler_relearning_steps: tuple[timedelta, ...] = DEFAULT_SCHEDULER.relearning_steps
     scheduler_maximum_interval: int = DEFAULT_SCHEDULER.maximum_interval
     scheduler_enable_fuzzing: bool = DEFAULT_SCHEDULER.enable_fuzzing
 
@@ -71,17 +62,9 @@ def load_review_config(repo_root: str) -> ReviewConfig:
     rating_buttons = _parse_rating_buttons(review_raw.get("rating_buttons"))
     show_context = _parse_review_flags(review_raw, defaults)
     cloze_config = _parse_cloze_config(cloze_raw, defaults.cloze)
-    media = _parse_media_directory(
-        raw.get("media"),
-        repo_root,
-        defaults.media,
-    )
+    media = _parse_media_directory(raw.get("media"), repo_root, defaults.media)
     if media is None:
-        media = _parse_media_directory(
-            raw.get("attachments_directory"),
-            repo_root,
-            defaults.media,
-        )
+        media = _parse_media_directory(raw.get("attachments_directory"), repo_root, defaults.media)
 
     scheduler_parameters = defaults.scheduler_parameters
     scheduler_desired_retention = defaults.scheduler_desired_retention
@@ -136,10 +119,7 @@ def _dict_or_empty(value: object) -> dict[str, object]:
     return {}
 
 
-def _parse_review_flags(
-    review_raw: dict[str, object],
-    defaults: ReviewConfig,
-) -> bool:
+def _parse_review_flags(review_raw: dict[str, object], defaults: ReviewConfig) -> bool:
     show_context = defaults.show_context
     show_context_raw = review_raw.get("show_context")
     if isinstance(show_context_raw, bool):
@@ -148,9 +128,7 @@ def _parse_review_flags(
     return show_context
 
 
-def _parse_cloze_config(
-    cloze_raw: dict[str, object], defaults: ClozeConfig
-) -> ClozeConfig:
+def _parse_cloze_config(cloze_raw: dict[str, object], defaults: ClozeConfig) -> ClozeConfig:
     reveal_raw = cloze_raw.get("reveal_mode")
     try:
         reveal_mode = RevealMode(reveal_raw)
@@ -173,19 +151,10 @@ def _parse_cloze_config(
     if isinstance(mask_char_raw, str) and len(mask_char_raw) == 1:
         mask_char = mask_char_raw
 
-    return ClozeConfig(
-        reveal_mode=reveal_mode,
-        cloze_open=cloze_open,
-        cloze_close=cloze_close,
-        mask_char=mask_char,
-    )
+    return ClozeConfig(reveal_mode=reveal_mode, cloze_open=cloze_open, cloze_close=cloze_close, mask_char=mask_char)
 
 
-def _parse_media_directory(
-    raw_value: object,
-    repo_root: str,
-    default: str | None,
-) -> str | None:
+def _parse_media_directory(raw_value: object, repo_root: str, default: str | None) -> str | None:
     if not isinstance(raw_value, str):
         return default
     candidate = raw_value.strip()
@@ -213,19 +182,8 @@ def _parse_rating_buttons(raw: object) -> dict[Rating, str]:
 
 
 def _parse_scheduler_config(
-    raw: dict[str, object],
-    defaults: ReviewConfig,
-) -> (
-    tuple[
-        tuple[float, ...],
-        float,
-        tuple[timedelta, ...],
-        tuple[timedelta, ...],
-        int,
-        bool,
-    ]
-    | None
-):
+    raw: dict[str, object], defaults: ReviewConfig
+) -> tuple[tuple[float, ...], float, tuple[timedelta, ...], tuple[timedelta, ...], int, bool] | None:
     scheduler_payload: dict[str, object] = dict(defaults.build_scheduler().to_dict())
     for key in (
         "parameters",

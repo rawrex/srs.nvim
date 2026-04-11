@@ -52,13 +52,9 @@ def find_repeat_tracked_paths(repo_root: str) -> list[str]:
 
     def walk(current_dir: str, tracked_parent: bool) -> None:
         entries = sorted(os.scandir(current_dir), key=lambda entry: entry.name)
-        has_repeat = any(
-            entry.name == REPEAT_MARKER_NAME and entry.is_file(follow_symlinks=False)
-            for entry in entries
-        )
+        has_repeat = any(entry.name == REPEAT_MARKER_NAME and entry.is_file(follow_symlinks=False) for entry in entries)
         has_norepeat = any(
-            entry.name == NOREPEAT_MARKER_NAME and entry.is_file(follow_symlinks=False)
-            for entry in entries
+            entry.name == NOREPEAT_MARKER_NAME and entry.is_file(follow_symlinks=False) for entry in entries
         )
         tracked_here = has_repeat or (tracked_parent and not has_norepeat)
 

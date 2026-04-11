@@ -14,9 +14,7 @@ common = import_module("setup.common")
 build_parser_registry = import_module("core.parsers").build_parser_registry
 load_review_config = import_module("core.config").load_review_config
 Index = import_module("core.index.index").Index
-find_repeat_tracked_paths = import_module(
-    "core.index.tracking"
-).find_repeat_tracked_paths
+find_repeat_tracked_paths = import_module("core.index.tracking").find_repeat_tracked_paths
 
 
 def write_hook(hook_path: str, script_path: str, hook_name: str) -> None:
@@ -24,12 +22,7 @@ def write_hook(hook_path: str, script_path: str, hook_name: str) -> None:
     quoted_script_path = shlex.quote(script_path)
     quoted_hook_name = shlex.quote(hook_name)
     content = "\n".join(
-        [
-            "#!/bin/sh",
-            "set -e",
-            f'exec {python_executable} {quoted_script_path} {quoted_hook_name} "$@"',
-            "",
-        ]
+        ["#!/bin/sh", "set -e", f'exec {python_executable} {quoted_script_path} {quoted_hook_name} "$@"', ""]
     )
     with open(hook_path, "w", encoding="utf-8") as handle:
         handle.write(content)
@@ -68,9 +61,7 @@ def main() -> int:
     hooks_dir = context.hooks_dir
     os.makedirs(hooks_dir, exist_ok=True)
 
-    hooks_path = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "..", "hooks", "hooks.py")
-    )
+    hooks_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "hooks", "hooks.py"))
 
     if not os.path.exists(hooks_path):
         print(f"Missing hook script: {hooks_path}")
@@ -80,23 +71,15 @@ def main() -> int:
         print("Could not initialize .srs/index.txt")
         return 1
 
-    initialized_count = initialize_index_from_repeat_markers(
-        repo_root, context.index_path
-    )
+    initialized_count = initialize_index_from_repeat_markers(repo_root, context.index_path)
 
     for hook in common.HOOKS:
         hook_path = os.path.join(hooks_dir, hook)
         write_hook(hook_path, hooks_path, hook)
 
     print("Installed hooks:", ", ".join(common.HOOKS))
-    print(
-        "Ensured index:",
-        os.path.join(common.SRS_DIR_NAME, common.INDEX_FILE_NAME),
-    )
-    print(
-        f"Initialized cards from {common.REPEAT_MARKER_NAME} markers:",
-        initialized_count,
-    )
+    print("Ensured index:", os.path.join(common.SRS_DIR_NAME, common.INDEX_FILE_NAME))
+    print(f"Initialized cards from {common.REPEAT_MARKER_NAME} markers:", initialized_count)
     return 0
 
 

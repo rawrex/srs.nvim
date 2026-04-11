@@ -78,14 +78,9 @@ class QuoteBlockClozeParser(ClozeParser, QuoteBlockParser, Parser):
         cards: List[Tuple[int, int, str]] = []
         current_start: int | None = None
         current_lines: List[str] = []
-        cloze_re = re.compile(
-            re.escape(self.cloze_open) + r".*?" + re.escape(self.cloze_close),
-            re.DOTALL,
-        )
+        cloze_re = re.compile(re.escape(self.cloze_open) + r".*?" + re.escape(self.cloze_close), re.DOTALL)
 
-        for line_number, line in enumerate(
-            note_text.splitlines(keepends=True), start=1
-        ):
+        for line_number, line in enumerate(note_text.splitlines(keepends=True), start=1):
             if self._is_quote_line(line):
                 if current_start is None:
                     current_start = line_number
@@ -102,13 +97,7 @@ class QuoteBlockClozeParser(ClozeParser, QuoteBlockParser, Parser):
         if current_start is not None:
             block = "".join(current_lines)
             if cloze_re.search(block):
-                cards.append(
-                    (
-                        current_start,
-                        current_start + len(current_lines) - 1,
-                        block,
-                    )
-                )
+                cards.append((current_start, current_start + len(current_lines) - 1, block))
 
         return cards
 

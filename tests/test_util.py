@@ -12,17 +12,11 @@ class UtilTest(unittest.TestCase):
 
         self.assertEqual((0, "ok", ""), (code, out, err))
         run.assert_called_once_with(
-            ["git", "-c", "core.quotepath=false", "ls-files"],
-            cwd="/repo",
-            text=True,
-            capture_output=True,
+            ["git", "-c", "core.quotepath=false", "ls-files"], cwd="/repo", text=True, capture_output=True
         )
 
     def test_get_repo_root_returns_stripped_path_on_success(self) -> None:
-        with patch(
-            "core.util.run_git",
-            return_value=(0, "/tmp/repo\n", ""),
-        ):
+        with patch("core.util.run_git", return_value=(0, "/tmp/repo\n", "")):
             self.assertEqual("/tmp/repo", util.get_repo_root())
 
     def test_get_repo_root_returns_empty_on_failure(self) -> None:

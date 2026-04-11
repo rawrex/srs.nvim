@@ -23,14 +23,7 @@ class _Parser(Parser):
         return []
 
     def build_card(
-        self,
-        note_id: str,
-        note_path: str,
-        note_text: str,
-        start_line: int,
-        end_line: int,
-        card_path: str,
-        metadata,
+        self, note_id: str, note_path: str, note_text: str, start_line: int, end_line: int, card_path: str, metadata
     ):
         raise NotImplementedError
 
@@ -94,10 +87,7 @@ class ParsersTest(unittest.TestCase):
 
         with (
             patch("core.parsers._pack_module_names", return_value=["a", "b"]),
-            patch(
-                "core.parsers._load_pack_module",
-                side_effect=[module_with_register, module_without_register],
-            ),
+            patch("core.parsers._load_pack_module", side_effect=[module_with_register, module_without_register]),
         ):
             _load_registered_packs(registry, ReviewConfig())
 

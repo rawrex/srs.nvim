@@ -15,11 +15,7 @@ class DiffChangeSet:
     @classmethod
     def from_diff_text(cls, diff_text: str) -> "DiffChangeSet":
         renames, deletes, adds = util.parse_diff(diff_text)
-        return cls(
-            renames=renames,
-            deletes=deletes,
-            adds=adds,
-        )
+        return cls(renames=renames, deletes=deletes, adds=adds)
 
     def has_changes(self) -> bool:
         return bool(self.renames or self.deletes or self.adds)

@@ -40,11 +40,7 @@ class QuoteBlockCard(Card):
     def _build_view(self, current_block: str) -> CardView:
         return CardView(
             blocks=[
-                ViewBlock(
-                    start_line=self.start_line,
-                    text=self._strip_callout_heading(current_block),
-                    is_primary=True,
-                )
+                ViewBlock(start_line=self.start_line, text=self._strip_callout_heading(current_block), is_primary=True)
             ]
         )
 
@@ -76,9 +72,7 @@ class QuoteBlockParser(Parser):
         current_start: int | None = None
         current_lines: List[str] = []
 
-        for line_number, line in enumerate(
-            note_text.splitlines(keepends=True), start=1
-        ):
+        for line_number, line in enumerate(note_text.splitlines(keepends=True), start=1):
             if self._is_quote_line(line):
                 if current_start is None:
                     current_start = line_number
@@ -91,13 +85,7 @@ class QuoteBlockParser(Parser):
                 current_lines = []
 
         if current_start is not None:
-            cards.append(
-                (
-                    current_start,
-                    current_start + len(current_lines) - 1,
-                    "".join(current_lines),
-                )
-            )
+            cards.append((current_start, current_start + len(current_lines) - 1, "".join(current_lines)))
 
         return cards
 

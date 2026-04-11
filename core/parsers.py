@@ -25,10 +25,7 @@ class ParserRegistry:
         return ordered[-1]
 
     def ordered(self) -> list[Parser]:
-        return sorted(
-            self.parsers.values(),
-            key=lambda parser: (-parser.priority, parser.parser_id),
-        )
+        return sorted(self.parsers.values(), key=lambda parser: (-parser.priority, parser.parser_id))
 
 
 def _pack_modules_dir() -> Path:
@@ -77,7 +74,4 @@ def _build_parser_registry(config: ReviewConfig) -> ParserRegistry:
     return build_parser_registry(config)
 
 
-__all__ = [
-    "ParserRegistry",
-    "build_parser_registry",
-]
+__all__ = ["ParserRegistry", "build_parser_registry"]

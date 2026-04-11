@@ -3,12 +3,7 @@ import unittest
 from pathlib import Path
 
 from setup.common import HOOKS
-from tests.setup_test_helpers import (
-    init_git_repo,
-    install_system,
-    run_command,
-    uninstall_system,
-)
+from tests.setup_test_helpers import init_git_repo, install_system, run_command, uninstall_system
 
 
 class UninstallIntegrationTest(unittest.TestCase):

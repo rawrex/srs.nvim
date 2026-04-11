@@ -21,12 +21,7 @@ def _is_managed_hook_script(hook_path: str) -> bool:
     except OSError:
         return False
 
-    return (
-        "#!/bin/sh" in content
-        and "set -e" in content
-        and "hooks.py" in content
-        and '"$@"' in content
-    )
+    return "#!/bin/sh" in content and "set -e" in content and "hooks.py" in content and '"$@"' in content
 
 
 def remove_installed_hooks(hooks_dir: str) -> int:

@@ -14,10 +14,7 @@ def run_command(args: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
     result = subprocess.run(args, cwd=cwd, text=True, capture_output=True)
     if result.returncode != 0:
         raise AssertionError(
-            f"command failed: {' '.join(args)}\n"
-            f"cwd: {cwd}\n"
-            f"stdout:\n{result.stdout}\n"
-            f"stderr:\n{result.stderr}"
+            f"command failed: {' '.join(args)}\ncwd: {cwd}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
         )
     return result
 
@@ -37,11 +34,7 @@ def uninstall_system(repo_dir: Path) -> None:
 
 
 @contextmanager
-def temporary_git_repo(
-    *,
-    install: bool,
-    with_repeat_marker: bool,
-):
+def temporary_git_repo(*, install: bool, with_repeat_marker: bool):
     with tempfile.TemporaryDirectory() as tmp_dir:
         repo_dir = Path(tmp_dir)
         init_git_repo(repo_dir)
@@ -64,11 +57,7 @@ def temporary_session_repo(with_index: bool):
 
 
 def tracked_head_files(repo_dir: Path) -> set[str]:
-    return set(
-        run_command(
-            ["git", "ls-tree", "-r", "--name-only", "HEAD"], cwd=repo_dir
-        ).stdout.splitlines()
-    )
+    return set(run_command(["git", "ls-tree", "-r", "--name-only", "HEAD"], cwd=repo_dir).stdout.splitlines())
 
 
 def read_index_rows(index_path: Path) -> list[tuple[str, str, str, int, int]]:
@@ -83,13 +72,5 @@ def read_index_rows(index_path: Path) -> list[tuple[str, str, str, int, int]]:
         match = row_re.match(line)
         if not match:
             raise AssertionError(f"unexpected index row format: {line}")
-        rows.append(
-            (
-                match.group(1),
-                match.group(2),
-                match.group(3),
-                int(match.group(4)),
-                int(match.group(5)),
-            )
-        )
+        rows.append((match.group(1), match.group(2), match.group(3), int(match.group(4)), int(match.group(5))))
     return rows

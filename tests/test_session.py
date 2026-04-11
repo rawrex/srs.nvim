@@ -70,14 +70,10 @@ class ReviewSessionTest(unittest.TestCase):
             with open(note_path, "w", encoding="utf-8") as handle:
                 handle.write("Prelude line\nTerm ~{hidden}\nTail line\n")
 
-            with open(
-                os.path.join(repo_root, ".srs", "index.txt"), "w", encoding="utf-8"
-            ) as handle:
+            with open(os.path.join(repo_root, ".srs", "index.txt"), "w", encoding="utf-8") as handle:
                 handle.write("'1','/note.md','cloze','2','2'\n")
 
-            with open(
-                os.path.join(repo_root, ".srs", "1.json"), "w", encoding="utf-8"
-            ) as handle:
+            with open(os.path.join(repo_root, ".srs", "1.json"), "w", encoding="utf-8") as handle:
                 json.dump(json.loads(SchedulerCard().to_json()), handle)
 
             session = ReviewSession(

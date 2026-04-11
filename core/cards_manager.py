@@ -26,26 +26,19 @@ class CardsManager:
     def load_due_cards(self) -> list[DueCard]:
         now = datetime.now(timezone.utc)
         index_rows = Index(
-            path=os.path.join(self.repo_root, ".srs", "index.txt"),
-            parser_registry=self.parser_registry,
+            path=os.path.join(self.repo_root, ".srs", "index.txt"), parser_registry=self.parser_registry
         ).read_rows()
 
         claimed_lines_by_note: dict[str, set[int]] = {}
         for _, indexed_path, _, start_line, end_line in index_rows:
             note_path = self._note_abs_path(indexed_path)
-            claimed_lines_by_note.setdefault(note_path, set()).update(
-                range(start_line, end_line + 1)
-            )
+            claimed_lines_by_note.setdefault(note_path, set()).update(range(start_line, end_line + 1))
 
-        cards_with_paths, note_context_blocks = self._build_cards_with_note_context(
-            index_rows
-        )
+        cards_with_paths, note_context_blocks = self._build_cards_with_note_context(index_rows)
         self._add_unclaimed_note_context(note_context_blocks, claimed_lines_by_note)
         return self._filter_due_cards(cards_with_paths, note_context_blocks, now)
 
-    def estimate_due_cards_duration_minutes(
-        self, due_cards: list[DueCard]
-    ) -> int | None:
+    def estimate_due_cards_duration_minutes(self, due_cards: list[DueCard]) -> int | None:
         total_duration_ms = 0
         for due_card in due_cards:
             card = due_card.card
@@ -60,8 +53,7 @@ class CardsManager:
         return math.ceil(total_duration_ms / 60_000)
 
     def _build_cards_with_note_context(
-        self,
-        index_rows: list[IndexRow],
+        self, index_rows: list[IndexRow]
     ) -> tuple[list[tuple[Card, str]], dict[str, dict[LineRange, str]]]:
         cards_with_paths: list[tuple[Card, str]] = []
         note_context_blocks: dict[str, dict[LineRange, str]] = {}
@@ -95,13 +87,7 @@ class CardsManager:
         return cards_with_paths, note_context_blocks
 
     def _build_card(
-        self,
-        note_id: str,
-        note_path: str,
-        parser_id: str,
-        start_line: int,
-        end_line: int,
-        note_text: str,
+        self, note_id: str, note_path: str, parser_id: str, start_line: int, end_line: int, note_text: str
     ) -> Card:
         card_path = os.path.join(self.repo_root, ".srs", f"{note_id}.json")
         with open(card_path, "r", encoding="utf-8") as handle:
@@ -119,9 +105,7 @@ class CardsManager:
         )
 
     def _add_unclaimed_note_context(
-        self,
-        note_context_blocks: dict[str, dict[LineRange, str]],
-        claimed_lines_by_note: dict[str, set[int]],
+        self, note_context_blocks: dict[str, dict[LineRange, str]], claimed_lines_by_note: dict[str, set[int]]
     ) -> None:
         for note_path, claimed_lines in claimed_lines_by_note.items():
             fallback_blocks = self._read_unclaimed_line_blocks(note_path, claimed_lines)
@@ -140,12 +124,7 @@ class CardsManager:
         due_cards: list[DueCard] = []
         for card, note_path in cards_with_paths:
             if card.is_due(now):
-                due_cards.append(
-                    DueCard(
-                        card=card,
-                        note_context_blocks=note_context_blocks.get(note_path, {}),
-                    )
-                )
+                due_cards.append(DueCard(card=card, note_context_blocks=note_context_blocks.get(note_path, {})))
         return due_cards
 
     def _note_abs_path(self, indexed_path: str) -> str:
@@ -156,13 +135,10 @@ class CardsManager:
             note_text = handle.read()
         parser = self.parser_registry.get(parser_id)
         return {
-            (start_line, end_line): block
-            for start_line, end_line, block in parser.split_note_into_cards(note_text)
+            (start_line, end_line): block for start_line, end_line, block in parser.split_note_into_cards(note_text)
         }
 
-    def _read_unclaimed_line_blocks(
-        self, note_path: str, claimed_lines: set[int]
-    ) -> dict[LineRange, str]:
+    def _read_unclaimed_line_blocks(self, note_path: str, claimed_lines: set[int]) -> dict[LineRange, str]:
         with open(note_path, "r", encoding="utf-8") as handle:
             lines = handle.readlines()
         return {

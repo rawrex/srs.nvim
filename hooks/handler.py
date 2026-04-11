@@ -11,9 +11,7 @@ class Handler:
         self.repository_root = repository_root
 
     def is_rev_exists(self, rev: str) -> bool:
-        code, _out, _err = util.run_git(
-            ["rev-parse", "--verify", rev], cwd=self.repository_root
-        )
+        code, _out, _err = util.run_git(["rev-parse", "--verify", rev], cwd=self.repository_root)
         return code == 0
 
     def handle_pre_commit(self, index: Index) -> None:
@@ -59,14 +57,10 @@ class Handler:
 
     def _apply_ref_diff(self, index: Index, old_ref: str, new_ref: str) -> None:
         code, diff_text, _ = util.run_git(
-            ["diff", "--name-status", "-M", "-C", old_ref, new_ref],
-            cwd=self.repository_root,
+            ["diff", "--name-status", "-M", "-C", old_ref, new_ref], cwd=self.repository_root
         )
         if code != 0:
             diff_text = ""
 
         index.apply_diff(diff_text, repo_root=self.repository_root)
-        index.sync_tracked_paths(
-            set(find_repeat_tracked_paths(self.repository_root)),
-            repo_root="",
-        )
+        index.sync_tracked_paths(set(find_repeat_tracked_paths(self.repository_root)), repo_root="")

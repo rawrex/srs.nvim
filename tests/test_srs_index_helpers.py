@@ -20,14 +20,7 @@ class _StaticParser(Parser):
         return list(self._rows)
 
     def build_card(
-        self,
-        note_id: str,
-        note_path: str,
-        note_text: str,
-        start_line: int,
-        end_line: int,
-        card_path: str,
-        metadata,
+        self, note_id: str, note_path: str, note_text: str, start_line: int, end_line: int, card_path: str, metadata
     ):
         raise NotImplementedError
 
@@ -66,29 +59,17 @@ class SrsIndexHelperTest(unittest.TestCase):
             with open(note_path, "w", encoding="utf-8") as handle:
                 handle.write("one\ntwo\nthree\n")
 
-            high = _StaticParser(
-                parser_id="high",
-                priority=10,
-                rows=[(1, 2, "one\ntwo\n")],
-            )
-            low = _StaticParser(
-                parser_id="low",
-                priority=0,
-                rows=[(2, 2, "two\n"), (3, 3, "three\n")],
-            )
+            high = _StaticParser(parser_id="high", priority=10, rows=[(1, 2, "one\ntwo\n")])
+            low = _StaticParser(parser_id="low", priority=0, rows=[(2, 2, "two\n"), (3, 3, "three\n")])
             parser_registry = ParserRegistry(parsers={})
             parser_registry.register(high)
             parser_registry.register(low)
             index = Index(index_path, parser_registry=parser_registry)
-            rows = index.collect_parser_rows(
-                "/note.md",
-            )
+            rows = index.collect_parser_rows("/note.md")
 
         self.assertEqual([("high", 1, 2), ("low", 3, 3)], rows)
 
-    def test_read_note_text_returns_none_for_missing_and_raises_for_bad_utf8(
-        self,
-    ) -> None:
+    def test_read_note_text_returns_none_for_missing_and_raises_for_bad_utf8(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
             index_path = os.path.join(repo_root, ".srs", "index.txt")
             os.makedirs(os.path.dirname(index_path), exist_ok=True)

@@ -12,11 +12,7 @@ from core.index.storage import REVIEW_LOGS_KEY, Metadata, read_metadata, write_m
 class StorageTest(unittest.TestCase):
     def test_read_metadata_ignores_non_dict_review_logs(self) -> None:
         scheduler = Scheduler()
-        updated_card, review_log = scheduler.review_card(
-            SchedulerCard(),
-            Rating.Good,
-            review_duration=321,
-        )
+        updated_card, review_log = scheduler.review_card(SchedulerCard(), Rating.Good, review_duration=321)
         payload = json.loads(updated_card.to_json())
         payload[REVIEW_LOGS_KEY] = ["bad", 1, review_log.to_dict()]
 
@@ -42,15 +38,8 @@ class StorageTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             card_path = os.path.join(temp_dir, "2.json")
             scheduler = Scheduler()
-            updated_card, review_log = scheduler.review_card(
-                SchedulerCard(),
-                Rating.Easy,
-                review_duration=100,
-            )
-            metadata = Metadata(
-                scheduler_card=updated_card,
-                review_logs=[review_log],
-            )
+            updated_card, review_log = scheduler.review_card(SchedulerCard(), Rating.Easy, review_duration=100)
+            metadata = Metadata(scheduler_card=updated_card, review_logs=[review_log])
 
             write_metadata(card_path, metadata)
 

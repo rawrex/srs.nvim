@@ -37,10 +37,7 @@ class HooksCliTest(unittest.TestCase):
             code = hooks.main()
 
         self.assertEqual(0, code)
-        index_cls.assert_called_once_with(
-            "/repo/.srs/index.txt",
-            parser_registry=ANY,
-        )
+        index_cls.assert_called_once_with("/repo/.srs/index.txt", parser_registry=ANY)
         handler.handle_pre_merge_commit.assert_called_once()
 
     def test_main_dispatches_post_checkout_with_args(self) -> None:

@@ -23,9 +23,7 @@ class _DummyReviewLog:
 
 
 class _DummyCard:
-    def __init__(
-        self, note_filename: str, scheduler_card: object, card_path: str
-    ) -> None:
+    def __init__(self, note_filename: str, scheduler_card: object, card_path: str) -> None:
         self.note_filename = note_filename
         self.card_path = card_path
         self.metadata = _DummyMetadata(scheduler_card)
@@ -102,18 +100,11 @@ class ReviewSessionRunTest(unittest.TestCase):
             new_card_2 = object()
             log_1 = object()
             log_2 = object()
-            scheduler.review_card.side_effect = [
-                (new_card_1, log_1),
-                (new_card_2, log_2),
-            ]
+            scheduler.review_card.side_effect = [(new_card_1, log_1), (new_card_2, log_2)]
             session.scheduler = scheduler
 
-            card_1 = _DummyCard(
-                "one.md", old_card_1, os.path.join(repo_root, ".srs", "1.json")
-            )
-            card_2 = _DummyCard(
-                "two.md", old_card_2, os.path.join(repo_root, ".srs", "2.json")
-            )
+            card_1 = _DummyCard("one.md", old_card_1, os.path.join(repo_root, ".srs", "1.json"))
+            card_2 = _DummyCard("two.md", old_card_2, os.path.join(repo_root, ".srs", "2.json"))
 
             with (
                 patch.object(
@@ -127,12 +118,7 @@ class ReviewSessionRunTest(unittest.TestCase):
                 patch("core.session.write_metadata") as write_metadata,
                 patch("core.session.time.monotonic_ns") as monotonic_ns,
             ):
-                monotonic_ns.side_effect = [
-                    0,
-                    1_200_000_000,
-                    2_000_000_000,
-                    2_900_000_000,
-                ]
+                monotonic_ns.side_effect = [0, 1_200_000_000, 2_000_000_000, 2_900_000_000]
                 code = session.run()
 
         self.assertEqual(0, code)
@@ -165,16 +151,8 @@ class ReviewSessionRunTest(unittest.TestCase):
             scheduler.review_card.return_value = (object(), object())
             session.scheduler = scheduler
 
-            card_1 = _DummyCard(
-                "one.md",
-                object(),
-                os.path.join(repo_root, ".srs", "1.json"),
-            )
-            card_2 = _DummyCard(
-                "two.md",
-                object(),
-                os.path.join(repo_root, ".srs", "2.json"),
-            )
+            card_1 = _DummyCard("one.md", object(), os.path.join(repo_root, ".srs", "1.json"))
+            card_2 = _DummyCard("two.md", object(), os.path.join(repo_root, ".srs", "2.json"))
 
             with (
                 patch.object(
@@ -186,10 +164,7 @@ class ReviewSessionRunTest(unittest.TestCase):
                     ],
                 ),
                 patch("core.session.write_metadata"),
-                patch(
-                    "core.session.time.monotonic_ns",
-                    side_effect=[0, 1_000_000, 2_000_000, 3_000_000],
-                ),
+                patch("core.session.time.monotonic_ns", side_effect=[0, 1_000_000, 2_000_000, 3_000_000]),
             ):
                 with self.assertRaises(KeyboardInterrupt):
                     session.run()
@@ -214,18 +189,11 @@ class ReviewSessionRunTest(unittest.TestCase):
             )
 
             scheduler = Mock()
-            scheduler.review_card.side_effect = [
-                (object(), object()),
-                (object(), object()),
-            ]
+            scheduler.review_card.side_effect = [(object(), object()), (object(), object())]
             session.scheduler = scheduler
 
-            card_1 = _DummyCard(
-                "one.md", object(), os.path.join(repo_root, ".srs", "1.json")
-            )
-            card_2 = _DummyCard(
-                "two.md", object(), os.path.join(repo_root, ".srs", "2.json")
-            )
+            card_1 = _DummyCard("one.md", object(), os.path.join(repo_root, ".srs", "1.json"))
+            card_2 = _DummyCard("two.md", object(), os.path.join(repo_root, ".srs", "2.json"))
             card_1.metadata.review_logs = [_DummyReviewLog(review_duration=30_000)]
             card_2.metadata.review_logs = [_DummyReviewLog(review_duration=40_000)]
 
@@ -239,10 +207,7 @@ class ReviewSessionRunTest(unittest.TestCase):
                     ],
                 ),
                 patch("core.session.write_metadata"),
-                patch(
-                    "core.session.time.monotonic_ns",
-                    side_effect=[0, 1_000_000, 2_000_000, 3_000_000],
-                ),
+                patch("core.session.time.monotonic_ns", side_effect=[0, 1_000_000, 2_000_000, 3_000_000]),
             ):
                 code = session.run()
 

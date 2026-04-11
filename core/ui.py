@@ -16,29 +16,21 @@ WIKI_IMAGE_RE = re.compile(r"!\[\[[^\]]+\]\]")
 
 
 class ReviewUI:
-    def __init__(
-        self,
-        config: ReviewConfig,
-        console: Console,
-    ) -> None:
+    def __init__(self, config: ReviewConfig, console: Console) -> None:
         self.console = console
         self.rating_buttons = config.rating_buttons
         self.show_context = config.show_context
         self.media = config.media
         self.chafa_path = shutil.which("chafa") if self.media is not None else None
         self.button_to_rating_byte: dict[str, bytes] = {
-            button: bytes([rating.value])
-            for rating, button in self.rating_buttons.items()
+            button: bytes([rating.value]) for rating, button in self.rating_buttons.items()
         }
 
     def print_message(self, message: str) -> None:
         self.console.print(message)
 
     def run_question_step(
-        self,
-        title: str,
-        card: Card,
-        note_context_blocks: dict[tuple[int, int], str] | None = None,
+        self, title: str, card: Card, note_context_blocks: dict[tuple[int, int], str] | None = None
     ) -> CardView:
         current_view = card.question_view()
         while True:
@@ -56,11 +48,7 @@ class ReviewUI:
                 current_view = maybe_view
 
     def show_answer_step(
-        self,
-        title: str,
-        card: Card,
-        view: CardView,
-        note_context_blocks: dict[tuple[int, int], str] | None = None,
+        self, title: str, card: Card, view: CardView, note_context_blocks: dict[tuple[int, int], str] | None = None
     ) -> None:
         self._clear_screen()
         self.console.print(title)
@@ -104,10 +92,7 @@ class ReviewUI:
         return f"Rate [{', '.join(parts)}]: "
 
     def _print_view(
-        self,
-        card: Card,
-        view: CardView,
-        note_context_blocks: dict[tuple[int, int], str] | None = None,
+        self, card: Card, view: CardView, note_context_blocks: dict[tuple[int, int], str] | None = None
     ) -> None:
         primary_block = self._mark_active_line(view.primary_block().text)
 
@@ -116,53 +101,29 @@ class ReviewUI:
             return
 
         rendered_blocks, primary_block_index = self._rendered_context_blocks(
-            card,
-            view,
-            primary_block,
-            note_context_blocks,
+            card, view, primary_block, note_context_blocks
         )
         merged_text = "\n\n".join(block.rstrip("\n") for block in rendered_blocks)
-        target_line_index = self._line_index_for_block(
-            rendered_blocks, primary_block_index
-        )
-        viewport_text = self._center_viewport_on_line(
-            merged_text.rstrip("\n"),
-            target_line_index,
-        )
+        target_line_index = self._line_index_for_block(rendered_blocks, primary_block_index)
+        viewport_text = self._center_viewport_on_line(merged_text.rstrip("\n"), target_line_index)
         self._print_markdown_with_images(viewport_text)
 
     def _rendered_context_blocks(
-        self,
-        card: Card,
-        view: CardView,
-        primary_block: str,
-        note_context_blocks: dict[tuple[int, int], str] | None,
+        self, card: Card, view: CardView, primary_block: str, note_context_blocks: dict[tuple[int, int], str] | None
     ) -> tuple[list[str], int]:
         if note_context_blocks:
             return self._rendered_context_blocks_for_card(
-                note_context_blocks,
-                card.start_line,
-                card.end_line,
-                primary_block,
+                note_context_blocks, card.start_line, card.end_line, primary_block
             )
 
-        rendered_blocks = [
-            primary_block if block.is_primary else block.text for block in view.blocks
-        ]
+        rendered_blocks = [primary_block if block.is_primary else block.text for block in view.blocks]
         if not rendered_blocks:
             return [primary_block], 0
-        primary_block_index = next(
-            (idx for idx, block in enumerate(view.blocks) if block.is_primary),
-            0,
-        )
+        primary_block_index = next((idx for idx, block in enumerate(view.blocks) if block.is_primary), 0)
         return rendered_blocks, primary_block_index
 
     def _rendered_context_blocks_for_card(
-        self,
-        note_context_blocks: dict[tuple[int, int], str],
-        start_line: int,
-        end_line: int,
-        primary_block: str,
+        self, note_context_blocks: dict[tuple[int, int], str], start_line: int, end_line: int, primary_block: str
     ) -> tuple[list[str], int]:
         rendered_blocks: list[str] = []
         primary_line_range = (start_line, end_line)
@@ -219,9 +180,7 @@ class ReviewUI:
             if not markdown_lines:
                 return
             markdown = "".join(markdown_lines).rstrip("\n")
-            self.console.print(
-                Markdown(self._preserve_blockquote_line_breaks(markdown))
-            )
+            self.console.print(Markdown(self._preserve_blockquote_line_breaks(markdown)))
             markdown_lines.clear()
 
         for line in self._split_inline_wiki_images(text):
@@ -229,13 +188,7 @@ class ReviewUI:
                 if rendered_image := self._render_image(image_reference):
                     flush_markdown_lines()
                     image_block = f"{rendered_image.rstrip('\n')}\n\n"
-                    self.console.print(
-                        image_block,
-                        end="",
-                        markup=False,
-                        highlight=False,
-                        soft_wrap=True,
-                    )
+                    self.console.print(image_block, end="", markup=False, highlight=False, soft_wrap=True)
                     continue
             markdown_lines.append(line)
         flush_markdown_lines()
@@ -293,12 +246,7 @@ class ReviewUI:
         render_height = max(16, terminal_size.lines // 2)
 
         result = subprocess.run(
-            [
-                self.chafa_path,
-                "--size",
-                f"{render_width}x{render_height}",
-                path,
-            ],
+            [self.chafa_path, "--size", f"{render_width}x{render_height}", path],
             capture_output=True,
             text=True,
             check=False,
@@ -317,11 +265,7 @@ class SessionEntryUI:
     def __init__(self, console: Console) -> None:
         self.console = console
 
-    def show_start_menu(
-        self,
-        due_cards_count: int,
-        estimated_minutes: int | None,
-    ) -> None:
+    def show_start_menu(self, due_cards_count: int, estimated_minutes: int | None) -> None:
         while True:
             self._clear_screen()
             self.console.print("Session")

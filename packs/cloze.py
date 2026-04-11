@@ -17,9 +17,7 @@ if TYPE_CHECKING:
 
 
 CLOZE_PARSER_ID = "cloze"
-LABEL_CHARS = (
-    string.ascii_lowercase + string.ascii_uppercase + string.digits + string.punctuation
-)
+LABEL_CHARS = string.ascii_lowercase + string.ascii_uppercase + string.digits + string.punctuation
 
 
 @dataclass
@@ -32,18 +30,11 @@ class IncrementalRevealState:
     fully_revealed: bool = False
 
 
-def parse_note_clozes(
-    note_text: str,
-    cloze_open: str,
-    cloze_close: str,
-) -> Tuple[List[str], List[str]]:
+def parse_note_clozes(note_text: str, cloze_open: str, cloze_close: str) -> Tuple[List[str], List[str]]:
     text_parts: List[str] = []
     clozes: List[str] = []
     last_end = 0
-    cloze_re = re.compile(
-        re.escape(cloze_open) + r"(.*?)" + re.escape(cloze_close),
-        re.DOTALL,
-    )
+    cloze_re = re.compile(re.escape(cloze_open) + r"(.*?)" + re.escape(cloze_close), re.DOTALL)
 
     for match in cloze_re.finditer(note_text):
         start, end = match.span()
@@ -62,16 +53,9 @@ def mask_hidden_text(text: str, mask_char: str) -> str:
 def build_incremental_reveal_state(hidden: str) -> IncrementalRevealState:
     word_first_positions = [match.start() for match in re.finditer(r"\S+", hidden)]
     first_positions = set(word_first_positions)
-    random_positions = [
-        idx
-        for idx, ch in enumerate(hidden)
-        if ch != "\n" and idx not in first_positions
-    ]
+    random_positions = [idx for idx, ch in enumerate(hidden) if ch != "\n" and idx not in first_positions]
     random.shuffle(random_positions)
-    return IncrementalRevealState(
-        word_first_positions=word_first_positions,
-        random_positions=random_positions,
-    )
+    return IncrementalRevealState(word_first_positions=word_first_positions, random_positions=random_positions)
 
 
 def reveal_next_incremental_char(state: IncrementalRevealState) -> None:
@@ -87,9 +71,9 @@ def reveal_next_incremental_char(state: IncrementalRevealState) -> None:
         state.next_random_index += 1
         state.revealed_positions.add(idx)
 
-    if state.next_word_first_index >= len(
-        state.word_first_positions
-    ) and state.next_random_index >= len(state.random_positions):
+    if state.next_word_first_index >= len(state.word_first_positions) and state.next_random_index >= len(
+        state.random_positions
+    ):
         state.fully_revealed = True
 
 
@@ -109,16 +93,12 @@ class ClozeCard(Card):
     def __post_init__(self) -> None:
         self.reveal_mode = RevealMode(self.reveal_mode)
         self.text_parts, self.clozes = parse_note_clozes(
-            self.note_text,
-            cloze_open=self.cloze_open,
-            cloze_close=self.cloze_close,
+            self.note_text, cloze_open=self.cloze_open, cloze_close=self.cloze_close
         )
         self.labels = [LABEL_CHARS[idx] for idx in range(len(self.clozes))]
         self.label_to_index = {label: idx for idx, label in enumerate(self.labels)}
         self.whole_revealed = [False] * len(self.clozes)
-        self.incremental_states = [
-            build_incremental_reveal_state(hidden) for hidden in self.clozes
-        ]
+        self.incremental_states = [build_incremental_reveal_state(hidden) for hidden in self.clozes]
 
     def reveal_for_label(self, label: str) -> CardView | None:
         if label == REVEAL_ALL_LABEL:
@@ -170,9 +150,7 @@ class ClozeCard(Card):
         return self._build_view(current_block=self._question_block())
 
     def context_view(self) -> CardView:
-        return self._build_view(
-            current_block=self._masked_context_block(self.note_text)
-        )
+        return self._build_view(current_block=self._masked_context_block(self.note_text))
 
     def _question_block(self) -> str:
         parts: List[str] = [self.text_parts[0]]
@@ -182,28 +160,16 @@ class ClozeCard(Card):
                 if state.fully_revealed:
                     parts.append(f"`{hidden}`")
                 else:
-                    parts.append(
-                        f"[{self.labels[idx]}]{self._incremental_hidden_view(hidden, state)}"
-                    )
+                    parts.append(f"[{self.labels[idx]}]{self._incremental_hidden_view(hidden, state)}")
             elif self.whole_revealed[idx]:
                 parts.append(f"`{hidden}`")
             else:
-                parts.append(
-                    f"[{self.labels[idx]}]{mask_hidden_text(hidden, self.mask_char)}"
-                )
+                parts.append(f"[{self.labels[idx]}]{mask_hidden_text(hidden, self.mask_char)}")
             parts.append(self.text_parts[idx + 1])
         return "".join(parts)
 
     def _build_view(self, current_block: str) -> CardView:
-        return CardView(
-            blocks=[
-                ViewBlock(
-                    start_line=self.start_line,
-                    text=current_block,
-                    is_primary=True,
-                )
-            ]
-        )
+        return CardView(blocks=[ViewBlock(start_line=self.start_line, text=current_block, is_primary=True)])
 
     def _masked_context_block(self, block: str) -> str:
         text_parts, clozes = parse_note_clozes(block, self.cloze_open, self.cloze_close)
@@ -218,14 +184,11 @@ class ClozeCard(Card):
         label_re = re.compile(r"\[[^\]]\]")
         return label_re.sub("", masked)
 
-    def _incremental_hidden_view(
-        self, hidden: str, state: IncrementalRevealState
-    ) -> str:
+    def _incremental_hidden_view(self, hidden: str, state: IncrementalRevealState) -> str:
         if state.fully_revealed:
             return hidden
         return "".join(
-            ch if ch == "\n" or idx in state.revealed_positions else self.mask_char
-            for idx, ch in enumerate(hidden)
+            ch if ch == "\n" or idx in state.revealed_positions else self.mask_char for idx, ch in enumerate(hidden)
         )
 
 
@@ -240,12 +203,8 @@ class ClozeParser(Parser):
 
     def split_note_into_cards(self, note_text: str) -> List[Tuple[int, int, str]]:
         cards: List[Tuple[int, int, str]] = []
-        cloze_re = re.compile(
-            re.escape(self.cloze_open) + r".*?" + re.escape(self.cloze_close)
-        )
-        for line_number, line in enumerate(
-            note_text.splitlines(keepends=True), start=1
-        ):
+        cloze_re = re.compile(re.escape(self.cloze_open) + r".*?" + re.escape(self.cloze_close))
+        for line_number, line in enumerate(note_text.splitlines(keepends=True), start=1):
             if cloze_re.search(line):
                 cards.append((line_number, line_number, line))
         return cards
