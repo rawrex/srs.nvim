@@ -65,7 +65,7 @@ class SrsIndexHelperTest(unittest.TestCase):
             parser_registry.register(high)
             parser_registry.register(low)
             index = Index(index_path, parser_registry=parser_registry)
-            rows = index.collect_parser_rows("/note.md")
+            rows = index.collect_parsed_blocks("/note.md")
 
         self.assertEqual([("high", 1, 2), ("low", 3, 3)], rows)
 
@@ -98,7 +98,7 @@ class SrsIndexHelperTest(unittest.TestCase):
             with open(bad_path, "wb") as handle:
                 handle.write(b"\xff\xfe")
 
-            self.assertEqual([], index.collect_parser_rows("/bad.md"))
+            self.assertEqual([], index.collect_parsed_blocks("/bad.md"))
 
     def test_repo_root_resolves_from_index_path(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:

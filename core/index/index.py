@@ -165,7 +165,7 @@ class Index:
 
     def _add_new(self, new_path: str, updated: list[str]) -> set[str]:
         touched_card_paths: set[str] = set()
-        for parser_id, start_line, end_line in self.collect_parser_rows(new_path):
+        for parser_id, start_line, end_line in self.collect_parsed_blocks(new_path):
             row, touched_path = self.create_card_row(parser_id, start_line, end_line)
             note_id, row_parser_id, row_start_line, row_end_line = row
             updated.append(self._format_row(note_id, new_path, row_parser_id, row_start_line, row_end_line))
@@ -191,7 +191,7 @@ class Index:
             return self.card_path(note_id)
         return None
 
-    def collect_parser_rows(self, indexed_path: str) -> list[tuple[str, int, int]]:
+    def collect_parsed_blocks(self, indexed_path: str) -> list[tuple[str, int, int]]:
         try:
             note_text = self.read_note_text(indexed_path)
         except UnicodeDecodeError:
