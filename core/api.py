@@ -11,7 +11,7 @@ class Parser(ABC):
     priority: ClassVar[int] = 0
 
     @abstractmethod
-    def split_note_into_cards(self, note_text: str) -> List[Tuple[int, int, str]]:
+    def interpret_text(self, note_text: str) -> List[Tuple[int, int, str]]:
         raise NotImplementedError
 
     @abstractmethod

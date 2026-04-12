@@ -111,9 +111,7 @@ class CardsManager:
         with open(path, "r", encoding="utf-8") as handle:
             note_text = handle.read()
         parser = self.parser_registry.get(parser_id)
-        return {
-            (start_line, end_line): block for start_line, end_line, block in parser.split_note_into_cards(note_text)
-        }
+        return {(start_line, end_line): block for start_line, end_line, block in parser.interpret_text(note_text)}
 
     def _read_unclaimed_line_blocks(self, note_path: str, claimed_lines: set[int]) -> dict[LineRange, str]:
         with open(note_path, "r", encoding="utf-8") as handle:

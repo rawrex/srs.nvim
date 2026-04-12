@@ -200,16 +200,17 @@ class Index:
             return []
 
         selected: list[tuple[str, int, int]] = []
-        claimed: list[tuple[int, int]] = []
+        claimed_ranges: list[tuple[int, int]] = []
         for parser in self.parser_registry.ordered():
-            cards = parser.split_note_into_cards(note_text)
+            cards = parser.interpret_text(note_text)
             for start_line, end_line, _ in cards:
                 if any(
-                    not (end_line < claimed_start or start_line > claimed_end) for claimed_start, claimed_end in claimed
+                    not (end_line < claimed_start or start_line > claimed_end)
+                    for claimed_start, claimed_end in claimed_ranges
                 ):
                     continue
                 selected.append((parser.parser_id, start_line, end_line))
-                claimed.append((start_line, end_line))
+                claimed_ranges.append((start_line, end_line))
 
         return sorted(selected, key=lambda row: (row[1], row[2], row[0]))
 
