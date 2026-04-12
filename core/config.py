@@ -3,11 +3,9 @@ import os
 from dataclasses import dataclass, field
 from datetime import timedelta
 
-from fsrs import Rating
-from fsrs import Scheduler
+from fsrs import Rating, Scheduler
 
 from core.card import RevealMode
-
 
 DEFAULT_RATING_BUTTONS: dict[Rating, str] = {Rating.Again: "n", Rating.Hard: "e", Rating.Good: "i", Rating.Easy: "o"}
 
@@ -63,8 +61,6 @@ def load_review_config(repo_root: str) -> ReviewConfig:
     show_context = _parse_review_flags(review_raw, defaults)
     cloze_config = _parse_cloze_config(cloze_raw, defaults.cloze)
     media = _parse_media_directory(raw.get("media"), repo_root, defaults.media)
-    if media is None:
-        media = _parse_media_directory(raw.get("attachments_directory"), repo_root, defaults.media)
 
     scheduler_parameters = defaults.scheduler_parameters
     scheduler_desired_retention = defaults.scheduler_desired_retention
