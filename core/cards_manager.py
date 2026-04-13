@@ -69,12 +69,10 @@ class CardsManager:
         self, note_context_blocks: dict[str, dict[LineRange, str]], claimed_lines_by_note: dict[str, set[int]]
     ) -> None:
         for note_path, claimed_lines in claimed_lines_by_note.items():
-            fallback_blocks = self._read_unclaimed_line_blocks(note_path, claimed_lines)
-            if not fallback_blocks:
-                continue
-            context_blocks = note_context_blocks.setdefault(note_path, {})
-            for line_range, block in fallback_blocks.items():
-                context_blocks.setdefault(line_range, block)
+            if fallback_blocks := self._read_unclaimed_line_blocks(note_path, claimed_lines):
+                context_blocks = note_context_blocks.setdefault(note_path, {})
+                for line_range, block in fallback_blocks.items():
+                    context_blocks.setdefault(line_range, block)
 
     def _filter_due_cards(
         self,
