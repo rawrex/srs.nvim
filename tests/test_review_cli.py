@@ -37,7 +37,6 @@ class ReviewCliTest(unittest.TestCase):
         session_cls.assert_called_once_with(
             repo_root="/repo",
             ui=ui,
-            config=config,
             parser_registry=parser_registry,
             session_entry_ui=session_entry_ui,
             scheduler=ANY,

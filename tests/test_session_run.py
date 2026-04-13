@@ -51,7 +51,6 @@ class ReviewSessionRunTest(unittest.TestCase):
             session = ReviewSession(
                 repo_root=repo_root,
                 ui=ui,
-                config=config,
                 parser_registry=build_parser_registry(config),
                 session_entry_ui=None,
                 scheduler=config.build_scheduler(),
@@ -69,7 +68,6 @@ class ReviewSessionRunTest(unittest.TestCase):
             session = ReviewSession(
                 repo_root=repo_root,
                 ui=ui,
-                config=config,
                 parser_registry=build_parser_registry(config),
                 session_entry_ui=None,
                 scheduler=config.build_scheduler(),
@@ -92,7 +90,6 @@ class ReviewSessionRunTest(unittest.TestCase):
             session = ReviewSession(
                 repo_root=repo_root,
                 ui=ui,
-                config=config,
                 parser_registry=build_parser_registry(config),
                 session_entry_ui=session_entry_ui,
                 scheduler=config.build_scheduler(),
@@ -146,7 +143,6 @@ class ReviewSessionRunTest(unittest.TestCase):
             session = ReviewSession(
                 repo_root=repo_root,
                 ui=ui,
-                config=config,
                 parser_registry=build_parser_registry(config),
                 session_entry_ui=session_entry_ui,
                 scheduler=config.build_scheduler(),
@@ -187,7 +183,6 @@ class ReviewSessionRunTest(unittest.TestCase):
             session = ReviewSession(
                 repo_root=repo_root,
                 ui=ui,
-                config=config,
                 parser_registry=build_parser_registry(config),
                 session_entry_ui=session_entry_ui,
                 scheduler=config.build_scheduler(),

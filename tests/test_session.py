@@ -52,7 +52,6 @@ class ReviewSessionTest(unittest.TestCase):
         session = ReviewSession(
             repo_root="/tmp/repo",
             ui=_DummyUI(),  # type: ignore[arg-type]
-            config=config,
             parser_registry=build_parser_registry(config),
             session_entry_ui=None,
             scheduler=config.build_scheduler(),
@@ -79,7 +78,6 @@ class ReviewSessionTest(unittest.TestCase):
             session = ReviewSession(
                 repo_root=repo_root,
                 ui=_DummyUI(),  # type: ignore[arg-type]
-                config=ReviewConfig(),
                 parser_registry=build_parser_registry(ReviewConfig()),
                 session_entry_ui=None,
                 scheduler=ReviewConfig().build_scheduler(),
