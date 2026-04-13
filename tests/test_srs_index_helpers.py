@@ -16,7 +16,7 @@ class _StaticParser(Parser):
         self.priority = priority
         self._rows = rows
 
-    def split_note_into_cards(self, note_text: str):
+    def interpret_text(self, note_text: str):
         return list(self._rows)
 
     def build_card(
@@ -131,7 +131,7 @@ class SrsIndexHelperTest(unittest.TestCase):
 
             index = self._index(index_path)
 
-            row, card_path = index.create_card_row("cloze", 2, 4)
+            row, card_path = index.create_card_entry("cloze", 2, 4)
             note_id, parser_id, start_line, end_line = row
 
             self.assertEqual("cloze", parser_id)

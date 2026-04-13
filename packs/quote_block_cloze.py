@@ -75,7 +75,7 @@ class QuoteBlockClozeParser(ClozeParser, QuoteBlockParser, Parser):
     parser_id: ClassVar[str] = QUOTE_BLOCK_CLOZE_PARSER_ID
     priority: ClassVar[int] = 20
 
-    def split_note_into_cards(self, note_text: str) -> List[Tuple[int, int, str]]:
+    def interpret_text(self, note_text: str) -> List[Tuple[int, int, str]]:
         cards: List[Tuple[int, int, str]] = []
         current_start: int | None = None
         current_lines: List[str] = []

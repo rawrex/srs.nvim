@@ -202,7 +202,7 @@ class ClozeParser(Parser):
     cloze_close: str
     mask_char: str
 
-    def split_note_into_cards(self, note_text: str) -> List[Tuple[int, int, str]]:
+    def interpret_text(self, note_text: str) -> List[Tuple[int, int, str]]:
         cards: List[Tuple[int, int, str]] = []
         cloze_re = re.compile(re.escape(self.cloze_open) + r".*?" + re.escape(self.cloze_close))
         for line_number, line in enumerate(note_text.splitlines(keepends=True), start=1):

@@ -72,7 +72,7 @@ class QuoteBlockParser(Parser):
     def _is_quote_line(self, line: str) -> bool:
         return line.lstrip().startswith(">")
 
-    def split_note_into_cards(self, note_text: str) -> List[Tuple[int, int, str]]:
+    def interpret_text(self, note_text: str) -> List[Tuple[int, int, str]]:
         cards: List[Tuple[int, int, str]] = []
         current_start: int | None = None
         current_lines: List[str] = []

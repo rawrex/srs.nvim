@@ -2,8 +2,8 @@ from dataclasses import dataclass
 
 from core import util
 
-IndexRowTuple = tuple[str, str, int, int]
-PathRows = dict[str, list[IndexRowTuple]]
+IndexEntryTuple = tuple[str, str, int, int]
+PathEntries = dict[str, list[IndexEntryTuple]]
 
 
 @dataclass(frozen=True)

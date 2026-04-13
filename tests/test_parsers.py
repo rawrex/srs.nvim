@@ -13,7 +13,7 @@ class _Parser(Parser):
     parser_id = ""
     priority = 0
 
-    def split_note_into_cards(self, note_text: str):
+    def interpret_text(self, note_text: str):
         return []
 
     def build_card(

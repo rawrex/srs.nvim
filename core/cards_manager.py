@@ -22,19 +22,18 @@ class CardsManager:
     def __init__(self, repo_root: str, parser_registry: ParserRegistry) -> None:
         self.repo_root = repo_root
         self.parser_registry = parser_registry
+        self.index = Index(path=os.path.join(self.repo_root, ".srs", "index.txt"), parser_registry=self.parser_registry)
 
     def load_due_cards(self) -> list[DueCard]:
         now = datetime.now(timezone.utc)
-        index_rows = Index(
-            path=os.path.join(self.repo_root, ".srs", "index.txt"), parser_registry=self.parser_registry
-        ).read_rows()
+        index_entries = self.index.load_entries()
 
         claimed_lines_by_note: dict[str, set[int]] = {}
-        for entry in index_rows:
+        for entry in index_entries:
             note_path = self._note_abs_path(entry.note_path)
             claimed_lines_by_note.setdefault(note_path, set()).update(range(entry.start_line, entry.end_line + 1))
 
-        cards_with_paths, note_context_blocks = self._build_cards_with_note_context(index_rows)
+        cards_with_paths, note_context_blocks = self._build_cards_with_note_context(index_entries)
         self._add_unclaimed_note_context(note_context_blocks, claimed_lines_by_note)
         return self._filter_due_cards(cards_with_paths, note_context_blocks, now)
 

@@ -7,9 +7,9 @@ from rich.markdown import Markdown
 from core.card import REVEAL_ALL_LABEL, RevealMode, SchedulerCard
 from core.config import ReviewConfig
 from core.index.model import IndexEntry
-from packs.cloze import ClozeCard, ClozeParser, mask_hidden_text, parse_note_clozes
 from core.index.storage import Metadata
 from core.ui import ReviewUI
+from packs.cloze import ClozeCard, ClozeParser, mask_hidden_text, parse_note_clozes
 
 
 class FakeConsole:
@@ -186,10 +186,10 @@ class ClozePackTest(unittest.TestCase):
         self.assertEqual(["A ", " B"], text_parts)
         self.assertEqual(["one"], clozes)
 
-    def test_split_note_into_cards_maps_each_cloze_line_to_a_card(self) -> None:
+    def test_interpret_text_maps_each_cloze_line_to_a_card(self) -> None:
         note_text = "A\n  ~{B}\n    C\n~{D}\n\nE ~{F}\n"
         parser = ClozeParser(reveal_mode=RevealMode.WHOLE, cloze_open="~{", cloze_close="}", mask_char="▇")
-        cards = parser.split_note_into_cards(note_text)
+        cards = parser.interpret_text(note_text)
         self.assertEqual([(2, 2, "  ~{B}\n"), (4, 4, "~{D}\n"), (6, 6, "E ~{F}\n")], cards)
 
     def test_suggested_rating_supports_single_cloze_cards(self) -> None:

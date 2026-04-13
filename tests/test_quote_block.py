@@ -2,8 +2,8 @@ import unittest
 
 from core.card import REVEAL_ALL_LABEL, SchedulerCard
 from core.index.model import IndexEntry
-from packs.quote_block import QuoteBlockCard, QuoteBlockParser
 from core.index.storage import Metadata
+from packs.quote_block import QuoteBlockCard, QuoteBlockParser
 
 
 class QuoteBlockPackTest(unittest.TestCase):
@@ -27,7 +27,7 @@ class QuoteBlockPackTest(unittest.TestCase):
         note_text = "Intro\n>[!code]- Example\n>```cpp\n>int x = 1;\n>```\nEnd\n"
         parser = QuoteBlockParser()
 
-        cards = parser.split_note_into_cards(note_text)
+        cards = parser.interpret_text(note_text)
 
         self.assertEqual([(2, 5, ">[!code]- Example\n>```cpp\n>int x = 1;\n>```\n")], cards)
 
@@ -35,7 +35,7 @@ class QuoteBlockPackTest(unittest.TestCase):
         note_text = "Intro\n >[!code]- Example\n >```cpp\n >int x = 1;\n >```\nEnd\n"
         parser = QuoteBlockParser()
 
-        cards = parser.split_note_into_cards(note_text)
+        cards = parser.interpret_text(note_text)
 
         self.assertEqual([(2, 5, " >[!code]- Example\n >```cpp\n >int x = 1;\n >```\n")], cards)
 

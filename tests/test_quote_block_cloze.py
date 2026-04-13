@@ -22,7 +22,7 @@ class QuoteBlockClozePackTest(unittest.TestCase):
         note_text = "Intro\n> plain quote\n> still plain\nMiddle\n> quoted start\n> includes ~{cloze}\nEnd\n"
         parser = QuoteBlockClozeParser(reveal_mode=RevealMode.WHOLE, cloze_open="~{", cloze_close="}", mask_char="▇")
 
-        cards = parser.split_note_into_cards(note_text)
+        cards = parser.interpret_text(note_text)
 
         self.assertEqual([(5, 6, "> quoted start\n> includes ~{cloze}\n")], cards)
 
@@ -30,7 +30,7 @@ class QuoteBlockClozePackTest(unittest.TestCase):
         note_text = "Intro\n > plain quote\n > still plain\nMiddle\n > quoted start\n > includes ~{cloze}\nEnd\n"
         parser = QuoteBlockClozeParser(reveal_mode=RevealMode.WHOLE, cloze_open="~{", cloze_close="}", mask_char="▇")
 
-        cards = parser.split_note_into_cards(note_text)
+        cards = parser.interpret_text(note_text)
 
         self.assertEqual([(5, 6, " > quoted start\n > includes ~{cloze}\n")], cards)
 
