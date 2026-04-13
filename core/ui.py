@@ -4,6 +4,7 @@ import shutil
 import signal
 import subprocess
 import sys
+from pathlib import Path
 
 from fsrs import Rating
 from rich.console import Console
@@ -13,6 +14,7 @@ from core.card import Card, CardView
 from core.config import ReviewConfig
 
 WIKI_IMAGE_RE = re.compile(r"!\[\[[^\]]+\]\]")
+SESSION_LOGO_PATH = Path(__file__).with_name("session_logo.txt")
 
 
 class ReviewUI:
@@ -264,12 +266,14 @@ class ReviewUI:
 class SessionEntryUI:
     def __init__(self, console: Console) -> None:
         self.console = console
+        self.session_logo = self._load_session_logo()
 
     def show_start_menu(self, due_cards_count: int) -> None:
         while True:
             self._clear_screen()
-            self.console.print(f"Due cards: {due_cards_count}")
+            self.console.print(self.session_logo, markup=False, highlight=False)
             self.console.print("")
+            self.console.print(f"Due cards: {due_cards_count}")
             self.console.print("Press Enter to start")
 
             key = read_single_key()
@@ -280,6 +284,9 @@ class SessionEntryUI:
 
     def _clear_screen(self) -> None:
         os.system("cls" if os.name == "nt" else "clear")
+
+    def _load_session_logo(self) -> str:
+        return SESSION_LOGO_PATH.read_text(encoding="utf-8").rstrip("\n")
 
 
 def read_single_key() -> str:
