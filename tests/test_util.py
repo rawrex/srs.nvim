@@ -45,7 +45,3 @@ class UtilTest(unittest.TestCase):
         self.assertEqual({"/old.md": "/new.md"}, renames)
         self.assertEqual({"/gone.md"}, deletes)
         self.assertEqual({"/copied.md", "/added.md"}, adds)
-
-
-if __name__ == "__main__":
-    unittest.main()

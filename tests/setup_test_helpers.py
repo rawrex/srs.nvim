@@ -10,6 +10,14 @@ INSTALL_SCRIPT = REPO_ROOT / "setup" / "install.py"
 UNINSTALL_SCRIPT = REPO_ROOT / "setup" / "uninstall.py"
 
 
+class FakeConsole:
+    def __init__(self) -> None:
+        self.printed: list[tuple[object, dict[str, object]]] = []
+
+    def print(self, value: object, *args: object, **kwargs: object) -> None:
+        self.printed.append((value, dict(kwargs)))
+
+
 def run_command(args: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
     result = subprocess.run(args, cwd=cwd, text=True, capture_output=True)
     if result.returncode != 0:

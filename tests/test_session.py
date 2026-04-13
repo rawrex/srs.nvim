@@ -17,7 +17,7 @@ class _DummyUI:
 
 
 class ReviewSessionTest(unittest.TestCase):
-    def test_init_builds_scheduler_from_config(self) -> None:
+    def test_init_uses_scheduler_passed_to_session(self) -> None:
         config = ReviewConfig(
             scheduler_parameters=(
                 0.5,
@@ -97,7 +97,3 @@ class ReviewSessionTest(unittest.TestCase):
             self.assertNotIn("[a]", blocks[(2, 2)])
             self.assertIn("▇▇▇▇▇▇", blocks[(2, 2)])
             self.assertEqual("Tail line\n", blocks[(3, 3)])
-
-
-if __name__ == "__main__":
-    unittest.main()

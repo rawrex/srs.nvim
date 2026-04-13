@@ -10,14 +10,7 @@ from core.index.model import IndexEntry
 from core.index.storage import Metadata
 from core.ui import ReviewUI
 from packs.cloze import ClozeCard, ClozeParser, mask_hidden_text, parse_note_clozes
-
-
-class FakeConsole:
-    def __init__(self) -> None:
-        self.printed = []
-
-    def print(self, value, *args, **kwargs) -> None:
-        self.printed.append((value, kwargs))
+from tests.setup_test_helpers import FakeConsole
 
 
 class ClozePackTest(unittest.TestCase):
@@ -221,7 +214,3 @@ class ClozePackTest(unittest.TestCase):
         card.reveal_for_label("a")
 
         self.assertEqual(Rating.Easy, card.suggested_rating())
-
-
-if __name__ == "__main__":
-    unittest.main()

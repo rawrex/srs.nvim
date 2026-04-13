@@ -84,7 +84,7 @@ class HandlerTest(unittest.TestCase):
             {"/notes/top.md", "/notes/sub/deep/deep.md"}, repo_root="/repo"
         )
 
-    def test_apply_ref_diff_ignores_eol_whitespace_noise(self) -> None:
+    def test_apply_ref_diff_applies_diff_and_syncs_repeat_scan(self) -> None:
         handler = Handler("/repo")
         index = Mock()
 
@@ -114,7 +114,3 @@ class HandlerTest(unittest.TestCase):
         self.assertEqual(
             call(["diff", "--cached", "--name-status", "-M", "-C", "--root"], cwd="/repo"), run_git.call_args_list[0]
         )
-
-
-if __name__ == "__main__":
-    unittest.main()

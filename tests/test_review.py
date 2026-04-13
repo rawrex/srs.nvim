@@ -170,7 +170,3 @@ class ReviewConfigTest(unittest.TestCase):
             config = load_review_config(repo_root)
 
         self.assertEqual(Scheduler().to_dict(), config.build_scheduler().to_dict())
-
-
-if __name__ == "__main__":
-    unittest.main()

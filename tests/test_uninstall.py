@@ -49,7 +49,3 @@ class UninstallIntegrationTest(unittest.TestCase):
             uninstall_system(repo_dir)
 
             self.assertTrue(hook_path.exists())
-
-
-if __name__ == "__main__":
-    unittest.main()

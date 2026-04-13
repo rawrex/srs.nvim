@@ -207,7 +207,3 @@ class HooksInstallIntegrationTest(unittest.TestCase):
             self.assertEqual(self._read_index_rows(repo_dir), [])
             for card_id, _path, _parser_id, _start_line, _end_line in rows:
                 self.assertFalse((srs_dir / f"{card_id}.json").exists())
-
-
-if __name__ == "__main__":
-    unittest.main()

@@ -16,9 +16,7 @@ class _Parser(Parser):
     def interpret_text(self, note_text: str):
         return []
 
-    def build_card(
-        self, note_id: str, note_path: str, note_text: str, start_line: int, end_line: int, card_path: str, metadata
-    ):
+    def build_card(self, note_text: str, index_entry, metadata):
         raise NotImplementedError
 
 
@@ -86,7 +84,3 @@ class ParsersTest(unittest.TestCase):
             _load_registered_packs(registry, ReviewConfig())
 
         register_pack.assert_called_once_with(registry, ReviewConfig())
-
-
-if __name__ == "__main__":
-    unittest.main()

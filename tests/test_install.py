@@ -94,7 +94,3 @@ class InstallDiscoveryTest(unittest.TestCase):
             self.assertEqual(
                 ["/notes/keep.md", "/notes/skip/reenabled/again.md"], find_repeat_tracked_paths(str(repo_dir))
             )
-
-
-if __name__ == "__main__":
-    unittest.main()

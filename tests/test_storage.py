@@ -47,7 +47,3 @@ class StorageTest(unittest.TestCase):
                 stored = json.load(handle)
             self.assertIn(REVIEW_LOGS_KEY, stored)
             self.assertEqual(1, len(stored[REVIEW_LOGS_KEY]))
-
-
-if __name__ == "__main__":
-    unittest.main()

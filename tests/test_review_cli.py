@@ -57,7 +57,3 @@ class ReviewCliTest(unittest.TestCase):
 
         self.assertEqual(0, code)
         print_mock.assert_called_once_with("\nExit.")
-
-
-if __name__ == "__main__":
-    unittest.main()

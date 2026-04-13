@@ -218,7 +218,3 @@ class ReviewSessionRunTest(unittest.TestCase):
 
         self.assertEqual(0, code)
         session_entry_ui.show_start_menu.assert_called_once_with(2, 2)
-
-
-if __name__ == "__main__":
-    unittest.main()

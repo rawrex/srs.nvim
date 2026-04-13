@@ -18,25 +18,11 @@ class QuoteBlockClozePackTest(unittest.TestCase):
             end_line=end_line,
         )
 
-    def test_parser_claims_only_quoted_blocks_with_clozes(self) -> None:
-        note_text = "Intro\n> plain quote\n> still plain\nMiddle\n> quoted start\n> includes ~{cloze}\nEnd\n"
-        parser = QuoteBlockClozeParser(reveal_mode=RevealMode.WHOLE, cloze_open="~{", cloze_close="}", mask_char="▇")
+    def _parser(self) -> QuoteBlockClozeParser:
+        return QuoteBlockClozeParser(reveal_mode=RevealMode.WHOLE, cloze_open="~{", cloze_close="}", mask_char="▇")
 
-        cards = parser.interpret_text(note_text)
-
-        self.assertEqual([(5, 6, "> quoted start\n> includes ~{cloze}\n")], cards)
-
-    def test_parser_claims_indented_quoted_blocks_with_clozes(self) -> None:
-        note_text = "Intro\n > plain quote\n > still plain\nMiddle\n > quoted start\n > includes ~{cloze}\nEnd\n"
-        parser = QuoteBlockClozeParser(reveal_mode=RevealMode.WHOLE, cloze_open="~{", cloze_close="}", mask_char="▇")
-
-        cards = parser.interpret_text(note_text)
-
-        self.assertEqual([(5, 6, " > quoted start\n > includes ~{cloze}\n")], cards)
-
-    def test_card_uses_label_to_open_block_and_labels_for_clozes(self) -> None:
-        block_text = ">[!code]- Example\n>let x = ~{1};\n"
-        card = QuoteBlockClozeCard(
+    def _card(self, block_text: str) -> QuoteBlockClozeCard:
+        return QuoteBlockClozeCard(
             note_text=block_text,
             index_entry=self._entry(),
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
@@ -45,6 +31,26 @@ class QuoteBlockClozePackTest(unittest.TestCase):
             cloze_close="}",
             mask_char="▇",
         )
+
+    def test_parser_claims_quoted_blocks_with_clozes_for_indented_and_unindented_quotes(self) -> None:
+        parser = self._parser()
+        cases = [
+            (
+                "Intro\n> plain quote\n> still plain\nMiddle\n> quoted start\n> includes ~{cloze}\nEnd\n",
+                [(5, 6, "> quoted start\n> includes ~{cloze}\n")],
+            ),
+            (
+                "Intro\n > plain quote\n > still plain\nMiddle\n > quoted start\n > includes ~{cloze}\nEnd\n",
+                [(5, 6, " > quoted start\n > includes ~{cloze}\n")],
+            ),
+        ]
+        for note_text, expected in cases:
+            with self.subTest(note_text=note_text.splitlines()[1]):
+                self.assertEqual(expected, parser.interpret_text(note_text))
+
+    def test_card_uses_label_to_open_block_and_labels_for_clozes(self) -> None:
+        block_text = ">[!code]- Example\n>let x = ~{1};\n"
+        card = self._card(block_text)
 
         question = card.question_view().primary_block().text
         self.assertEqual(">[a] Example\n>\n", question)
@@ -67,15 +73,7 @@ class QuoteBlockClozePackTest(unittest.TestCase):
 
     def test_suggested_rating_for_quote_block_cloze_uses_only_clozes(self) -> None:
         block_text = ">[!code]- Example\n>let x = ~{ab}; and y = ~{cd};\n"
-        card = QuoteBlockClozeCard(
-            note_text=block_text,
-            index_entry=self._entry(),
-            metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
-            reveal_mode=RevealMode.WHOLE,
-            cloze_open="~{",
-            cloze_close="}",
-            mask_char="▇",
-        )
+        card = self._card(block_text)
 
         card.reveal_for_label("a")
         card.reveal_for_label("b")
@@ -85,15 +83,7 @@ class QuoteBlockClozePackTest(unittest.TestCase):
 
     def test_context_view_hides_labels_and_keeps_block_closed(self) -> None:
         block_text = ">[!code]- Example\n>let x = ~{1};\n"
-        card = QuoteBlockClozeCard(
-            note_text=block_text,
-            index_entry=self._entry(),
-            metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
-            reveal_mode=RevealMode.WHOLE,
-            cloze_open="~{",
-            cloze_close="}",
-            mask_char="▇",
-        )
+        card = self._card(block_text)
 
         context = card.context_view().primary_block().text
 
@@ -104,20 +94,8 @@ class QuoteBlockClozePackTest(unittest.TestCase):
 
     def test_answer_view_keeps_revealed_callout_content(self) -> None:
         block_text = ">[!code]- Example\n>let x = ~{1};\n"
-        card = QuoteBlockClozeCard(
-            note_text=block_text,
-            index_entry=self._entry(),
-            metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
-            reveal_mode=RevealMode.WHOLE,
-            cloze_open="~{",
-            cloze_close="}",
-            mask_char="▇",
-        )
+        card = self._card(block_text)
 
         answer = card.answer_view().primary_block().text
 
         self.assertEqual(">Example\n>\n>let x = `1`;\n", answer)
-
-
-if __name__ == "__main__":
-    unittest.main()

@@ -72,7 +72,3 @@ class HooksCliTest(unittest.TestCase):
 
         self.assertEqual(0, code)
         handler.handle_post_rewrite.assert_called_once()
-
-
-if __name__ == "__main__":
-    unittest.main()

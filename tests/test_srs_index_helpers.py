@@ -19,9 +19,7 @@ class _StaticParser(Parser):
     def interpret_text(self, note_text: str):
         return list(self._rows)
 
-    def build_card(
-        self, note_id: str, note_path: str, note_text: str, start_line: int, end_line: int, card_path: str, metadata
-    ):
+    def build_card(self, note_text, index_entry, metadata):
         raise NotImplementedError
 
 
@@ -29,12 +27,16 @@ class SrsIndexHelperTest(unittest.TestCase):
     def _index(self, index_path: str) -> Index:
         return Index(index_path, parser_registry=ParserRegistry(parsers={}))
 
+    def _create_index_path(self, repo_root: str) -> str:
+        index_path = os.path.join(repo_root, ".srs", "index.txt")
+        os.makedirs(os.path.dirname(index_path), exist_ok=True)
+        with open(index_path, "w", encoding="utf-8"):
+            pass
+        return index_path
+
     def test_index_parse_parses_valid_row_and_rejects_invalid(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
-            index_path = os.path.join(repo_root, ".srs", "index.txt")
-            os.makedirs(os.path.dirname(index_path), exist_ok=True)
-            with open(index_path, "w", encoding="utf-8"):
-                pass
+            index_path = self._create_index_path(repo_root)
             index = self._index(index_path)
 
         row = index._parse("'1','/note.md','cloze','2','3'\n")
@@ -48,12 +50,9 @@ class SrsIndexHelperTest(unittest.TestCase):
         self.assertEqual(3, row.end_line)
         self.assertIsNone(index._parse("bad-row"))
 
-    def test_collect_parser_rows_uses_priority_and_skips_overlaps(self) -> None:
+    def test_collect_parsed_blocks_uses_priority_and_skips_overlaps(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
-            index_path = os.path.join(repo_root, ".srs", "index.txt")
-            os.makedirs(os.path.dirname(index_path), exist_ok=True)
-            with open(index_path, "w", encoding="utf-8"):
-                pass
+            index_path = self._create_index_path(repo_root)
 
             note_path = os.path.join(repo_root, "note.md")
             with open(note_path, "w", encoding="utf-8") as handle:
@@ -71,10 +70,7 @@ class SrsIndexHelperTest(unittest.TestCase):
 
     def test_read_note_text_returns_none_for_missing_and_raises_for_bad_utf8(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
-            index_path = os.path.join(repo_root, ".srs", "index.txt")
-            os.makedirs(os.path.dirname(index_path), exist_ok=True)
-            with open(index_path, "w", encoding="utf-8"):
-                pass
+            index_path = self._create_index_path(repo_root)
             index = self._index(index_path)
 
             self.assertIsNone(index.read_note_text("/missing.md"))
@@ -86,12 +82,9 @@ class SrsIndexHelperTest(unittest.TestCase):
             with self.assertRaises(UnicodeDecodeError):
                 index.read_note_text("/bad.md")
 
-    def test_collect_parser_rows_skips_bad_utf8_note(self) -> None:
+    def test_collect_parsed_blocks_skips_bad_utf8_note(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
-            index_path = os.path.join(repo_root, ".srs", "index.txt")
-            os.makedirs(os.path.dirname(index_path), exist_ok=True)
-            with open(index_path, "w", encoding="utf-8"):
-                pass
+            index_path = self._create_index_path(repo_root)
             index = self._index(index_path)
 
             bad_path = os.path.join(repo_root, "bad.md")
@@ -102,32 +95,23 @@ class SrsIndexHelperTest(unittest.TestCase):
 
     def test_repo_root_resolves_from_index_path(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
-            index_path = os.path.join(repo_root, ".srs", "index.txt")
-            os.makedirs(os.path.dirname(index_path), exist_ok=True)
-            with open(index_path, "w", encoding="utf-8"):
-                pass
+            index_path = self._create_index_path(repo_root)
             index = self._index(index_path)
 
             self.assertEqual(repo_root, index.repo_root())
 
     def test_index_file_path_is_repo_relative_and_normalized(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
-            index_path = os.path.join(repo_root, ".srs", "index.txt")
-            os.makedirs(os.path.dirname(index_path), exist_ok=True)
-            with open(index_path, "w", encoding="utf-8"):
-                pass
+            index_path = self._create_index_path(repo_root)
 
             index = self._index(index_path)
 
             self.assertEqual("/.srs/index.txt", index.index_file_path())
 
-    def test_add_missing_and_remove_card_row_manage_card_file(self) -> None:
+    def test_add_missing_and_remove_card_file_manage_card_file(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
-            index_path = os.path.join(repo_root, ".srs", "index.txt")
+            index_path = self._create_index_path(repo_root)
             srs_dir = os.path.dirname(index_path)
-            os.makedirs(srs_dir, exist_ok=True)
-            with open(index_path, "w", encoding="utf-8"):
-                pass
 
             note_path = os.path.join(repo_root, "note.md")
             with open(note_path, "w", encoding="utf-8") as handle:
@@ -160,7 +144,3 @@ class SrsIndexHelperTest(unittest.TestCase):
             self.assertFalse(os.path.exists(os.path.join(srs_dir, f"{note_id}.json")))
 
             self.assertIsNone(index.remove_card_file(note_id))
-
-
-if __name__ == "__main__":
-    unittest.main()
