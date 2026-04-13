@@ -44,7 +44,14 @@ class CardsManager:
 
         for entry in index_entries:
             note_path = self._note_abs_path(entry.note_path)
-            parser_blocks = self._read_parser_blocks(note_path, entry.parser_id)
+
+            with open(note_path, "r", encoding="utf-8") as handle:
+                note_text = handle.read()
+            parser = self.parser_registry.get(entry.parser_id)
+            parser_blocks = {
+                (start_line, end_line): block for start_line, end_line, block in parser.interpret_text(note_text)
+            }
+
             note_text = parser_blocks.get((entry.start_line, entry.end_line))
             if note_text is None:
                 continue
@@ -88,12 +95,6 @@ class CardsManager:
 
     def _note_abs_path(self, indexed_path: str) -> str:
         return os.path.join(self.repo_root, indexed_path.lstrip("/"))
-
-    def _read_parser_blocks(self, path: str, parser_id: str) -> dict[LineRange, str]:
-        with open(path, "r", encoding="utf-8") as handle:
-            note_text = handle.read()
-        parser = self.parser_registry.get(parser_id)
-        return {(start_line, end_line): block for start_line, end_line, block in parser.interpret_text(note_text)}
 
     def _read_unclaimed_line_blocks(self, note_path: str, claimed_lines: set[int]) -> dict[LineRange, str]:
         with open(note_path, "r", encoding="utf-8") as handle:
