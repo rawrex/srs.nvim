@@ -121,7 +121,7 @@ class SrsIndexHelperTest(unittest.TestCase):
 
             self.assertEqual("/.srs/index.txt", index.index_file_path())
 
-    def test_create_and_remove_card_row_manage_card_file(self) -> None:
+    def test_add_missing_and_remove_card_row_manage_card_file(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
             index_path = os.path.join(repo_root, ".srs", "index.txt")
             srs_dir = os.path.dirname(index_path)
@@ -129,14 +129,29 @@ class SrsIndexHelperTest(unittest.TestCase):
             with open(index_path, "w", encoding="utf-8"):
                 pass
 
-            index = self._index(index_path)
+            note_path = os.path.join(repo_root, "note.md")
+            with open(note_path, "w", encoding="utf-8") as handle:
+                handle.write("one\ntwo\nthree\nfour\n")
 
-            row, card_path = index.create_card_entry("cloze", 2, 4)
-            note_id, parser_id, start_line, end_line = row
+            parser_registry = ParserRegistry(parsers={})
+            parser_registry.register(_StaticParser(parser_id="cloze", priority=0, rows=[(2, 4, "two\nthree\nfour\n")]))
 
-            self.assertEqual("cloze", parser_id)
-            self.assertEqual(2, start_line)
-            self.assertEqual(4, end_line)
+            index = Index(index_path, parser_registry=parser_registry)
+
+            added = index.add_missing_tracked_paths({"/note.md"})
+            self.assertEqual(1, added)
+
+            entries = index.load_entries()
+            self.assertEqual(1, len(entries))
+            row = entries[0]
+            note_id = row.card_id
+
+            card_path = index.card_path(note_id)
+
+            self.assertEqual("/note.md", row.note_path)
+            self.assertEqual("cloze", row.parser_id)
+            self.assertEqual(2, row.start_line)
+            self.assertEqual(4, row.end_line)
             self.assertEqual(index.card_path(note_id), card_path)
             self.assertTrue(os.path.exists(os.path.join(srs_dir, f"{note_id}.json")))
 
