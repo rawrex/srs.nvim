@@ -49,18 +49,15 @@ class CardsManager:
                 note_text = handle.read()
             parser = self.parser_registry.get(entry.parser_id)
             parser_blocks = {
-                (start_line, end_line): block for start_line, end_line, block in parser.interpret_text(note_text)
+                (line_start, line_end): block for line_start, line_end, block in parser.interpret_text(note_text)
             }
 
-            note_text = parser_blocks.get((entry.start_line, entry.end_line))
-            if note_text is None:
-                continue
-
-            card = self._build_card(note_text=note_text, index_entry=entry)
-            note_context_blocks.setdefault(note_path, {})[(entry.start_line, entry.end_line)] = (
-                card.context_view().primary_block().text
-            )
-            cards_with_paths.append((card, note_path))
+            if note_text := parser_blocks.get((entry.start_line, entry.end_line)):
+                card = self._build_card(note_text=note_text, index_entry=entry)
+                note_context_blocks.setdefault(note_path, {})[(entry.start_line, entry.end_line)] = (
+                    card.context_view().primary_block().text
+                )
+                cards_with_paths.append((card, note_path))
 
         return cards_with_paths, note_context_blocks
 
