@@ -27,14 +27,16 @@ def main() -> int:
         parser_registry = build_parser_registry(config)
         ui = ReviewUI(config=config, console=Console())
         session_entry_ui = SessionEntryUI(console=ui.console)
+
         session = ReviewSession(
-            repo_root=repo_root,
             ui=ui,
+            repo_root=repo_root,
             parser_registry=parser_registry,
             session_entry_ui=session_entry_ui,
             scheduler=config.build_scheduler(),
         )
         return session.run()
+
     except KeyboardInterrupt:
         print("\nExit.")
         return 0
