@@ -152,12 +152,13 @@ class ReviewUiRatingTest(unittest.TestCase):
 class SessionEntryUiTest(unittest.TestCase):
     def test_show_start_menu_returns_on_enter(self) -> None:
         console = FakeConsole()
-        ui = SessionEntryUI(console=console)  # type: ignore[arg-type]
+        with patch.object(SessionEntryUI, "_load_session_logo", return_value="ASCII LOGO"):
+            ui = SessionEntryUI(console=console)  # type: ignore[arg-type]
 
         with patch("core.ui.os.system", return_value=0), patch("core.ui.read_single_key", return_value="\n"):
             ui.show_start_menu(due_cards_count=3)
 
-        self.assertIn(("Session", {}), console.printed)
+        self.assertIn(("ASCII LOGO", {"markup": False, "highlight": False}), console.printed)
         self.assertIn(("Due cards: 3", {}), console.printed)
         printed_lines = [value for value, _kwargs in console.printed if isinstance(value, str)]
         self.assertFalse(any(line.startswith("Estimated time:") for line in printed_lines))
