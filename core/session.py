@@ -15,7 +15,7 @@ class ReviewSession:
         ui: ReviewUI,
         repo_root: str,
         parser_registry: ParserRegistry,
-        session_entry_ui: SessionEntryUI | None,
+        session_entry_ui: SessionEntryUI,
         scheduler: Scheduler,
     ) -> None:
         self.repo_root = repo_root
