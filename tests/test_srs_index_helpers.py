@@ -68,7 +68,7 @@ class SrsIndexHelperTest(unittest.TestCase):
 
         self.assertEqual([("high", 1, 2), ("low", 3, 3)], rows)
 
-    def test_read_note_text_returns_none_for_missing_and_raises_for_bad_utf8(self) -> None:
+    def test_read_note_text_returns_none_for_missing_and_bad_utf8(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
             index_path = self._create_index_path(repo_root)
             index = self._index(index_path)
@@ -79,8 +79,7 @@ class SrsIndexHelperTest(unittest.TestCase):
             with open(bad_path, "wb") as handle:
                 handle.write(b"\xff\xfe")
 
-            with self.assertRaises(UnicodeDecodeError):
-                index.read_note_text("/bad.md")
+            self.assertIsNone(index.read_note_text("/bad.md"))
 
     def test_collect_parsed_blocks_skips_bad_utf8_note(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
