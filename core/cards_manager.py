@@ -1,4 +1,3 @@
-import math
 import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -36,20 +35,6 @@ class CardsManager:
         cards_with_paths, note_context_blocks = self._build_cards_with_note_context(index_entries)
         self._add_unclaimed_note_context(note_context_blocks, claimed_lines_by_note)
         return self._filter_due_cards(cards_with_paths, note_context_blocks, now)
-
-    def estimate_due_cards_duration_minutes(self, due_cards: list[DueCard]) -> int | None:
-        total_duration_ms = 0
-        for due_card in due_cards:
-            card = due_card.card
-            if not card.metadata.review_logs:
-                return None
-            latest_review_log = card.metadata.review_logs[-1]
-            review_duration = getattr(latest_review_log, "review_duration", None)
-            if not isinstance(review_duration, int):
-                return None
-            total_duration_ms += review_duration
-
-        return math.ceil(total_duration_ms / 60_000)
 
     def _build_cards_with_note_context(
         self, index_entries: list[IndexEntry]

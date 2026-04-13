@@ -265,13 +265,10 @@ class SessionEntryUI:
     def __init__(self, console: Console) -> None:
         self.console = console
 
-    def show_start_menu(self, due_cards_count: int, estimated_minutes: int | None) -> None:
+    def show_start_menu(self, due_cards_count: int) -> None:
         while True:
             self._clear_screen()
-            self.console.print("Session")
             self.console.print(f"Due cards: {due_cards_count}")
-            if estimated_minutes:
-                self.console.print(f"Estimated time: {estimated_minutes} min")
             self.console.print("")
             self.console.print("Press Enter to start")
 

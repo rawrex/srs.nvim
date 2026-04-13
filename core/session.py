@@ -36,8 +36,7 @@ class ReviewSession:
 
         total = len(cards)
         if self.session_entry_ui:
-            estimated_minutes = self.cards_manager.estimate_due_cards_duration_minutes(cards)
-            self.session_entry_ui.show_start_menu(total, estimated_minutes)
+            self.session_entry_ui.show_start_menu(total)
         for idx, due_card in enumerate(cards, start=1):
             card = due_card.card
             note_context_blocks = due_card.note_context_blocks

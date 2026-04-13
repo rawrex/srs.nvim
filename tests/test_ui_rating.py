@@ -155,27 +155,19 @@ class SessionEntryUiTest(unittest.TestCase):
         ui = SessionEntryUI(console=console)  # type: ignore[arg-type]
 
         with patch("core.ui.os.system", return_value=0), patch("core.ui.read_single_key", return_value="\n"):
-            ui.show_start_menu(due_cards_count=3, estimated_minutes=None)
+            ui.show_start_menu(due_cards_count=3)
 
         self.assertIn(("Session", {}), console.printed)
         self.assertIn(("Due cards: 3", {}), console.printed)
-        self.assertNotIn(("Estimated time: n/a", {}), console.printed)
+        printed_lines = [value for value, _kwargs in console.printed if isinstance(value, str)]
+        self.assertFalse(any(line.startswith("Estimated time:") for line in printed_lines))
 
     def test_show_start_menu_reprompts_on_non_enter_key(self) -> None:
         console = FakeConsole()
         ui = SessionEntryUI(console=console)  # type: ignore[arg-type]
 
         with patch("core.ui.os.system", return_value=0), patch("core.ui.read_single_key", side_effect=["x", "\n"]):
-            ui.show_start_menu(due_cards_count=1, estimated_minutes=None)
+            ui.show_start_menu(due_cards_count=1)
 
         prompts = [value for value, _kwargs in console.printed if isinstance(value, str)]
         self.assertGreaterEqual(prompts.count("Press Enter to start"), 2)
-
-    def test_show_start_menu_shows_estimated_minutes_when_provided(self) -> None:
-        console = FakeConsole()
-        ui = SessionEntryUI(console=console)  # type: ignore[arg-type]
-
-        with patch("core.ui.os.system", return_value=0), patch("core.ui.read_single_key", return_value="\n"):
-            ui.show_start_menu(due_cards_count=3, estimated_minutes=7)
-
-        self.assertIn(("Estimated time: 7 min", {}), console.printed)

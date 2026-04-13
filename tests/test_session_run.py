@@ -16,11 +16,6 @@ class _DummyMetadata:
         self.review_logs: list[object] = []
 
 
-class _DummyReviewLog:
-    def __init__(self, review_duration: int) -> None:
-        self.review_duration = review_duration
-
-
 class _DummyIndexEntry:
     def __init__(self, card_id: str, note_path: str) -> None:
         self.card_id = card_id
@@ -130,7 +125,7 @@ class ReviewSessionRunTest(unittest.TestCase):
         self.assertEqual([log_2], card_2.metadata.review_logs)
         self.assertEqual(2, write_metadata.call_count)
         self.assertEqual(2, scheduler.review_card.call_count)
-        session_entry_ui.show_start_menu.assert_called_once_with(2, None)
+        session_entry_ui.show_start_menu.assert_called_once_with(2)
 
     def test_run_raises_interrupt_during_rating(self) -> None:
         with temporary_session_repo(with_index=True) as repo_root:
@@ -170,46 +165,4 @@ class ReviewSessionRunTest(unittest.TestCase):
                 with self.assertRaises(KeyboardInterrupt):
                     session.run()
 
-        session_entry_ui.show_start_menu.assert_called_once_with(2, None)
-
-    def test_run_passes_estimated_minutes_to_session_entry_ui(self) -> None:
-        with temporary_session_repo(with_index=True) as repo_root:
-            config = ReviewConfig()
-            ui = Mock()
-            session_entry_ui = Mock()
-            ui.prompt_rating_step.return_value = Rating.Good
-            ui.run_question_step.side_effect = ["answer1", "answer2"]
-
-            session = ReviewSession(
-                ui=ui,
-                repo_root=repo_root,
-                parser_registry=build_parser_registry(config),
-                session_entry_ui=session_entry_ui,
-                scheduler=config.build_scheduler(),
-            )
-
-            scheduler = Mock()
-            scheduler.review_card.side_effect = [(object(), object()), (object(), object())]
-            session.scheduler = scheduler
-
-            card_1 = _DummyCard("one.md", object(), "1")
-            card_2 = _DummyCard("two.md", object(), "2")
-            card_1.metadata.review_logs = [_DummyReviewLog(review_duration=30_000)]
-            card_2.metadata.review_logs = [_DummyReviewLog(review_duration=40_000)]
-
-            with (
-                patch.object(
-                    session.cards_manager,
-                    "load_due_cards",
-                    return_value=[
-                        DueCard(card=card_1, note_context_blocks={}),
-                        DueCard(card=card_2, note_context_blocks={}),
-                    ],
-                ),
-                patch("core.session.write_metadata"),
-                patch("core.session.time.monotonic_ns", side_effect=[0, 1_000_000, 2_000_000, 3_000_000]),
-            ):
-                code = session.run()
-
-        self.assertEqual(0, code)
-        session_entry_ui.show_start_menu.assert_called_once_with(2, 2)
+        session_entry_ui.show_start_menu.assert_called_once_with(2)
