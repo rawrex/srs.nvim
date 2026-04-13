@@ -2,9 +2,6 @@ from dataclasses import dataclass
 
 from core import util
 
-IndexEntryTuple = tuple[str, str, int, int]
-PathEntries = dict[str, list[IndexEntryTuple]]
-
 
 @dataclass(frozen=True)
 class DiffChangeSet:

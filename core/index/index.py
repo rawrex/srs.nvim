@@ -4,7 +4,7 @@ import re
 
 from core import util
 from core.card import SchedulerCard
-from core.index.model import DiffChangeSet, IndexEntry, IndexEntryTuple, IndexUpdateResult, PathEntries
+from core.index.model import DiffChangeSet, IndexEntry, IndexUpdateResult
 from core.index.storage import Metadata, write_metadata
 from core.parsers import ParserRegistry
 
@@ -33,7 +33,39 @@ class Index:
         return False
 
     def sync_tracked_paths(self, tracked_paths: set[str], repo_root: str) -> bool:
-        changed, touched_paths = self._sync_tracked_paths(tracked_paths)
+        lines = self._readlines()
+        updated: list[str] = []
+        changed = False
+        touched_paths: set[str] = set()
+
+        for line in lines:
+            entry = self._parse(line)
+            if entry is None:
+                updated.append(line)
+                continue
+            if not self._is_note_path(entry.note_path) or entry.note_path in tracked_paths:
+                updated.append(line)
+                continue
+
+            changed = True
+            removed_path = self.remove_card_file(entry.card_id)
+            if removed_path is not None:
+                touched_paths.add(removed_path)
+
+        grouped_entries = self._enries_by_path(updated)
+        for tracked_path in sorted(tracked_paths):
+            if not self._is_note_path(tracked_path) or tracked_path in grouped_entries:
+                continue
+            before_count = len(updated)
+            touched_paths.update(self._add_new(tracked_path, updated))
+            if len(updated) != before_count:
+                changed = True
+                grouped_entries[tracked_path] = [IndexEntry('', '', '', 0, 0)]
+
+        if changed:
+            self._write(updated)
+            touched_paths.add(self.index_file_path())
+
         if changed and repo_root:
             self._stage_paths(repo_root, touched_paths)
         return changed
@@ -93,7 +125,13 @@ class Index:
                 changed = True
                 updated.append(
                     self._format_entry(
-                        entry.card_id, renames[entry.note_path], entry.parser_id, entry.start_line, entry.end_line
+                        IndexEntry(
+                            card_id=entry.card_id,
+                            note_path=renames[entry.note_path],
+                            parser_id=entry.parser_id,
+                            start_line=entry.start_line,
+                            end_line=entry.end_line,
+                        )
                     )
                 )
                 continue
@@ -115,41 +153,6 @@ class Index:
 
         return lines, changed, touched_paths
 
-    def _sync_tracked_paths(self, tracked_paths: set[str]) -> tuple[bool, set[str]]:
-        lines = self._readlines()
-        updated: list[str] = []
-        changed = False
-        touched_paths: set[str] = set()
-
-        for line in lines:
-            entry = self._parse(line)
-            if entry is None:
-                updated.append(line)
-                continue
-            if not self._is_note_path(entry.note_path) or entry.note_path in tracked_paths:
-                updated.append(line)
-                continue
-
-            changed = True
-            removed_path = self.remove_card_file(entry.card_id)
-            if removed_path is not None:
-                touched_paths.add(removed_path)
-
-        grouped_entries = self._enries_by_path(updated)
-        for tracked_path in sorted(tracked_paths):
-            if not self._is_note_path(tracked_path) or tracked_path in grouped_entries:
-                continue
-            before_count = len(updated)
-            touched_paths.update(self._add_new(tracked_path, updated))
-            if len(updated) != before_count:
-                changed = True
-                grouped_entries[tracked_path] = [("", "", 0, 0)]
-
-        if changed:
-            self._write(updated)
-            touched_paths.add(self.index_file_path())
-        return changed, touched_paths
-
     def _stage_paths(self, repo_root: str, indexed_paths: set[str]) -> None:
         rel_paths = sorted(path.lstrip("/") for path in indexed_paths)
         if rel_paths:
@@ -168,9 +171,18 @@ class Index:
     def _add_new(self, new_path: str, updated: list[str]) -> set[str]:
         touched_card_paths: set[str] = set()
         for parser_id, start_line, end_line in self.collect_parsed_blocks(new_path):
-            entry, touched_path = self.create_card_entry(parser_id, start_line, end_line)
-            note_id, entry_parser_id, entry_start_line, entry_end_line = entry
-            updated.append(self._format_entry(note_id, new_path, entry_parser_id, entry_start_line, entry_end_line))
+            scheduler_card = SchedulerCard()
+            metadata = Metadata(scheduler_card=scheduler_card, review_logs=[])
+            card_id = str(scheduler_card.card_id)
+            card_path = self._card_abs_path(card_id)
+            write_metadata(card_path, metadata)
+            entry, touched_path = (
+                IndexEntry(
+                    card_id=card_id, note_path=new_path, parser_id=parser_id, start_line=start_line, end_line=end_line
+                ),
+                self.card_path(card_id),
+            )
+            updated.append(self._format_entry(entry))
             touched_card_paths.add(touched_path)
         return touched_card_paths
 
@@ -216,15 +228,6 @@ class Index:
 
         return sorted(selected, key=lambda entry: (entry[1], entry[2], entry[0]))
 
-    # TODO: remove the use of the IndexEntryTuple
-    def create_card_entry(self, parser_id: str, start_line: int, end_line: int) -> tuple[IndexEntryTuple, str]:
-        scheduler_card = SchedulerCard()
-        metadata = Metadata(scheduler_card=scheduler_card, review_logs=[])
-        card_id = str(scheduler_card.card_id)
-        card_path = self._card_abs_path(card_id)
-        write_metadata(card_path, metadata)
-        return (card_id, parser_id, start_line, end_line), self.card_path(card_id)
-
     def card_path(self, note_id: str) -> str:
         return f"/.srs/{note_id}.json"
 
@@ -241,13 +244,11 @@ class Index:
                 return handle.read()
         return None
 
-    def _enries_by_path(self, lines: list[str]) -> PathEntries:
-        grouped: PathEntries = {}
+    def _enries_by_path(self, lines: list[str]) -> dict[str, list[IndexEntry]]:
+        grouped: dict[str, list[IndexEntry]] = {}
         for line in lines:
             if entry := self._parse(line):
-                grouped.setdefault(entry.note_path, []).append(
-                    (entry.card_id, entry.parser_id, entry.start_line, entry.end_line)
-                )
+                grouped.setdefault(entry.note_path, []).append(entry)
         return grouped
 
     def _parse(self, raw_line: str) -> IndexEntry | None:
@@ -261,7 +262,7 @@ class Index:
             )
         return None
 
-    def _format_entry(self, note_id: str, indexed_path: str, parser_id: str, start_line: int, end_line: int) -> str:
-        return f"'{note_id}','{indexed_path}','{parser_id}','{start_line}','{end_line}'\n"
+    def _format_entry(self, entry: IndexEntry) -> str:
+        return f"'{entry.card_id}','{entry.note_path}','{entry.parser_id}','{entry.start_line}','{entry.end_line}'\n"
 
     __all__ = ["Index"]
