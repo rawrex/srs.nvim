@@ -206,10 +206,7 @@ class Index:
         return None
 
     def collect_parsed_blocks(self, indexed_path: str) -> list[tuple[str, int, int]]:
-        try:
-            note_text = self.read_note_text(indexed_path)
-        except UnicodeDecodeError:
-            return []
+        note_text = self.read_note_text(indexed_path)
         if note_text is None:
             return []
 
@@ -217,14 +214,13 @@ class Index:
         claimed_ranges: list[tuple[int, int]] = []
         for parser in self.parser_registry.ordered():
             cards = parser.interpret_text(note_text)
-            for start_line, end_line, _ in cards:
-                if any(
-                    not (end_line < claimed_start or start_line > claimed_end)
+            for line_start, line_end, _ in cards:
+                if not any(
+                    line_start <= claimed_end and line_end >= claimed_start
                     for claimed_start, claimed_end in claimed_ranges
                 ):
-                    continue
-                selected.append((parser.parser_id, start_line, end_line))
-                claimed_ranges.append((start_line, end_line))
+                    selected.append((parser.parser_id, line_start, line_end))
+                    claimed_ranges.append((line_start, line_end))
 
         return sorted(selected, key=lambda entry: (entry[1], entry[2], entry[0]))
 
@@ -241,7 +237,10 @@ class Index:
         note_path = os.path.join(self.repo_root(), indexed_path.lstrip("/"))
         if os.path.exists(note_path):
             with open(note_path, "r", encoding="utf-8") as handle:
-                return handle.read()
+                try:
+                    return handle.read()
+                except UnicodeDecodeError:
+                    return None
         return None
 
     def _enries_by_path(self, lines: list[str]) -> dict[str, list[IndexEntry]]:
