@@ -49,8 +49,8 @@ class ReviewSessionRunTest(unittest.TestCase):
             ui = Mock()
             config = ReviewConfig()
             session = ReviewSession(
-                repo_root=repo_root,
                 ui=ui,
+                repo_root=repo_root,
                 parser_registry=build_parser_registry(config),
                 session_entry_ui=None,
                 scheduler=config.build_scheduler(),
@@ -66,8 +66,8 @@ class ReviewSessionRunTest(unittest.TestCase):
             ui = Mock()
             config = ReviewConfig()
             session = ReviewSession(
-                repo_root=repo_root,
                 ui=ui,
+                repo_root=repo_root,
                 parser_registry=build_parser_registry(config),
                 session_entry_ui=None,
                 scheduler=config.build_scheduler(),
@@ -88,8 +88,8 @@ class ReviewSessionRunTest(unittest.TestCase):
             ui.run_question_step.side_effect = ["answer1", "answer2"]
 
             session = ReviewSession(
-                repo_root=repo_root,
                 ui=ui,
+                repo_root=repo_root,
                 parser_registry=build_parser_registry(config),
                 session_entry_ui=session_entry_ui,
                 scheduler=config.build_scheduler(),
@@ -141,8 +141,8 @@ class ReviewSessionRunTest(unittest.TestCase):
             ui.prompt_rating_step.side_effect = [Rating.Good, KeyboardInterrupt]
 
             session = ReviewSession(
-                repo_root=repo_root,
                 ui=ui,
+                repo_root=repo_root,
                 parser_registry=build_parser_registry(config),
                 session_entry_ui=session_entry_ui,
                 scheduler=config.build_scheduler(),
@@ -181,8 +181,8 @@ class ReviewSessionRunTest(unittest.TestCase):
             ui.run_question_step.side_effect = ["answer1", "answer2"]
 
             session = ReviewSession(
-                repo_root=repo_root,
                 ui=ui,
+                repo_root=repo_root,
                 parser_registry=build_parser_registry(config),
                 session_entry_ui=session_entry_ui,
                 scheduler=config.build_scheduler(),

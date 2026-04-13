@@ -50,8 +50,8 @@ class ReviewSessionTest(unittest.TestCase):
         )
 
         session = ReviewSession(
-            repo_root="/tmp/repo",
             ui=_DummyUI(),  # type: ignore[arg-type]
+            repo_root="/tmp/repo",
             parser_registry=build_parser_registry(config),
             session_entry_ui=None,
             scheduler=config.build_scheduler(),
@@ -76,8 +76,8 @@ class ReviewSessionTest(unittest.TestCase):
                 json.dump(json.loads(SchedulerCard().to_json()), handle)
 
             session = ReviewSession(
-                repo_root=repo_root,
                 ui=_DummyUI(),  # type: ignore[arg-type]
+                repo_root=repo_root,
                 parser_registry=build_parser_registry(ReviewConfig()),
                 session_entry_ui=None,
                 scheduler=ReviewConfig().build_scheduler(),

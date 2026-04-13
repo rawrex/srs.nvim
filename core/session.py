@@ -12,8 +12,8 @@ from core.ui import ReviewUI, SessionEntryUI
 class ReviewSession:
     def __init__(
         self,
-        repo_root: str,
         ui: ReviewUI,
+        repo_root: str,
         parser_registry: ParserRegistry,
         session_entry_ui: SessionEntryUI | None,
         scheduler: Scheduler,
