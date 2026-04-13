@@ -4,7 +4,6 @@ import time
 from fsrs import Scheduler
 
 from core.cards_manager import CardsManager
-from core.config import ReviewConfig
 from core.index.storage import write_metadata
 from core.parsers import ParserRegistry
 from core.ui import ReviewUI, SessionEntryUI
@@ -15,7 +14,6 @@ class ReviewSession:
         self,
         repo_root: str,
         ui: ReviewUI,
-        config: ReviewConfig,
         parser_registry: ParserRegistry,
         session_entry_ui: SessionEntryUI | None,
         scheduler: Scheduler,

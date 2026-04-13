@@ -9,9 +9,9 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from rich.console import Console
 
-from core.parsers import build_parser_registry
 from core import util
 from core.config import load_review_config
+from core.parsers import build_parser_registry
 from core.session import ReviewSession
 from core.ui import ReviewUI, SessionEntryUI
 
@@ -30,7 +30,6 @@ def main() -> int:
         session = ReviewSession(
             repo_root=repo_root,
             ui=ui,
-            config=config,
             parser_registry=parser_registry,
             session_entry_ui=session_entry_ui,
             scheduler=config.build_scheduler(),
