@@ -18,8 +18,8 @@ class ReviewSession:
         session_entry_ui: SessionEntryUI,
         scheduler: Scheduler,
     ) -> None:
-        self.repo_root = repo_root
         self.ui = ui
+        self.repo_root = repo_root
         self.session_entry_ui = session_entry_ui
         self.scheduler = scheduler
         self.cards_manager = CardsManager(repo_root=repo_root, parser_registry=parser_registry)
@@ -37,6 +37,7 @@ class ReviewSession:
         total = len(cards)
         if self.session_entry_ui:
             self.session_entry_ui.show_start_menu(total)
+
         for idx, due_card in enumerate(cards, start=1):
             card = due_card.card
             note_context_blocks = due_card.note_context_blocks

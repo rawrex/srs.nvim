@@ -3,7 +3,7 @@ from unittest.mock import Mock, patch
 
 from fsrs import Rating
 
-from core.cards_manager import DueCard
+from core.cards_manager import ReviewCard
 from core.config import ReviewConfig
 from core.parsers import build_parser_registry
 from core.session import ReviewSession
@@ -108,8 +108,8 @@ class ReviewSessionRunTest(unittest.TestCase):
                     session.cards_manager,
                     "load_due_cards",
                     return_value=[
-                        DueCard(card=card_1, note_context_blocks={}),
-                        DueCard(card=card_2, note_context_blocks={}),
+                        ReviewCard(card=card_1, note_context_blocks={}),
+                        ReviewCard(card=card_2, note_context_blocks={}),
                     ],
                 ),
                 patch("core.session.write_metadata") as write_metadata,
@@ -155,8 +155,8 @@ class ReviewSessionRunTest(unittest.TestCase):
                     session.cards_manager,
                     "load_due_cards",
                     return_value=[
-                        DueCard(card=card_1, note_context_blocks={}),
-                        DueCard(card=card_2, note_context_blocks={}),
+                        ReviewCard(card=card_1, note_context_blocks={}),
+                        ReviewCard(card=card_2, note_context_blocks={}),
                     ],
                 ),
                 patch("core.session.write_metadata"),

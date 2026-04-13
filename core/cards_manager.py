@@ -12,7 +12,7 @@ LineRange = tuple[int, int]
 
 
 @dataclass(frozen=True)
-class DueCard:
+class ReviewCard:
     card: Card
     note_context_blocks: dict[LineRange, str]
 
@@ -23,7 +23,7 @@ class CardsManager:
         self.parser_registry = parser_registry
         self.index = Index(path=os.path.join(self.repo_root, ".srs", "index.txt"), parser_registry=self.parser_registry)
 
-    def load_due_cards(self) -> list[DueCard]:
+    def load_due_cards(self) -> list[ReviewCard]:
         now = datetime.now(timezone.utc)
         index_entries = self.index.load_entries()
 
@@ -81,11 +81,11 @@ class CardsManager:
         cards_with_paths: list[tuple[Card, str]],
         note_context_blocks: dict[str, dict[LineRange, str]],
         now: datetime,
-    ) -> list[DueCard]:
-        due_cards: list[DueCard] = []
+    ) -> list[ReviewCard]:
+        due_cards: list[ReviewCard] = []
         for card, note_path in cards_with_paths:
             if card.is_due(now):
-                due_cards.append(DueCard(card=card, note_context_blocks=note_context_blocks.get(note_path, {})))
+                due_cards.append(ReviewCard(card=card, note_context_blocks=note_context_blocks.get(note_path, {})))
         return due_cards
 
     def _note_abs_path(self, indexed_path: str) -> str:
