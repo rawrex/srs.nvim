@@ -6,7 +6,6 @@ from core import util
 from core.card import Card
 from core.index.index import Index
 from core.index.model import IndexEntry
-from core.index.storage import read_metadata
 from core.parsers import ParserRegistry
 
 LineRange = tuple[int, int]
@@ -62,10 +61,7 @@ class CardsManager:
         return cards_with_paths, note_context_blocks
 
     def _build_card(self, note_text: str, index_entry: IndexEntry) -> Card:
-        card_path = os.path.join(util.get_srs_path(), f"{index_entry.card_id}.json")
-        with open(card_path, "r", encoding="utf-8") as handle:
-            raw_text = handle.read()
-        metadata = read_metadata(raw_text)
+        metadata = index_entry.read_metadata()
         parser = self.parser_registry.get(index_entry.parser_id)
         return parser.build_card(note_text=note_text, index_entry=index_entry, metadata=metadata)
 

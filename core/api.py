@@ -2,8 +2,7 @@ from abc import ABC, abstractmethod
 from typing import ClassVar, List, Tuple
 
 from core.card import Card
-from core.index.model import IndexEntry
-from core.index.storage import Metadata
+from core.index.model import IndexEntry, Metadata
 
 
 class Parser(ABC):

@@ -5,8 +5,7 @@ from typing import TYPE_CHECKING, ClassVar, List, Tuple
 from core.api import Parser
 from core.card import REVEAL_ALL_LABEL, Card, CardView
 from core.config import ReviewConfig
-from core.index.model import IndexEntry
-from core.index.storage import Metadata
+from core.index.model import IndexEntry, Metadata
 from packs.cloze import LABEL_CHARS, ClozeCard, ClozeParser
 from packs.quote_block import QuoteBlockCard, QuoteBlockParser
 

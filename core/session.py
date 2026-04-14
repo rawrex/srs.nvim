@@ -5,7 +5,6 @@ from fsrs import Scheduler
 
 from core import util
 from core.cards_manager import CardsManager
-from core.index.storage import write_metadata
 from core.parsers import ParserRegistry
 from core.ui import ReviewUI, SessionEntryUI
 
@@ -60,8 +59,7 @@ class ReviewSession:
             card.metadata.scheduler_card = updated_card
             card.metadata.review_logs.append(review_log)
 
-            # TODO shoeld be moved into the Card
-            write_metadata(os.path.join(util.get_srs_path(), f"{card.index_entry.card_id}.json"), card.metadata)
+            card.index_entry.write_metadata(card.metadata)
             self.ui.print_message("Saved")
 
         return 0

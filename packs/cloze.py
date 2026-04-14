@@ -10,8 +10,7 @@ from core.api import Parser
 from core.autograde import suggest_rating
 from core.card import REVEAL_ALL_LABEL, Card, CardView, RevealMode, ViewBlock
 from core.config import ReviewConfig
-from core.index.model import IndexEntry
-from core.index.storage import Metadata
+from core.index.model import IndexEntry, Metadata
 
 if TYPE_CHECKING:
     from core.parsers import ParserRegistry

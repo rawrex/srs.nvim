@@ -4,8 +4,7 @@ import re
 
 from core import util
 from core.card import SchedulerCard
-from core.index.model import DiffChangeSet, IndexEntry, IndexUpdateResult
-from core.index.storage import Metadata, write_metadata
+from core.index.model import DiffChangeSet, IndexEntry, IndexUpdateResult, Metadata
 from core.parsers import ParserRegistry
 
 
@@ -13,7 +12,7 @@ class Index:
     def __init__(self, parser_registry: ParserRegistry) -> None:
         self.path = util.get_index_path()
         self.parser_registry = parser_registry
-        self.entry_re = re.compile(r"^'([^']*)','([^']*)','([^']*)','(\d+)','(\d+)'\s*$")
+        self.entry_re = re.compile(r"^'(\d+)','([^']*)','([^']*)','(\d+)','(\d+)'\s*$")
 
     def apply_diff(self, diff_text: str) -> bool:
         changes = DiffChangeSet.from_diff_text(diff_text)
@@ -45,11 +44,10 @@ class Index:
             if not self._is_note_path(entry.note_path) or entry.note_path in tracked_paths:
                 updated.append(line)
                 continue
-
             changed = True
-            removed_path = self.remove_card_file(entry.card_id)
-            if removed_path is not None:
-                touched_paths.add(removed_path)
+            if os.path.exists(entry.card_path):
+                touched_paths.add(self.card_path(entry.card_id))
+                os.remove(entry.card_path)
 
         grouped_entries = self._enries_by_path(updated)
         for tracked_path in sorted(tracked_paths):
@@ -59,7 +57,7 @@ class Index:
             touched_paths.update(self._add_new(tracked_path, updated))
             if len(updated) != before_count:
                 changed = True
-                grouped_entries[tracked_path] = [IndexEntry('', '', '', 0, 0)]
+                grouped_entries[tracked_path] = [IndexEntry(0, '', '', 0, 0)]
 
         if changed:
             self._write(updated)
@@ -116,9 +114,9 @@ class Index:
                 continue
             if entry.note_path in deletes:
                 changed = True
-                removed_path = self.remove_card_file(entry.card_id)
-                if removed_path is not None:
-                    touched_paths.add(removed_path)
+                if os.path.exists(entry.card_path):
+                    touched_paths.add(self.card_path(entry.card_id))
+                    os.remove(entry.card_path)
                 continue
             if entry.note_path in renames:
                 changed = True
@@ -172,17 +170,13 @@ class Index:
         for parser_id, start_line, end_line in self.collect_parsed_blocks(new_path):
             scheduler_card = SchedulerCard()
             metadata = Metadata(scheduler_card=scheduler_card, review_logs=[])
-            card_id = str(scheduler_card.card_id)
-            card_path = self._card_abs_path(card_id)
-            write_metadata(card_path, metadata)
-            entry, touched_path = (
-                IndexEntry(
-                    card_id=card_id, note_path=new_path, parser_id=parser_id, start_line=start_line, end_line=end_line
-                ),
-                self.card_path(card_id),
+            card_id = scheduler_card.card_id
+            index_entry = IndexEntry(
+                card_id=card_id, note_path=new_path, parser_id=parser_id, start_line=start_line, end_line=end_line
             )
-            updated.append(self._format_entry(entry))
-            touched_card_paths.add(touched_path)
+            index_entry.write_metadata(metadata)
+            updated.append(self._format_entry(index_entry))
+            touched_card_paths.add(self.card_path(index_entry.card_id))
         return touched_card_paths
 
     def _is_note_path(self, indexed_path: str) -> bool:
@@ -196,13 +190,6 @@ class Index:
     def index_file_path(self) -> str:
         rel_path = os.path.relpath(self.path, self.repo_root())
         return util.normalize_path(rel_path)
-
-    def remove_card_file(self, note_id: str) -> str | None:
-        card_path = self._card_abs_path(note_id)
-        if os.path.exists(card_path):
-            os.remove(card_path)
-            return self.card_path(note_id)
-        return None
 
     def collect_parsed_blocks(self, indexed_path: str) -> list[tuple[str, int, int]]:
         note_text = self.read_note_text(indexed_path)
@@ -223,14 +210,14 @@ class Index:
 
         return sorted(selected, key=lambda entry: (entry[1], entry[2], entry[0]))
 
-    def card_path(self, note_id: str) -> str:
-        return f"/.srs/{note_id}.json"
+    def card_path(self, card_id: int) -> str:
+        return f"/.srs/{card_id}.json"
 
     def repo_root(self) -> str:
         return os.path.dirname(os.path.dirname(self.path))
 
-    def _card_abs_path(self, note_id: str) -> str:
-        return os.path.join(os.path.dirname(self.path), f"{note_id}.json")
+    def _card_abs_path(self, card_id: int) -> str:
+        return os.path.join(os.path.dirname(self.path), f"{card_id}.json")
 
     def read_note_text(self, indexed_path: str) -> str | None:
         note_path = os.path.join(self.repo_root(), indexed_path.lstrip("/"))
@@ -252,7 +239,7 @@ class Index:
     def _parse(self, raw_line: str) -> IndexEntry | None:
         if match := self.entry_re.match(raw_line.rstrip("\n")):
             return IndexEntry(
-                card_id=match.group(1),
+                card_id=int(match.group(1)),
                 note_path=match.group(2),
                 parser_id=match.group(3),
                 start_line=int(match.group(4)),

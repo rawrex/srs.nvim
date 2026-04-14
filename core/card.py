@@ -7,8 +7,7 @@ from typing import List
 from fsrs import Card as SchedulerCard
 from fsrs import Rating
 
-from core.index.model import IndexEntry
-from core.index.storage import Metadata
+from core.index.model import IndexEntry, Metadata
 
 __all__ = ["SchedulerCard", "REVEAL_ALL_LABEL", "RevealMode", "ViewBlock", "CardView", "Card"]
 

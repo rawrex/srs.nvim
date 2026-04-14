@@ -4,8 +4,7 @@ from typing import TYPE_CHECKING, ClassVar, List, Tuple
 
 from core.api import Parser
 from core.card import REVEAL_ALL_LABEL, Card, CardView, ViewBlock
-from core.index.model import IndexEntry
-from core.index.storage import Metadata
+from core.index.model import IndexEntry, Metadata
 
 if TYPE_CHECKING:
     from core.parsers import ParserRegistry
