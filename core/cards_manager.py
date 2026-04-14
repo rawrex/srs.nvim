@@ -23,14 +23,12 @@ class CardsManager:
     def load_due_cards(self) -> list[ReviewCard]:
         now = datetime.now(timezone.utc)
         index_entries = self.index.load_entries()
-
+        cards_with_paths, note_context_blocks = self._build_cards_with_note_context(index_entries)
         claimed_lines_by_note: dict[str, set[int]] = {}
         for entry in index_entries:
             claimed_lines_by_note.setdefault(entry.note_abs_path, set()).update(
                 range(entry.start_line, entry.end_line + 1)
             )
-
-        cards_with_paths, note_context_blocks = self._build_cards_with_note_context(index_entries)
         self._add_unclaimed_note_context(note_context_blocks, claimed_lines_by_note)
         return self._filter_due_cards(cards_with_paths, note_context_blocks, now)
 
@@ -38,24 +36,21 @@ class CardsManager:
         self, index_entries: list[IndexEntry]
     ) -> tuple[list[tuple[Card, str]], dict[str, dict[LineRange, str]]]:
         cards_with_paths: list[tuple[Card, str]] = []
-        note_context_blocks: dict[str, dict[LineRange, str]] = {}
-
+        context_blocks: dict[str, dict[LineRange, str]] = {}
         for entry in index_entries:
+            parser = self.parser_registry.get(entry.parser_id)
             with open(entry.note_abs_path, "r", encoding="utf-8") as handle:
                 note_text = handle.read()
-            parser = self.parser_registry.get(entry.parser_id)
-            parsed_blocks = {
-                (line_start, line_end): block for line_start, line_end, block in parser.interpret_text(note_text)
+            parsed_blocks: dict[tuple[int, int], str] = {
+                (start, end): block for start, end, block in parser.interpret_text(note_text)
             }
-
             if block_text := parsed_blocks.get((entry.start_line, entry.end_line)):
                 card = parser.build_card(note_text=block_text, index_entry=entry, metadata=entry.read_metadata())
-                note_context_blocks.setdefault(entry.note_abs_path, {})[(entry.start_line, entry.end_line)] = (
+                context_blocks.setdefault(entry.note_abs_path, {})[(entry.start_line, entry.end_line)] = (
                     card.context_view().primary_block().text
                 )
                 cards_with_paths.append((card, entry.note_abs_path))
-
-        return cards_with_paths, note_context_blocks
+        return cards_with_paths, context_blocks
 
     def _add_unclaimed_note_context(
         self, note_context_blocks: dict[str, dict[LineRange, str]], claimed_lines_by_note: dict[str, set[int]]
