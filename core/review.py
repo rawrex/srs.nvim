@@ -18,19 +18,18 @@ from core.ui import ReviewUI, SessionEntryUI
 
 def main() -> int:
     try:
-        repo_root = util.get_repo_root()
+        repo_root = util.get_repo_root_path()
         if not repo_root:
             print("Not inside a git repository.")
             return 1
 
-        config = load_review_config(repo_root)
+        config = load_review_config()
         parser_registry = build_parser_registry(config)
         ui = ReviewUI(config=config, console=Console())
         session_entry_ui = SessionEntryUI(console=ui.console)
 
         session = ReviewSession(
             ui=ui,
-            repo_root=repo_root,
             parser_registry=parser_registry,
             session_entry_ui=session_entry_ui,
             scheduler=config.build_scheduler(),

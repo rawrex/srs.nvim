@@ -2,7 +2,7 @@
 import os
 
 from core import util
-from setup.common import EXCLUDE_FROM_TRACKING, NOREPEAT_MARKER_NAME, REPEAT_MARKER_NAME
+from core.util import EXCLUDE_FROM_TRACKING, NOREPEAT_MARKER_FILENAME, REPEAT_MARKER_FILENAME
 
 
 def _to_indexed_path(repo_root: str, abs_path: str) -> str:
@@ -32,10 +32,10 @@ def tracked_paths_from_repo_paths(repo_paths: list[str]) -> set[str]:
 
     for repo_path in repo_paths:
         name = os.path.basename(repo_path)
-        if name == REPEAT_MARKER_NAME:
+        if name == REPEAT_MARKER_FILENAME:
             repeat_dirs.add(os.path.dirname(repo_path))
             continue
-        if name == NOREPEAT_MARKER_NAME:
+        if name == NOREPEAT_MARKER_FILENAME:
             norepeat_dirs.add(os.path.dirname(repo_path))
             continue
         file_paths.append(repo_path)
@@ -47,14 +47,17 @@ def tracked_paths_from_repo_paths(repo_paths: list[str]) -> set[str]:
     return tracked_paths
 
 
-def find_repeat_tracked_paths(repo_root: str) -> list[str]:
+def find_repeat_tracked_paths() -> list[str]:
+    repo_root = util.get_repo_root_path()
     tracked_paths: set[str] = set()
 
     def walk(current_dir: str, tracked_parent: bool) -> None:
         entries = sorted(os.scandir(current_dir), key=lambda entry: entry.name)
-        has_repeat = any(entry.name == REPEAT_MARKER_NAME and entry.is_file(follow_symlinks=False) for entry in entries)
+        has_repeat = any(
+            entry.name == REPEAT_MARKER_FILENAME and entry.is_file(follow_symlinks=False) for entry in entries
+        )
         has_norepeat = any(
-            entry.name == NOREPEAT_MARKER_NAME and entry.is_file(follow_symlinks=False) for entry in entries
+            entry.name == NOREPEAT_MARKER_FILENAME and entry.is_file(follow_symlinks=False) for entry in entries
         )
         tracked_here = has_repeat or (tracked_parent and not has_norepeat)
 
@@ -65,7 +68,7 @@ def find_repeat_tracked_paths(repo_root: str) -> list[str]:
                     continue
             if not tracked_here:
                 continue
-            if entry.name in {REPEAT_MARKER_NAME, NOREPEAT_MARKER_NAME}:
+            if entry.name in {REPEAT_MARKER_FILENAME, NOREPEAT_MARKER_FILENAME}:
                 continue
             if entry.is_file(follow_symlinks=False):
                 tracked_paths.add(_to_indexed_path(repo_root, entry.path))

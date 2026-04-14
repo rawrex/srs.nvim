@@ -2,6 +2,7 @@ import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
+from core import util
 from core.card import Card
 from core.index.index import Index
 from core.index.model import IndexEntry
@@ -18,10 +19,9 @@ class ReviewCard:
 
 
 class CardsManager:
-    def __init__(self, repo_root: str, parser_registry: ParserRegistry) -> None:
-        self.repo_root = repo_root
+    def __init__(self, parser_registry: ParserRegistry) -> None:
         self.parser_registry = parser_registry
-        self.index = Index(path=os.path.join(self.repo_root, ".srs", "index.txt"), parser_registry=self.parser_registry)
+        self.index = Index(parser_registry=self.parser_registry)
 
     def load_due_cards(self) -> list[ReviewCard]:
         now = datetime.now(timezone.utc)
@@ -62,7 +62,7 @@ class CardsManager:
         return cards_with_paths, note_context_blocks
 
     def _build_card(self, note_text: str, index_entry: IndexEntry) -> Card:
-        card_path = os.path.join(self.repo_root, ".srs", f"{index_entry.card_id}.json")
+        card_path = os.path.join(util.get_srs_path(), f"{index_entry.card_id}.json")
         with open(card_path, "r", encoding="utf-8") as handle:
             raw_text = handle.read()
         metadata = read_metadata(raw_text)
@@ -91,7 +91,7 @@ class CardsManager:
         return due_cards
 
     def _note_abs_path(self, indexed_path: str) -> str:
-        return os.path.join(self.repo_root, indexed_path.lstrip("/"))
+        return os.path.join(util.get_repo_root_path(), indexed_path.lstrip("/"))
 
     def _read_unclaimed_line_blocks(self, note_path: str, claimed_lines: set[int]) -> dict[LineRange, str]:
         with open(note_path, "r", encoding="utf-8") as handle:

@@ -9,9 +9,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-common = import_module("setup.common")
-HOOKS = common.HOOKS
-resolve_repo_context = common.resolve_repo_context
+util = import_module("core.util")
+
+HOOKS = ["pre-commit", "pre-merge-commit", "post-checkout", "post-rewrite"]
 
 
 def _is_managed_hook_script(hook_path: str) -> bool:
@@ -47,13 +47,16 @@ def remove_srs_dir(srs_dir: str) -> bool:
 
 
 def main() -> int:
-    context = resolve_repo_context()
-    if context is None:
+    repo_root = util.get_repo_root_path()
+    if not repo_root:
         print("Not inside a git repository.")
         return 1
 
-    removed_hooks = remove_installed_hooks(context.hooks_dir)
-    removed_srs = remove_srs_dir(context.srs_dir)
+    hooks_dir = util.get_hooks_path()
+    srs_dir = util.get_srs_path()
+
+    removed_hooks = remove_installed_hooks(hooks_dir) if hooks_dir else 0
+    removed_srs = remove_srs_dir(srs_dir) if srs_dir else False
 
     print("Removed hooks:", removed_hooks)
     print("Removed .srs directory:", "yes" if removed_srs else "no")

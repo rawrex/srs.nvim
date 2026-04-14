@@ -3,6 +3,7 @@ import time
 
 from fsrs import Scheduler
 
+from core import util
 from core.cards_manager import CardsManager
 from core.index.storage import write_metadata
 from core.parsers import ParserRegistry
@@ -11,21 +12,15 @@ from core.ui import ReviewUI, SessionEntryUI
 
 class ReviewSession:
     def __init__(
-        self,
-        ui: ReviewUI,
-        repo_root: str,
-        parser_registry: ParserRegistry,
-        session_entry_ui: SessionEntryUI,
-        scheduler: Scheduler,
+        self, ui: ReviewUI, parser_registry: ParserRegistry, session_entry_ui: SessionEntryUI, scheduler: Scheduler
     ) -> None:
         self.ui = ui
-        self.repo_root = repo_root
         self.session_entry_ui = session_entry_ui
         self.scheduler = scheduler
-        self.cards_manager = CardsManager(repo_root=repo_root, parser_registry=parser_registry)
+        self.cards_manager = CardsManager(parser_registry=parser_registry)
 
     def run(self) -> int:
-        if not os.path.exists(os.path.join(self.repo_root, ".srs", "index.txt")):
+        if not os.path.exists(util.get_index_path()):
             self.ui.print_message("Missing index")
             return 1
 
@@ -66,7 +61,7 @@ class ReviewSession:
             card.metadata.review_logs.append(review_log)
 
             # TODO shoeld be moved into the Card
-            write_metadata(os.path.join(self.repo_root, ".srs", f"{card.index_entry.card_id}.json"), card.metadata)
+            write_metadata(os.path.join(util.get_srs_path(), f"{card.index_entry.card_id}.json"), card.metadata)
             self.ui.print_message("Saved")
 
         return 0

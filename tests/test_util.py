@@ -17,11 +17,11 @@ class UtilTest(unittest.TestCase):
 
     def test_get_repo_root_returns_stripped_path_on_success(self) -> None:
         with patch("core.util.run_git", return_value=(0, "/tmp/repo\n", "")):
-            self.assertEqual("/tmp/repo", util.get_repo_root())
+            self.assertEqual("/tmp/repo", util.get_repo_root_path())
 
     def test_get_repo_root_returns_empty_on_failure(self) -> None:
         with patch("core.util.run_git", return_value=(1, "", "fatal")):
-            self.assertEqual("", util.get_repo_root())
+            self.assertEqual("", util.get_repo_root_path())
 
     def test_normalize_path_handles_empty_absolute_and_relative(self) -> None:
         self.assertEqual("", util.normalize_path(""))

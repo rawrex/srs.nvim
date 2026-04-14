@@ -9,10 +9,10 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from core import util
-from hooks.handler import Handler
 from core.config import load_review_config
-from core.parsers import build_parser_registry
 from core.index.index import Index
+from core.parsers import build_parser_registry
+from hooks.handler import Handler
 
 
 def main() -> int:
@@ -20,18 +20,18 @@ def main() -> int:
         return 1
     event = sys.argv[1]
 
-    repo_root = util.get_repo_root()
+    repo_root = util.get_repo_root_path()
     if not repo_root:
         return 0
 
-    index_path = os.path.join(repo_root, ".srs", "index.txt")
+    index_path = util.get_index_path()
     if not os.path.exists(index_path):
         return 0
 
-    config = load_review_config(repo_root)
+    config = load_review_config()
     parser_registry = build_parser_registry(config)
-    index = Index(index_path, parser_registry=parser_registry)
-    handler = Handler(repo_root)
+    index = Index(parser_registry=parser_registry)
+    handler = Handler()
 
     if event == "pre-commit":
         handler.handle_pre_commit(index)

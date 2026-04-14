@@ -10,7 +10,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-common = import_module("setup.common")
+util = import_module("core.util")
+
+HOOKS = ["pre-commit", "pre-merge-commit", "post-checkout", "post-rewrite"]
+
 build_parser_registry = import_module("core.parsers").build_parser_registry
 load_review_config = import_module("core.config").load_review_config
 Index = import_module("core.index.index").Index
@@ -31,10 +34,10 @@ def write_hook(hook_path: str, script_path: str, hook_name: str) -> None:
 
 
 def ensure_srs_index(repo_root: str) -> bool:
-    srs_dir = os.path.join(repo_root, common.SRS_DIR_NAME)
+    srs_dir = os.path.join(repo_root, util.SRS_DIR_NAME)
     os.makedirs(srs_dir, exist_ok=True)
 
-    index_path = os.path.join(srs_dir, common.INDEX_FILE_NAME)
+    index_path = os.path.join(srs_dir, util.INDEX_FILENAME)
     if os.path.isdir(index_path):
         return False
     if not os.path.exists(index_path):
@@ -43,22 +46,17 @@ def ensure_srs_index(repo_root: str) -> bool:
     return True
 
 
-def initialize_index_from_repeat_markers(repo_root: str, index_path: str) -> int:
-    config = load_review_config(repo_root)
+def initialize_index_from_repeat_markers() -> int:
+    config = load_review_config()
     parser_registry = build_parser_registry(config)
-    index = Index(index_path, parser_registry=parser_registry)
-    tracked_paths = set(find_repeat_tracked_paths(repo_root))
+    index = Index(parser_registry=parser_registry)
+    tracked_paths = set(find_repeat_tracked_paths())
     return index.add_missing_tracked_paths(tracked_paths)
 
 
 def main() -> int:
-    context = common.resolve_repo_context()
-    if context is None:
-        print("Not inside a git repository.")
-        return 1
-
-    repo_root = context.repo_root
-    hooks_dir = context.hooks_dir
+    repo_root = util.get_repo_root_path()
+    hooks_dir = util.get_hooks_path()
     os.makedirs(hooks_dir, exist_ok=True)
 
     hooks_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "hooks", "hooks.py"))
@@ -71,15 +69,15 @@ def main() -> int:
         print("Could not initialize .srs/index.txt")
         return 1
 
-    initialized_count = initialize_index_from_repeat_markers(repo_root, context.index_path)
+    initialized_count = initialize_index_from_repeat_markers()
 
-    for hook in common.HOOKS:
+    for hook in HOOKS:
         hook_path = os.path.join(hooks_dir, hook)
         write_hook(hook_path, hooks_path, hook)
 
-    print("Installed hooks:", ", ".join(common.HOOKS))
-    print("Ensured index:", os.path.join(common.SRS_DIR_NAME, common.INDEX_FILE_NAME))
-    print(f"Initialized cards from {common.REPEAT_MARKER_NAME} markers:", initialized_count)
+    print("Installed hooks:", ", ".join(HOOKS))
+    print("Ensured index:", os.path.join(util.SRS_DIR_NAME, util.INDEX_FILENAME))
+    print(f"Initialized cards from {util.REPEAT_MARKER_FILENAME} markers:", initialized_count)
     return 0
 
 

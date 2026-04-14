@@ -5,6 +5,7 @@ from datetime import timedelta
 
 from fsrs import Rating, Scheduler
 
+from core import util
 from core.card import RevealMode
 
 DEFAULT_RATING_BUTTONS: dict[Rating, str] = {Rating.Again: "n", Rating.Hard: "e", Rating.Good: "i", Rating.Easy: "o"}
@@ -45,8 +46,8 @@ class ReviewConfig:
         )
 
 
-def load_review_config(repo_root: str) -> ReviewConfig:
-    path = os.path.join(repo_root, ".srs", "config.json")
+def load_review_config() -> ReviewConfig:
+    path = util.get_config_path()
     defaults = ReviewConfig()
     raw = _load_raw_config(path)
     if raw is None:
@@ -60,7 +61,7 @@ def load_review_config(repo_root: str) -> ReviewConfig:
     rating_buttons = _parse_rating_buttons(review_raw.get("rating_buttons"))
     show_context = _parse_review_flags(review_raw, defaults)
     cloze_config = _parse_cloze_config(cloze_raw, defaults.cloze)
-    media = _parse_media_directory(raw.get("media"), repo_root, defaults.media)
+    media = _parse_media_directory(raw.get("media"), defaults.media)
 
     scheduler_parameters = defaults.scheduler_parameters
     scheduler_desired_retention = defaults.scheduler_desired_retention
@@ -150,7 +151,7 @@ def _parse_cloze_config(cloze_raw: dict[str, object], defaults: ClozeConfig) -> 
     return ClozeConfig(reveal_mode=reveal_mode, cloze_open=cloze_open, cloze_close=cloze_close, mask_char=mask_char)
 
 
-def _parse_media_directory(raw_value: object, repo_root: str, default: str | None) -> str | None:
+def _parse_media_directory(raw_value: object, default: str | None) -> str | None:
     if not isinstance(raw_value, str):
         return default
     candidate = raw_value.strip()
@@ -158,7 +159,7 @@ def _parse_media_directory(raw_value: object, repo_root: str, default: str | Non
         return default
     if os.path.isabs(candidate):
         return os.path.normpath(candidate)
-    return os.path.normpath(os.path.join(repo_root, candidate))
+    return os.path.normpath(os.path.join(util.get_repo_root_path(), candidate))
 
 
 def _parse_rating_buttons(raw: object) -> dict[Rating, str]:

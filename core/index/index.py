@@ -10,12 +10,12 @@ from core.parsers import ParserRegistry
 
 
 class Index:
-    def __init__(self, path: str, parser_registry: ParserRegistry) -> None:
-        self.path = path
+    def __init__(self, parser_registry: ParserRegistry) -> None:
+        self.path = util.get_index_path()
         self.parser_registry = parser_registry
         self.entry_re = re.compile(r"^'([^']*)','([^']*)','([^']*)','(\d+)','(\d+)'\s*$")
 
-    def apply_diff(self, diff_text: str, repo_root: str) -> bool:
+    def apply_diff(self, diff_text: str) -> bool:
         changes = DiffChangeSet.from_diff_text(diff_text)
         if not changes.has_changes():
             return False
@@ -27,10 +27,9 @@ class Index:
         self._write(result.lines)
         touched_paths = set(result.touched_paths)
         touched_paths.add(self.index_file_path())
-        if repo_root:
-            self._stage_paths(repo_root, touched_paths)
-            return True
-        return False
+
+        self._stage_paths(util.get_repo_root_path(), touched_paths)
+        return True
 
     def sync_tracked_paths(self, tracked_paths: set[str], repo_root: str) -> bool:
         lines = self._readlines()
