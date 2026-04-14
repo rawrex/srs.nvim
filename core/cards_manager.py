@@ -52,18 +52,14 @@ class CardsManager:
             }
 
             if note_text := parser_blocks.get((entry.start_line, entry.end_line)):
-                card = self._build_card(note_text=note_text, index_entry=entry)
+                parser = self.parser_registry.get(entry.parser_id)
+                card = parser.build_card(note_text=note_text, index_entry=entry, metadata=entry.read_metadata())
                 note_context_blocks.setdefault(note_path, {})[(entry.start_line, entry.end_line)] = (
                     card.context_view().primary_block().text
                 )
                 cards_with_paths.append((card, note_path))
 
         return cards_with_paths, note_context_blocks
-
-    def _build_card(self, note_text: str, index_entry: IndexEntry) -> Card:
-        metadata = index_entry.read_metadata()
-        parser = self.parser_registry.get(index_entry.parser_id)
-        return parser.build_card(note_text=note_text, index_entry=index_entry, metadata=metadata)
 
     def _add_unclaimed_note_context(
         self, note_context_blocks: dict[str, dict[LineRange, str]], claimed_lines_by_note: dict[str, set[int]]
