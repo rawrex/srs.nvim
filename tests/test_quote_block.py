@@ -1,15 +1,14 @@
 import unittest
 
 from core.card import REVEAL_ALL_LABEL, SchedulerCard
-from core.index.model import IndexEntry
-from core.index.storage import Metadata
+from core.index.model import IndexEntry, Metadata
 from packs.quote_block import QuoteBlockCard, QuoteBlockParser
 
 
 class QuoteBlockPackTest(unittest.TestCase):
     def _entry(self, start_line: int = 5, end_line: int = 8) -> IndexEntry:
         return IndexEntry(
-            card_id="1", note_path="/tmp/note.md", parser_id="quote_block", start_line=start_line, end_line=end_line
+            card_id=1, note_path="/tmp/note.md", parser_id="quote_block", start_line=start_line, end_line=end_line
         )
 
     def _card(self, block_text: str) -> QuoteBlockCard:

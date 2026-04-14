@@ -21,6 +21,7 @@ class _DummyIndexEntry:
     def __init__(self, card_id: str, note_path: str) -> None:
         self.card_id = card_id
         self.note_path = note_path
+        self.write_metadata = Mock()
 
 
 class _DummyCard:
@@ -114,10 +115,8 @@ class ReviewSessionRunTest(unittest.TestCase):
                         ReviewCard(card=card_2, note_context_blocks={}),
                     ],
                 ),
-                patch("core.session.write_metadata") as write_metadata,
                 patch("core.session.time.monotonic_ns") as monotonic_ns,
                 patch("core.util.get_index_path", return_value=os.path.join(repo_root, ".srs", "index.txt")),
-                patch("core.util.get_srs_path", return_value=os.path.join(repo_root, ".srs")),
             ):
                 monotonic_ns.side_effect = [0, 1_200_000_000, 2_000_000_000, 2_900_000_000]
                 code = session.run()
@@ -127,7 +126,8 @@ class ReviewSessionRunTest(unittest.TestCase):
         self.assertEqual(new_card_2, card_2.metadata.scheduler_card)
         self.assertEqual([log_1], card_1.metadata.review_logs)
         self.assertEqual([log_2], card_2.metadata.review_logs)
-        self.assertEqual(2, write_metadata.call_count)
+        card_1.index_entry.write_metadata.assert_called_once_with(card_1.metadata)
+        card_2.index_entry.write_metadata.assert_called_once_with(card_2.metadata)
         self.assertEqual(2, scheduler.review_card.call_count)
         session_entry_ui.show_start_menu.assert_called_once_with(2)
 
@@ -162,10 +162,8 @@ class ReviewSessionRunTest(unittest.TestCase):
                         ReviewCard(card=card_2, note_context_blocks={}),
                     ],
                 ),
-                patch("core.session.write_metadata"),
                 patch("core.session.time.monotonic_ns", side_effect=[0, 1_000_000, 2_000_000, 3_000_000]),
                 patch("core.util.get_index_path", return_value=os.path.join(repo_root, ".srs", "index.txt")),
-                patch("core.util.get_srs_path", return_value=os.path.join(repo_root, ".srs")),
             ):
                 with self.assertRaises(KeyboardInterrupt):
                     session.run()
