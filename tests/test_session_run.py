@@ -21,6 +21,7 @@ class _DummyIndexEntry:
     def __init__(self, card_id: str, note_path: str) -> None:
         self.card_id = card_id
         self.note_path = note_path
+        self.note_abs_path = note_path
         self.write_metadata = Mock()
 
 
