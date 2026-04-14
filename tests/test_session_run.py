@@ -1,4 +1,5 @@
 import unittest
+import os
 from unittest.mock import Mock, patch
 
 from fsrs import Rating
@@ -45,13 +46,13 @@ class ReviewSessionRunTest(unittest.TestCase):
             config = ReviewConfig()
             session = ReviewSession(
                 ui=ui,
-                repo_root=repo_root,
                 parser_registry=build_parser_registry(config),
                 session_entry_ui=None,
                 scheduler=config.build_scheduler(),
             )
 
-            code = session.run()
+            with patch("core.util.get_index_path", return_value=os.path.join(repo_root, ".srs", "index.txt")):
+                code = session.run()
 
         self.assertEqual(1, code)
         ui.print_message.assert_called_once_with("Missing index")
@@ -62,13 +63,15 @@ class ReviewSessionRunTest(unittest.TestCase):
             config = ReviewConfig()
             session = ReviewSession(
                 ui=ui,
-                repo_root=repo_root,
                 parser_registry=build_parser_registry(config),
                 session_entry_ui=None,
                 scheduler=config.build_scheduler(),
             )
 
-            with patch.object(session.cards_manager, "load_due_cards", return_value=[]):
+            with (
+                patch("core.util.get_index_path", return_value=os.path.join(repo_root, ".srs", "index.txt")),
+                patch.object(session.cards_manager, "load_due_cards", return_value=[]),
+            ):
                 code = session.run()
 
         self.assertEqual(0, code)
@@ -84,7 +87,6 @@ class ReviewSessionRunTest(unittest.TestCase):
 
             session = ReviewSession(
                 ui=ui,
-                repo_root=repo_root,
                 parser_registry=build_parser_registry(config),
                 session_entry_ui=session_entry_ui,
                 scheduler=config.build_scheduler(),
@@ -114,6 +116,8 @@ class ReviewSessionRunTest(unittest.TestCase):
                 ),
                 patch("core.session.write_metadata") as write_metadata,
                 patch("core.session.time.monotonic_ns") as monotonic_ns,
+                patch("core.util.get_index_path", return_value=os.path.join(repo_root, ".srs", "index.txt")),
+                patch("core.util.get_srs_path", return_value=os.path.join(repo_root, ".srs")),
             ):
                 monotonic_ns.side_effect = [0, 1_200_000_000, 2_000_000_000, 2_900_000_000]
                 code = session.run()
@@ -137,7 +141,6 @@ class ReviewSessionRunTest(unittest.TestCase):
 
             session = ReviewSession(
                 ui=ui,
-                repo_root=repo_root,
                 parser_registry=build_parser_registry(config),
                 session_entry_ui=session_entry_ui,
                 scheduler=config.build_scheduler(),
@@ -161,6 +164,8 @@ class ReviewSessionRunTest(unittest.TestCase):
                 ),
                 patch("core.session.write_metadata"),
                 patch("core.session.time.monotonic_ns", side_effect=[0, 1_000_000, 2_000_000, 3_000_000]),
+                patch("core.util.get_index_path", return_value=os.path.join(repo_root, ".srs", "index.txt")),
+                patch("core.util.get_srs_path", return_value=os.path.join(repo_root, ".srs")),
             ):
                 with self.assertRaises(KeyboardInterrupt):
                     session.run()

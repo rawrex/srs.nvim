@@ -12,14 +12,14 @@ class HooksCliTest(unittest.TestCase):
     def test_main_returns_0_when_repo_root_is_missing(self) -> None:
         with (
             patch.object(hooks.sys, "argv", ["hooks.py", "pre-commit"]),
-            patch("hooks.hooks.util.get_repo_root", return_value=""),
+            patch("hooks.hooks.util.get_repo_root_path", return_value=""),
         ):
             self.assertEqual(0, hooks.main())
 
     def test_main_returns_0_when_index_file_is_missing(self) -> None:
         with (
             patch.object(hooks.sys, "argv", ["hooks.py", "pre-commit"]),
-            patch("hooks.hooks.util.get_repo_root", return_value="/repo"),
+            patch("hooks.hooks.util.get_repo_root_path", return_value="/repo"),
             patch("hooks.hooks.os.path.exists", return_value=False),
         ):
             self.assertEqual(0, hooks.main())
@@ -29,7 +29,7 @@ class HooksCliTest(unittest.TestCase):
 
         with (
             patch.object(hooks.sys, "argv", ["hooks.py", "pre-merge-commit"]),
-            patch("hooks.hooks.util.get_repo_root", return_value="/repo"),
+            patch("hooks.hooks.util.get_repo_root_path", return_value="/repo"),
             patch("hooks.hooks.os.path.exists", return_value=True),
             patch("hooks.hooks.Index", return_value=object()) as index_cls,
             patch("hooks.hooks.Handler", return_value=handler),
@@ -37,7 +37,7 @@ class HooksCliTest(unittest.TestCase):
             code = hooks.main()
 
         self.assertEqual(0, code)
-        index_cls.assert_called_once_with("/repo/.srs/index.txt", parser_registry=ANY)
+        index_cls.assert_called_once_with(parser_registry=ANY)
         handler.handle_pre_merge_commit.assert_called_once()
 
     def test_main_dispatches_post_checkout_with_args(self) -> None:
@@ -46,7 +46,7 @@ class HooksCliTest(unittest.TestCase):
 
         with (
             patch.object(hooks.sys, "argv", argv),
-            patch("hooks.hooks.util.get_repo_root", return_value="/repo"),
+            patch("hooks.hooks.util.get_repo_root_path", return_value="/repo"),
             patch("hooks.hooks.os.path.exists", return_value=True),
             patch("hooks.hooks.Index", return_value=object()),
             patch("hooks.hooks.Handler", return_value=handler),
@@ -63,7 +63,7 @@ class HooksCliTest(unittest.TestCase):
 
         with (
             patch.object(hooks.sys, "argv", ["hooks.py", "post-rewrite"]),
-            patch("hooks.hooks.util.get_repo_root", return_value="/repo"),
+            patch("hooks.hooks.util.get_repo_root_path", return_value="/repo"),
             patch("hooks.hooks.os.path.exists", return_value=True),
             patch("hooks.hooks.Index", return_value=object()),
             patch("hooks.hooks.Handler", return_value=handler),

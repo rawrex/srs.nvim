@@ -1,6 +1,7 @@
 import os
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from core.api import Parser
 from core.index.index import Index
@@ -25,7 +26,12 @@ class _StaticParser(Parser):
 
 class SrsIndexHelperTest(unittest.TestCase):
     def _index(self, index_path: str) -> Index:
-        return Index(index_path, parser_registry=ParserRegistry(parsers={}))
+        return self._index_with_registry(index_path, ParserRegistry(parsers={}))
+
+    @staticmethod
+    def _index_with_registry(index_path: str, parser_registry: ParserRegistry) -> Index:
+        with patch("core.index.index.util.get_index_path", return_value=index_path):
+            return Index(parser_registry=parser_registry)
 
     def _create_index_path(self, repo_root: str) -> str:
         index_path = os.path.join(repo_root, ".srs", "index.txt")
@@ -63,7 +69,7 @@ class SrsIndexHelperTest(unittest.TestCase):
             parser_registry = ParserRegistry(parsers={})
             parser_registry.register(high)
             parser_registry.register(low)
-            index = Index(index_path, parser_registry=parser_registry)
+            index = self._index_with_registry(index_path, parser_registry)
             rows = index.collect_parsed_blocks("/note.md")
 
         self.assertEqual([("high", 1, 2), ("low", 3, 3)], rows)
@@ -119,7 +125,7 @@ class SrsIndexHelperTest(unittest.TestCase):
             parser_registry = ParserRegistry(parsers={})
             parser_registry.register(_StaticParser(parser_id="cloze", priority=0, rows=[(2, 4, "two\nthree\nfour\n")]))
 
-            index = Index(index_path, parser_registry=parser_registry)
+            index = self._index_with_registry(index_path, parser_registry)
 
             added = index.add_missing_tracked_paths({"/note.md"})
             self.assertEqual(1, added)

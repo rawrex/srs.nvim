@@ -2,6 +2,7 @@ import json
 import os
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from fsrs import Rating
 from fsrs import Scheduler
@@ -17,9 +18,17 @@ class ReviewConfigTest(unittest.TestCase):
         os.makedirs(srs_dir, exist_ok=True)
         return os.path.join(srs_dir, "config.json")
 
+    @classmethod
+    def _load_config(cls, repo_root: str):
+        with (
+            patch("core.config.util.get_config_path", return_value=cls._config_path(repo_root)),
+            patch("core.config.util.get_repo_root_path", return_value=repo_root),
+        ):
+            return load_review_config()
+
     def test_load_review_config_uses_defaults_when_missing(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
-            config = load_review_config(repo_root)
+            config = self._load_config(repo_root)
 
         self.assertEqual(RevealMode.INCREMENTAL, config.cloze.reveal_mode)
         self.assertEqual(DEFAULT_RATING_BUTTONS, config.rating_buttons)
@@ -75,7 +84,7 @@ class ReviewConfigTest(unittest.TestCase):
                     handle,
                 )
 
-            config = load_review_config(repo_root)
+            config = self._load_config(repo_root)
 
         self.assertEqual(RevealMode.WHOLE, config.cloze.reveal_mode)
         self.assertEqual("a", config.rating_buttons[Rating.Again])
@@ -101,7 +110,7 @@ class ReviewConfigTest(unittest.TestCase):
             with open(path, "w", encoding="utf-8") as handle:
                 json.dump({"review": {}, "cloze": {"reveal_mode": "whole"}}, handle)
 
-            config = load_review_config(repo_root)
+            config = self._load_config(repo_root)
 
         self.assertEqual(RevealMode.WHOLE, config.cloze.reveal_mode)
         self.assertEqual(Scheduler().to_dict(), config.build_scheduler().to_dict())
@@ -112,7 +121,7 @@ class ReviewConfigTest(unittest.TestCase):
             with open(path, "w", encoding="utf-8") as handle:
                 handle.write("not-json")
 
-            config = load_review_config(repo_root)
+            config = self._load_config(repo_root)
 
         self.assertEqual(RevealMode.INCREMENTAL, config.cloze.reveal_mode)
         self.assertEqual(DEFAULT_RATING_BUTTONS, config.rating_buttons)
@@ -123,7 +132,7 @@ class ReviewConfigTest(unittest.TestCase):
             with open(path, "w", encoding="utf-8") as handle:
                 json.dump({"review": {"rating_buttons": {"Again": "a", "Hard": "a", "Good": "g", "Easy": "e"}}}, handle)
 
-            config = load_review_config(repo_root)
+            config = self._load_config(repo_root)
 
         self.assertEqual(DEFAULT_RATING_BUTTONS, config.rating_buttons)
 
@@ -140,7 +149,7 @@ class ReviewConfigTest(unittest.TestCase):
                     handle,
                 )
 
-            config = load_review_config(repo_root)
+            config = self._load_config(repo_root)
 
         self.assertEqual(RevealMode.INCREMENTAL, config.cloze.reveal_mode)
         self.assertEqual("~{", config.cloze.cloze_open)
@@ -167,6 +176,6 @@ class ReviewConfigTest(unittest.TestCase):
                     handle,
                 )
 
-            config = load_review_config(repo_root)
+            config = self._load_config(repo_root)
 
         self.assertEqual(Scheduler().to_dict(), config.build_scheduler().to_dict())

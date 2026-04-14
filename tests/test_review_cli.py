@@ -7,7 +7,7 @@ from core.config import ReviewConfig
 
 class ReviewCliTest(unittest.TestCase):
     def test_main_returns_1_outside_git_repo(self) -> None:
-        with patch("core.review.util.get_repo_root", return_value=""), patch("builtins.print") as print_mock:
+        with patch("core.review.util.get_repo_root_path", return_value=""), patch("builtins.print") as print_mock:
             code = review.main()
 
         self.assertEqual(1, code)
@@ -21,7 +21,7 @@ class ReviewCliTest(unittest.TestCase):
         session.run.return_value = 7
 
         with (
-            patch("core.review.util.get_repo_root", return_value="/repo"),
+            patch("core.review.util.get_repo_root_path", return_value="/repo"),
             patch("core.review.load_review_config", return_value=config),
             patch("core.review.build_parser_registry", return_value=parser_registry),
             patch("core.review.ReviewUI", return_value=ui) as ui_cls,
@@ -35,7 +35,6 @@ class ReviewCliTest(unittest.TestCase):
         self.assertEqual(7, code)
         ui_cls.assert_called_once_with(config=config, console=ANY)
         session_cls.assert_called_once_with(
-            repo_root="/repo",
             ui=ui,
             parser_registry=parser_registry,
             session_entry_ui=session_entry_ui,
@@ -45,7 +44,7 @@ class ReviewCliTest(unittest.TestCase):
 
     def test_main_handles_keyboard_interrupt_after_ui_creation(self) -> None:
         with (
-            patch("core.review.util.get_repo_root", return_value="/repo"),
+            patch("core.review.util.get_repo_root_path", return_value="/repo"),
             patch("core.review.load_review_config", return_value=ReviewConfig()),
             patch("core.review.build_parser_registry", return_value=Mock()),
             patch("core.review.ReviewUI", return_value=Mock()),

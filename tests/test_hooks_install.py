@@ -3,7 +3,7 @@ import json
 import unittest
 from pathlib import Path
 
-from setup.common import HOOKS
+from setup.install import HOOKS
 from tests.setup_test_helpers import (
     install_system,
     read_index_rows,

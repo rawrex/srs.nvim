@@ -51,7 +51,6 @@ class ReviewSessionTest(unittest.TestCase):
 
         session = ReviewSession(
             ui=_DummyUI(),  # type: ignore[arg-type]
-            repo_root="/tmp/repo",
             parser_registry=build_parser_registry(config),
             session_entry_ui=None,
             scheduler=config.build_scheduler(),
@@ -75,16 +74,20 @@ class ReviewSessionTest(unittest.TestCase):
             with open(os.path.join(repo_root, ".srs", "1.json"), "w", encoding="utf-8") as handle:
                 json.dump(json.loads(SchedulerCard().to_json()), handle)
 
-            session = ReviewSession(
-                ui=_DummyUI(),  # type: ignore[arg-type]
-                repo_root=repo_root,
-                parser_registry=build_parser_registry(ReviewConfig()),
-                session_entry_ui=None,
-                scheduler=ReviewConfig().build_scheduler(),
-            )
+            with (
+                patch("core.util.get_index_path", return_value=os.path.join(repo_root, ".srs", "index.txt")),
+                patch("core.util.get_srs_path", return_value=os.path.join(repo_root, ".srs")),
+                patch("core.util.get_repo_root_path", return_value=repo_root),
+            ):
+                session = ReviewSession(
+                    ui=_DummyUI(),  # type: ignore[arg-type]
+                    parser_registry=build_parser_registry(ReviewConfig()),
+                    session_entry_ui=None,
+                    scheduler=ReviewConfig().build_scheduler(),
+                )
 
-            with patch("core.card.Card.is_due", return_value=True):
-                cards = session.cards_manager.load_due_cards()
+                with patch("core.card.Card.is_due", return_value=True):
+                    cards = session.cards_manager.load_due_cards()
 
             self.assertEqual(1, len(cards))
             blocks = cards[0].note_context_blocks
