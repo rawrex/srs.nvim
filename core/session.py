@@ -35,7 +35,7 @@ class ReviewSession:
         for idx, due_card in enumerate(cards, start=1):
             card = due_card.card
             note_context_blocks = due_card.note_context_blocks
-            question_title = f"\n[{idx}/{total}] {card.note_filename}"
+            question_title = f"\n[{idx}/{total}] {os.path.basename(card.index_entry.note_abs_path)}"
 
             # Step 1: question + reveals.
             question_started_ns = time.monotonic_ns()
@@ -43,7 +43,7 @@ class ReviewSession:
 
             review_duration_ms = max(0, (time.monotonic_ns() - question_started_ns) // 1_000_000)
             review_duration_s = review_duration_ms / 1000
-            answer_title = f"\n[{idx}/{total}] {card.note_filename} — answer ({review_duration_s:.1f}s)"
+            answer_title = f"\n[{idx}/{total}] {os.path.basename(card.index_entry.note_abs_path)} — answer ({review_duration_s:.1f}s)"
 
             # Step 2: answer view.
             suggested_rating = card.suggested_rating()
