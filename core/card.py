@@ -46,10 +46,6 @@ class Card(ABC):
     index_entry: IndexEntry
     metadata: Metadata
 
-    @property
-    def note_filename(self) -> str:
-        return self.index_entry.note_path.rsplit("/", 1)[-1]
-
     def is_due(self, now: datetime) -> bool:
         due = self.metadata.scheduler_card.due
         if due.tzinfo is None:
