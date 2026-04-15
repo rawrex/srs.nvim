@@ -47,12 +47,6 @@ class Card(ABC):
     metadata: Metadata
     context: dict[tuple[int, int], str]
 
-    def is_due(self, now: datetime) -> bool:
-        due = self.metadata.scheduler_card.due
-        if due.tzinfo is None:
-            due = due.replace(tzinfo=timezone.utc)
-        return due <= now
-
     @abstractmethod
     def reveal_for_label(self, label: str) -> CardView | None:
         raise NotImplementedError
