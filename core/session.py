@@ -47,12 +47,11 @@ class ReviewSession:
         self.ui.intro(total)
 
         for idx, card in enumerate(cards, start=1):
-            context_blocks = card.context
             question_title = f"\n[{idx}/{total}] {os.path.basename(card.index_entry.note_abs_path)}"
 
             # Step 1: question + reveals.
             question_started_ns = time.monotonic_ns()
-            self.ui.run_question_step(question_title, card, note_context_blocks=context_blocks)
+            self.ui.run_question_step(question_title, card, note_context_blocks=card.context)
 
             review_duration_ms = max(0, (time.monotonic_ns() - question_started_ns) // 1_000_000)
             review_duration_s = review_duration_ms / 1000
@@ -61,7 +60,7 @@ class ReviewSession:
             # Step 2: answer view.
             suggested_rating = card.suggested_rating()
             answer_view = card.answer_view()
-            self.ui.show_answer_step(answer_title, card, answer_view, note_context_blocks=context_blocks)
+            self.ui.show_answer_step(answer_title, card, answer_view, note_context_blocks=card.context)
 
             # Step 3: rating.
             self.ui.print_message("")
