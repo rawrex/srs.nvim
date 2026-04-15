@@ -35,11 +35,13 @@ class CardsManager:
     def load_due_cards(self) -> list[ReviewCard]:
         now = datetime.now(timezone.utc)
         index_entries = self.index.load_entries()
-        cards, note_context_blocks = self._build_cards_with_note_context(index_entries)
+
         claimed_lines_by_note: dict[str, set[int]] = {}
         for entry in index_entries:
             claimed_lines_by_note.setdefault(entry.note_abs_path, set())
             claimed_lines_by_note[entry.note_abs_path].update(range(entry.start_line, entry.end_line + 1))
+
+        cards, note_context_blocks = self._build_cards_with_note_context(index_entries)
         self._add_unclaimed_note_context(note_context_blocks, claimed_lines_by_note)
         return self._filter_due_cards(cards, note_context_blocks, now)
 
