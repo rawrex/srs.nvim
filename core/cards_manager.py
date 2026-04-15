@@ -64,11 +64,11 @@ class CardsManager:
         context_blocks: dict[str, dict[LineRange, str]] = {}
         for entry in index_entries:
             card = self.factory.make_card(index_entry=entry)
+            view = card.context_view()
             cards.append(card)
+            line_range = (entry.start_line, entry.end_line)
             context_blocks.setdefault(entry.note_abs_path, {})
-            context_blocks[entry.note_abs_path][(entry.start_line, entry.end_line)] = (
-                card.context_view().primary_block().text
-            )
+            context_blocks[entry.note_abs_path][line_range] = view.primary_block().text
         return cards, context_blocks
 
     def _add_unclaimed_note_context(
