@@ -6,15 +6,12 @@ from fsrs import Scheduler
 from core import util
 from core.cards_manager import CardsManager
 from core.parsers import ParserRegistry
-from core.ui import ReviewUI, SessionEntryUI
+from core.ui import ReviewUI
 
 
 class ReviewSession:
-    def __init__(
-        self, ui: ReviewUI, parser_registry: ParserRegistry, session_entry_ui: SessionEntryUI, scheduler: Scheduler
-    ) -> None:
+    def __init__(self, ui: ReviewUI, parser_registry: ParserRegistry, scheduler: Scheduler) -> None:
         self.ui = ui
-        self.session_entry_ui = session_entry_ui
         self.scheduler = scheduler
         self.cards_manager = CardsManager(parser_registry=parser_registry)
 
@@ -29,8 +26,7 @@ class ReviewSession:
             return 0
 
         total = len(cards)
-        if self.session_entry_ui:
-            self.session_entry_ui.show_start_menu(total)
+        self.ui.intro(total)
 
         for idx, due_card in enumerate(cards, start=1):
             card = due_card.card

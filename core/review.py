@@ -13,7 +13,7 @@ from core import util
 from core.config import load_review_config
 from core.parsers import build_parser_registry
 from core.session import ReviewSession
-from core.ui import ReviewUI, SessionEntryUI
+from core.ui import ReviewUI
 
 
 def main() -> int:
@@ -22,20 +22,13 @@ def main() -> int:
         if not repo_root:
             print("Not inside a git repository.")
             return 1
-
         config = load_review_config()
-        parser_registry = build_parser_registry(config)
-        ui = ReviewUI(config=config, console=Console())
-        session_entry_ui = SessionEntryUI(console=ui.console)
-
         session = ReviewSession(
-            ui=ui,
-            parser_registry=parser_registry,
-            session_entry_ui=session_entry_ui,
+            ui=ReviewUI(config=config, console=Console()),
+            parser_registry=build_parser_registry(config),
             scheduler=config.build_scheduler(),
         )
         return session.run()
-
     except KeyboardInterrupt:
         print("\nExit.")
         return 0

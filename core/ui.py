@@ -17,6 +17,32 @@ WIKI_IMAGE_RE = re.compile(r"!\[\[[^\]]+\]\]")
 SESSION_LOGO_PATH = Path(__file__).with_name("session_logo.txt")
 
 
+class SessionEntryUI:
+    def __init__(self, console: Console) -> None:
+        self.console = console
+        self.session_logo = self._load_session_logo()
+
+    def show_start_menu(self, due_cards_count: int) -> None:
+        while True:
+            self._clear_screen()
+            self.console.print(self.session_logo, markup=False, highlight=False)
+            self.console.print("")
+            self.console.print(f"Due cards: {due_cards_count}")
+            self.console.print("Press Enter to start")
+
+            key = read_single_key()
+            if maybe_suspend_for_key(key):
+                continue
+            if key in {"\r", "\n"}:
+                return
+
+    def _clear_screen(self) -> None:
+        os.system("cls" if os.name == "nt" else "clear")
+
+    def _load_session_logo(self) -> str:
+        return SESSION_LOGO_PATH.read_text(encoding="utf-8").rstrip("\n")
+
+
 class ReviewUI:
     def __init__(self, config: ReviewConfig, console: Console) -> None:
         self.console = console
@@ -24,12 +50,16 @@ class ReviewUI:
         self.show_context = config.show_context
         self.media = config.media
         self.chafa_path = shutil.which("chafa") if self.media is not None else None
+        self.intro_ui = SessionEntryUI(self.console)
         self.button_to_rating_byte: dict[str, bytes] = {
             button: bytes([rating.value]) for rating, button in self.rating_buttons.items()
         }
 
     def print_message(self, message: str) -> None:
         self.console.print(message)
+
+    def intro(self, total: int) -> None:
+        self.intro_ui.show_start_menu(total)
 
     def run_question_step(
         self, title: str, card: Card, note_context_blocks: dict[tuple[int, int], str] | None = None
@@ -261,32 +291,6 @@ class ReviewUI:
         mark = "<|---"
         first_line, sep, rest = text.partition("\n")
         return f"{first_line} {mark}{sep}{rest}"
-
-
-class SessionEntryUI:
-    def __init__(self, console: Console) -> None:
-        self.console = console
-        self.session_logo = self._load_session_logo()
-
-    def show_start_menu(self, due_cards_count: int) -> None:
-        while True:
-            self._clear_screen()
-            self.console.print(self.session_logo, markup=False, highlight=False)
-            self.console.print("")
-            self.console.print(f"Due cards: {due_cards_count}")
-            self.console.print("Press Enter to start")
-
-            key = read_single_key()
-            if maybe_suspend_for_key(key):
-                continue
-            if key in {"\r", "\n"}:
-                return
-
-    def _clear_screen(self) -> None:
-        os.system("cls" if os.name == "nt" else "clear")
-
-    def _load_session_logo(self) -> str:
-        return SESSION_LOGO_PATH.read_text(encoding="utf-8").rstrip("\n")
 
 
 def read_single_key() -> str:
