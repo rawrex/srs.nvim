@@ -25,7 +25,7 @@ class ClozePackTest(unittest.TestCase):
         self.assertEqual(["capital of France"], clozes)
 
         card = ClozeCard(
-            note_text=note,
+            source_text=note,
             index_entry=self._entry(),
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             reveal_mode=RevealMode.WHOLE,
@@ -56,7 +56,7 @@ class ClozePackTest(unittest.TestCase):
         note = " ".join(f"~{{c{i}}}" for i in range(27))
         console = FakeConsole()
         card = ClozeCard(
-            note_text=note,
+            source_text=note,
             index_entry=self._entry(),
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             reveal_mode=RevealMode.WHOLE,
@@ -82,7 +82,7 @@ class ClozePackTest(unittest.TestCase):
         }
         console = FakeConsole()
         card = ClozeCard(
-            note_text=note_context_blocks[(1, 1)],
+            source_text=note_context_blocks[(1, 1)],
             index_entry=self._entry(start_line=1, end_line=1),
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             reveal_mode=RevealMode.WHOLE,
@@ -113,7 +113,7 @@ class ClozePackTest(unittest.TestCase):
         }
         console = FakeConsole()
         card = ClozeCard(
-            note_text=note_context_blocks[(1, 1)],
+            source_text=note_context_blocks[(1, 1)],
             index_entry=self._entry(start_line=1, end_line=1),
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             reveal_mode=RevealMode.WHOLE,
@@ -141,7 +141,7 @@ class ClozePackTest(unittest.TestCase):
             (4, 4): "# Two\nSecond ~{context cloze} block.\n",
         }
         card = ClozeCard(
-            note_text=note_context_blocks[(1, 1)],
+            source_text=note_context_blocks[(1, 1)],
             index_entry=self._entry(start_line=1, end_line=1),
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             reveal_mode=RevealMode.WHOLE,
@@ -158,7 +158,7 @@ class ClozePackTest(unittest.TestCase):
 
     def test_context_view_masks_primary_cloze_without_labels(self) -> None:
         card = ClozeCard(
-            note_text="Term [a]~{hidden}",
+            source_text="Term [a]~{hidden}",
             index_entry=self._entry(),
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             reveal_mode=RevealMode.WHOLE,
@@ -186,7 +186,7 @@ class ClozePackTest(unittest.TestCase):
 
     def test_suggested_rating_supports_single_cloze_cards(self) -> None:
         card = ClozeCard(
-            note_text="A ~{single} B",
+            source_text="A ~{single} B",
             index_entry=self._entry(),
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             reveal_mode=RevealMode.WHOLE,
@@ -201,7 +201,7 @@ class ClozePackTest(unittest.TestCase):
 
     def test_suggested_rating_uses_partial_incremental_reveal_ratio(self) -> None:
         card = ClozeCard(
-            note_text="A ~{abcd} B ~{efgh}",
+            source_text="A ~{abcd} B ~{efgh}",
             index_entry=self._entry(),
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
             reveal_mode=RevealMode.INCREMENTAL,

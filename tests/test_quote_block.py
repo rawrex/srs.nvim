@@ -13,7 +13,7 @@ class QuoteBlockPackTest(unittest.TestCase):
 
     def _card(self, block_text: str) -> QuoteBlockCard:
         return QuoteBlockCard(
-            note_text=block_text,
+            source_text=block_text,
             index_entry=self._entry(),
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
         )

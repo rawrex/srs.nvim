@@ -16,7 +16,7 @@ class _Parser(Parser):
     def interpret_text(self, note_text: str):
         return []
 
-    def build_card(self, note_text: str, index_entry, metadata):
+    def build_card(self, source_text: str, index_entry, metadata):
         raise NotImplementedError
 
 

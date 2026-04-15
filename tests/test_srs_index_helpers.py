@@ -20,7 +20,7 @@ class _StaticParser(Parser):
     def interpret_text(self, note_text: str):
         return list(self._rows)
 
-    def build_card(self, note_text, index_entry, metadata):
+    def build_card(self, source_text, index_entry, metadata):
         raise NotImplementedError
 
 
