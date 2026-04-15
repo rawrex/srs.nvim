@@ -42,7 +42,7 @@ class CardsManager:
             with open(entry.note_abs_path, "r", encoding="utf-8") as handle:
                 note_text = handle.read()
             parsed_blocks: dict[tuple[int, int], str] = {
-                (start, end): block for start, end, block in parser.interpret_text(note_text)
+                (start, end): text_block for start, end, text_block in parser.interpret_text(note_text)
             }
             if block_text := parsed_blocks.get((entry.start_line, entry.end_line)):
                 card = parser.build_card(note_text=block_text, index_entry=entry, metadata=entry.read_metadata())
