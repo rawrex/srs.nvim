@@ -42,7 +42,7 @@ class CardView:
 
 @dataclass(kw_only=True)
 class Card(ABC):
-    note_text: str
+    source_text: str
     index_entry: IndexEntry
     metadata: Metadata
 

@@ -27,15 +27,15 @@ class QuoteBlockCard(Card):
         return self._build_view(current_block=self._first_line_with_padding())
 
     def answer_view(self) -> CardView:
-        return self._build_view(current_block=self.note_text)
+        return self._build_view(current_block=self.source_text)
 
     def context_view(self) -> CardView:
         return self._build_view(current_block=self._first_line_with_padding())
 
     def _first_line_with_padding(self) -> str:
-        if lines := self.note_text.splitlines(keepends=True):
+        if lines := self.source_text.splitlines(keepends=True):
             return lines[0] + ("\n" * (len(lines) - 1))
-        return self.note_text
+        return self.source_text
 
     def _build_view(self, current_block: str) -> CardView:
         return CardView(
@@ -93,8 +93,8 @@ class QuoteBlockParser(Parser):
 
         return cards
 
-    def build_card(self, note_text: str, index_entry: IndexEntry, metadata: Metadata) -> Card:
-        return QuoteBlockCard(note_text=note_text, index_entry=index_entry, metadata=metadata)
+    def build_card(self, source_text: str, index_entry: IndexEntry, metadata: Metadata) -> Card:
+        return QuoteBlockCard(source_text=source_text, index_entry=index_entry, metadata=metadata)
 
 
 def register_pack(registry: "ParserRegistry", _config: object) -> None:

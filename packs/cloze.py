@@ -93,7 +93,7 @@ class ClozeCard(Card):
     def __post_init__(self) -> None:
         self.reveal_mode = RevealMode(self.reveal_mode)
         self.text_parts, self.clozes = parse_note_clozes(
-            self.note_text, cloze_open=self.cloze_open, cloze_close=self.cloze_close
+            self.source_text, cloze_open=self.cloze_open, cloze_close=self.cloze_close
         )
         self.labels = [LABEL_CHARS[idx] for idx in range(len(self.clozes))]
         self.label_to_index = {label: idx for idx, label in enumerate(self.labels)}
@@ -150,7 +150,7 @@ class ClozeCard(Card):
         return self._build_view(current_block=self._question_block())
 
     def context_view(self) -> CardView:
-        return self._build_view(current_block=self._masked_context_block(self.note_text))
+        return self._build_view(current_block=self._masked_context_block(self.source_text))
 
     def _question_block(self) -> str:
         parts: List[str] = [self.text_parts[0]]
@@ -209,9 +209,9 @@ class ClozeParser(Parser):
                 cards.append((line_number, line_number, line))
         return cards
 
-    def build_card(self, note_text: str, index_entry: IndexEntry, metadata: Metadata) -> Card:
+    def build_card(self, source_text: str, index_entry: IndexEntry, metadata: Metadata) -> Card:
         return ClozeCard(
-            note_text=note_text,
+            source_text=source_text,
             index_entry=index_entry,
             metadata=metadata,
             reveal_mode=self.reveal_mode,

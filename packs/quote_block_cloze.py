@@ -52,7 +52,7 @@ class QuoteBlockClozeCard(ClozeCard, QuoteBlockCard):
         return super().answer_view()
 
     def context_view(self) -> CardView:
-        masked_block = self._masked_context_block(self.note_text)
+        masked_block = self._masked_context_block(self.source_text)
         lines = masked_block.splitlines(keepends=True)
         first_line = lines[0] if lines else masked_block
         collapsed_block = first_line + ("\n" * (len(lines) - 1))
@@ -101,9 +101,9 @@ class QuoteBlockClozeParser(ClozeParser, QuoteBlockParser, Parser):
 
         return cards
 
-    def build_card(self, note_text: str, index_entry: IndexEntry, metadata: Metadata) -> Card:
+    def build_card(self, source_text: str, index_entry: IndexEntry, metadata: Metadata) -> Card:
         return QuoteBlockClozeCard(
-            note_text=note_text,
+            source_text=source_text,
             index_entry=index_entry,
             metadata=metadata,
             reveal_mode=self.reveal_mode,

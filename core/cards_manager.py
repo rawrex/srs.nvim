@@ -15,10 +15,23 @@ class ReviewCard:
     note_context_blocks: dict[LineRange, str]
 
 
+class CardFactory:
+    def __init__(self, parser_registry: ParserRegistry) -> None:
+        self.parser_registry = parser_registry
+
+    def make_card(self, index_entry: IndexEntry) -> Card:
+        parser = self.parser_registry.get(index_entry.parser_id)
+        with open(index_entry.note_abs_path, "r", encoding="utf-8") as handle:
+            note_text = handle.read()
+            block = "\n".join(note_text.splitlines()[index_entry.start_line - 1 : index_entry.end_line])
+            return parser.build_card(source_text=block, index_entry=index_entry, metadata=index_entry.read_metadata())
+
+
 class CardsManager:
     def __init__(self, parser_registry: ParserRegistry) -> None:
         self.parser_registry = parser_registry
         self.index = Index(parser_registry=self.parser_registry)
+        self.factory = CardFactory(parser_registry=parser_registry)
 
     def load_due_cards(self) -> list[ReviewCard]:
         now = datetime.now(timezone.utc)
@@ -38,18 +51,11 @@ class CardsManager:
         cards_with_paths: list[tuple[Card, str]] = []
         context_blocks: dict[str, dict[LineRange, str]] = {}
         for entry in index_entries:
-            parser = self.parser_registry.get(entry.parser_id)
-            with open(entry.note_abs_path, "r", encoding="utf-8") as handle:
-                note_text = handle.read()
-            parsed_blocks: dict[tuple[int, int], str] = {
-                (start, end): text_block for start, end, text_block in parser.interpret_text(note_text)
-            }
-            if block_text := parsed_blocks.get((entry.start_line, entry.end_line)):
-                card = parser.build_card(note_text=block_text, index_entry=entry, metadata=entry.read_metadata())
-                context_blocks.setdefault(entry.note_abs_path, {})[(entry.start_line, entry.end_line)] = (
-                    card.context_view().primary_block().text
-                )
-                cards_with_paths.append((card, entry.note_abs_path))
+            card = self.factory.make_card(index_entry=entry)
+            context_blocks.setdefault(entry.note_abs_path, {})[(entry.start_line, entry.end_line)] = (
+                card.context_view().primary_block().text
+            )
+            cards_with_paths.append((card, entry.note_abs_path))
         return cards_with_paths, context_blocks
 
     def _add_unclaimed_note_context(

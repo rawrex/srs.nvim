@@ -14,5 +14,5 @@ class Parser(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def build_card(self, note_text: str, index_entry: IndexEntry, metadata: Metadata) -> Card:
+    def build_card(self, source_text: str, index_entry: IndexEntry, metadata: Metadata) -> Card:
         raise NotImplementedError
