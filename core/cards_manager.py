@@ -36,14 +36,26 @@ class CardsManager:
         now = datetime.now(timezone.utc)
         index_entries = self.index.load_entries()
 
+        # Filter out non-due cards from the start
+        for index, entry in enumerate(index_entries):
+            metadata = entry.read_metadata()
+            if metadata.scheduler_card.due > now:
+                index_entries.pop(index)
+
+        # Context formation
         claimed_lines_by_note: dict[str, set[int]] = {}
         for entry in index_entries:
             claimed_lines_by_note.setdefault(entry.note_abs_path, set())
             claimed_lines_by_note[entry.note_abs_path].update(range(entry.start_line, entry.end_line + 1))
-
         cards, note_context_blocks = self._build_cards_with_note_context(index_entries)
         self._add_unclaimed_note_context(note_context_blocks, claimed_lines_by_note)
-        return self._filter_due_cards(cards, note_context_blocks, now)
+
+        # Form the review ready card items
+        due_cards: list[ReviewCard] = []
+        for card in cards:
+            note_path = card.index_entry.note_abs_path
+            due_cards.append(ReviewCard(card=card, context=note_context_blocks.get(note_path, {})))
+        return due_cards
 
     def _build_cards_with_note_context(
         self, index_entries: list[IndexEntry]
@@ -66,17 +78,6 @@ class CardsManager:
                 context_blocks = note_context_blocks.setdefault(note_path, {})
                 for line_range, block in fallback_blocks.items():
                     context_blocks.setdefault(line_range, block)
-
-    def _filter_due_cards(
-        self, cards: list[Card], context_blocks: dict[str, dict[LineRange, str]], now: datetime
-    ) -> list[ReviewCard]:
-        due_cards: list[ReviewCard] = []
-        for card in cards:
-            if card.is_due(now):
-                note_path = card.index_entry.note_abs_path
-                review_card = ReviewCard(card=card, context=context_blocks.get(note_path, {}))
-                due_cards.append(review_card)
-        return due_cards
 
     def _read_unclaimed_line_blocks(self, note_path: str, claimed_lines: set[int]) -> dict[LineRange, str]:
         with open(note_path, "r", encoding="utf-8") as handle:
