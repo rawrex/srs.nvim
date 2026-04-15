@@ -61,14 +61,12 @@ class ReviewUI:
     def intro(self, total: int) -> None:
         self.intro_ui.show_start_menu(total)
 
-    def question_step(
-        self, title: str, card: Card, note_context_blocks: dict[tuple[int, int], str] | None = None
-    ) -> CardView:
+    def question_step(self, title: str, card: Card) -> CardView:
         current_view = card.question_view()
         while True:
             self._clear_screen()
             self.console.print(title)
-            self._print_view(card, current_view, note_context_blocks)
+            self._print_view(card, current_view)
 
             key = read_single_key()
             if maybe_suspend_for_key(key):
@@ -79,12 +77,10 @@ class ReviewUI:
             if maybe_view is not None:
                 current_view = maybe_view
 
-    def answer_step(
-        self, title: str, card: Card, view: CardView, note_context_blocks: dict[tuple[int, int], str] | None = None
-    ) -> None:
+    def answer_step(self, title: str, card: Card, view: CardView) -> None:
         self._clear_screen()
         self.console.print(title)
-        self._print_view(card, view, note_context_blocks)
+        self._print_view(card, view)
 
     def rating_step(self, default_rating: Rating | None) -> Rating:
         prompt = self._rating_prompt(default_rating)
@@ -123,36 +119,23 @@ class ReviewUI:
             parts.append(f"Enter={default_rating.name}")
         return f"Rate [{', '.join(parts)}]: "
 
-    def _print_view(
-        self, card: Card, view: CardView, note_context_blocks: dict[tuple[int, int], str] | None = None
-    ) -> None:
+    def _print_view(self, card: Card, view: CardView) -> None:
         primary_block = self._mark_active_line(view.primary_block().text)
 
         if not self.show_context:
             self._print_markdown_with_images(primary_block.rstrip("\n"))
             return
 
-        rendered_blocks, primary_block_index = self._rendered_context_blocks(
-            card, view, primary_block, note_context_blocks
-        )
+        rendered_blocks, primary_block_index = self._rendered_context_blocks(card, view, primary_block)
         merged_text = "\n\n".join(block.rstrip("\n") for block in rendered_blocks)
         target_line_index = self._line_index_for_block(rendered_blocks, primary_block_index)
         viewport_text = self._center_viewport_on_line(merged_text.rstrip("\n"), target_line_index)
         self._print_markdown_with_images(viewport_text)
 
-    def _rendered_context_blocks(
-        self, card: Card, view: CardView, primary_block: str, note_context_blocks: dict[tuple[int, int], str] | None
-    ) -> tuple[list[str], int]:
-        if note_context_blocks:
-            return self._rendered_context_blocks_for_card(
-                note_context_blocks, card.index_entry.start_line, card.index_entry.end_line, primary_block
-            )
-
-        rendered_blocks = [primary_block if block.is_primary else block.text for block in view.blocks]
-        if not rendered_blocks:
-            return [primary_block], 0
-        primary_block_index = next((idx for idx, block in enumerate(view.blocks) if block.is_primary), 0)
-        return rendered_blocks, primary_block_index
+    def _rendered_context_blocks(self, card: Card, view: CardView, primary_block: str) -> tuple[list[str], int]:
+        return self._rendered_context_blocks_for_card(
+            card.context, card.index_entry.start_line, card.index_entry.end_line, primary_block
+        )
 
     def _rendered_context_blocks_for_card(
         self, note_context_blocks: dict[tuple[int, int], str], start_line: int, end_line: int, primary_block: str
