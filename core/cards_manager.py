@@ -46,11 +46,6 @@ class CardsManager:
         cards: list[Card] = []
         context_blocks: dict[str, dict[LineRange, str]] = {}
         note_to_claimed_lines: dict[str, set[int]] = {}
-
-        for entry in index_entries:
-            note_to_claimed_lines.setdefault(entry.note_abs_path, set())
-            note_to_claimed_lines[entry.note_abs_path].update(range(entry.start_line, entry.end_line + 1))
-
         for entry in index_entries:
             card = self.factory.make_card(index_entry=entry)
             view = card.context_view()
@@ -58,6 +53,8 @@ class CardsManager:
             line_range = (entry.start_line, entry.end_line)
             context_blocks.setdefault(entry.note_abs_path, {})
             context_blocks[entry.note_abs_path][line_range] = view.primary_block().text
+            note_to_claimed_lines.setdefault(entry.note_abs_path, set())
+            note_to_claimed_lines[entry.note_abs_path].update(range(entry.start_line, entry.end_line + 1))
 
         self._add_unclaimed_note_context(context_blocks, note_to_claimed_lines)
 
