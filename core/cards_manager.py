@@ -71,16 +71,16 @@ class CardsManager:
         return cards, context_blocks
 
     def _add_unclaimed_note_context(
-        self, note_context_blocks: dict[str, dict[LineRange, str]], claimed_lines_by_note: dict[str, set[int]]
+        self, note_context_blocks: dict[str, dict[LineRange, str]], note_to_claimed_lines: dict[str, set[int]]
     ) -> None:
-        for note_path, claimed_lines in claimed_lines_by_note.items():
+        for note_path, claimed in note_to_claimed_lines.items():
             with open(note_path, "r", encoding="utf-8") as handle:
                 lines = handle.readlines()
-            fallback_blocks = {
+            plaintext_blocks = {
                 (line_number, line_number): line
                 for line_number, line in enumerate(lines, start=1)
-                if line_number not in claimed_lines and line.strip()
+                if line_number not in claimed and line.strip()
             }
             context_blocks = note_context_blocks.setdefault(note_path, {})
-            for line_range, block in fallback_blocks.items():
+            for line_range, block in plaintext_blocks.items():
                 context_blocks.setdefault(line_range, block)
