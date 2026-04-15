@@ -59,18 +59,6 @@ class CardsManager:
             note_to_claimed_lines.setdefault(entry.note_abs_path, set())
             note_to_claimed_lines[entry.note_abs_path].update(range(entry.start_line, entry.end_line + 1))
 
-        self._add_unclaimed_note_context(context_blocks, note_to_claimed_lines)
-
-        # Form the review ready card items
-        due_cards: list[ReviewCard] = []
-        for card in cards:
-            note_path = card.index_entry.note_abs_path
-            due_cards.append(ReviewCard(card=card, context=context_blocks.get(note_path, {})))
-        return due_cards
-
-    def _add_unclaimed_note_context(
-        self, context_blocks: dict[str, dict[LineRange, str]], note_to_claimed_lines: dict[str, set[int]]
-    ) -> None:
         for note_path, claimed in note_to_claimed_lines.items():
             with open(note_path, "r", encoding="utf-8") as handle:
                 lines = handle.readlines()
@@ -82,3 +70,10 @@ class CardsManager:
             note_context_blocks = context_blocks.setdefault(note_path, {})
             for line_range, block in plaintext_blocks.items():
                 note_context_blocks.setdefault(line_range, block)
+
+        # Form the review ready card items
+        due_cards: list[ReviewCard] = []
+        for card in cards:
+            note_path = card.index_entry.note_abs_path
+            due_cards.append(ReviewCard(card=card, context=context_blocks.get(note_path, {})))
+        return due_cards
