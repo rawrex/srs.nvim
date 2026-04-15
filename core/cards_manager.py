@@ -29,8 +29,7 @@ class CardFactory:
 
 class CardsManager:
     def __init__(self, parser_registry: ParserRegistry) -> None:
-        self.parser_registry = parser_registry
-        self.index = Index(parser_registry=self.parser_registry)
+        self.index = Index(parser_registry=parser_registry)
         self.factory = CardFactory(parser_registry=parser_registry)
 
     def load_due_cards(self) -> list[ReviewCard]:
