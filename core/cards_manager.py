@@ -43,12 +43,12 @@ class CardsManager:
                 index_entries.pop(index)
 
         # Context formation
-        claimed_lines_by_note: dict[str, set[int]] = {}
+        note_to_claimed_lines: dict[str, set[int]] = {}
         for entry in index_entries:
-            claimed_lines_by_note.setdefault(entry.note_abs_path, set())
-            claimed_lines_by_note[entry.note_abs_path].update(range(entry.start_line, entry.end_line + 1))
+            note_to_claimed_lines.setdefault(entry.note_abs_path, set())
+            note_to_claimed_lines[entry.note_abs_path].update(range(entry.start_line, entry.end_line + 1))
         cards, context_blocks = self._build_cards_with_note_context(index_entries)
-        self._add_unclaimed_note_context(context_blocks, claimed_lines_by_note)
+        self._add_unclaimed_note_context(context_blocks, note_to_claimed_lines)
 
         # Form the review ready card items
         due_cards: list[ReviewCard] = []
