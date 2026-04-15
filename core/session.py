@@ -1,10 +1,13 @@
 import os
 import time
+from datetime import datetime, timezone
 
 from fsrs import Scheduler
 
 from core import util
-from core.cards_manager import CardsManager
+from core.card import Card
+from core.factory import CardFactory
+from core.index.index import Index
 from core.parsers import ParserRegistry
 from core.ui import ReviewUI
 
@@ -13,14 +16,29 @@ class ReviewSession:
     def __init__(self, ui: ReviewUI, parser_registry: ParserRegistry, scheduler: Scheduler) -> None:
         self.ui = ui
         self.scheduler = scheduler
-        self.cards_manager = CardsManager(parser_registry=parser_registry)
+        self.index = Index(parser_registry=parser_registry)
+        self.factory = CardFactory(parser_registry=parser_registry)
+
+    def load_due_cards(self) -> list[Card]:
+        now = datetime.now(timezone.utc)
+        index_entries = self.index.load_entries()
+        for index, entry in enumerate(index_entries):
+            metadata = entry.read_metadata()
+            if metadata.scheduler_card.due > now:
+                index_entries.pop(index)
+        cards: list[Card] = []
+        for entry in index_entries:
+            card = self.factory.make_card(index_entry=entry)
+            card.context = self.factory.make_context(card, index_entries)
+            cards.append(card)
+        return cards
 
     def run(self) -> int:
         if not os.path.exists(util.get_index_path()):
             self.ui.print_message("Missing index")
             return 1
 
-        cards = self.cards_manager.load_due_cards()
+        cards = self.load_due_cards()
         if not cards:
             self.ui.print_message("No due cards.")
             return 0
