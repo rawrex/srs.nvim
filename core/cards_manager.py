@@ -65,7 +65,8 @@ class CardsManager:
         for entry in index_entries:
             card = self.factory.make_card(index_entry=entry)
             cards.append(card)
-            context_blocks.setdefault(entry.note_abs_path, {})[(entry.start_line, entry.end_line)] = (
+            context_blocks.setdefault(entry.note_abs_path, {})
+            context_blocks[entry.note_abs_path][(entry.start_line, entry.end_line)] = (
                 card.context_view().primary_block().text
             )
         return cards, context_blocks
