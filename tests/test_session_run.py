@@ -1,5 +1,5 @@
-import unittest
 import os
+import unittest
 from unittest.mock import Mock, patch
 
 from fsrs import Rating
@@ -47,9 +47,7 @@ class ReviewSessionRunTest(unittest.TestCase):
             ui = Mock()
             config = ReviewConfig()
             session = ReviewSession(
-                ui=ui,
-                parser_registry=build_parser_registry(config),
-                scheduler=config.build_scheduler(),
+                ui=ui, parser_registry=build_parser_registry(config), scheduler=config.build_scheduler()
             )
 
             with patch("core.util.get_index_path", return_value=os.path.join(repo_root, ".srs", "index.txt")):
@@ -63,9 +61,7 @@ class ReviewSessionRunTest(unittest.TestCase):
             ui = Mock()
             config = ReviewConfig()
             session = ReviewSession(
-                ui=ui,
-                parser_registry=build_parser_registry(config),
-                scheduler=config.build_scheduler(),
+                ui=ui, parser_registry=build_parser_registry(config), scheduler=config.build_scheduler()
             )
 
             with (
@@ -85,9 +81,7 @@ class ReviewSessionRunTest(unittest.TestCase):
             ui.run_question_step.side_effect = ["answer1", "answer2"]
 
             session = ReviewSession(
-                ui=ui,
-                parser_registry=build_parser_registry(config),
-                scheduler=config.build_scheduler(),
+                ui=ui, parser_registry=build_parser_registry(config), scheduler=config.build_scheduler()
             )
 
             scheduler = Mock()
@@ -107,10 +101,7 @@ class ReviewSessionRunTest(unittest.TestCase):
                 patch.object(
                     session.cards_manager,
                     "load_due_cards",
-                    return_value=[
-                        ReviewCard(card=card_1, note_context_blocks={}),
-                        ReviewCard(card=card_2, note_context_blocks={}),
-                    ],
+                    return_value=[ReviewCard(card=card_1, context={}), ReviewCard(card=card_2, context={})],
                 ),
                 patch("core.session.time.monotonic_ns") as monotonic_ns,
                 patch("core.util.get_index_path", return_value=os.path.join(repo_root, ".srs", "index.txt")),
@@ -136,9 +127,7 @@ class ReviewSessionRunTest(unittest.TestCase):
             ui.prompt_rating_step.side_effect = [Rating.Good, KeyboardInterrupt]
 
             session = ReviewSession(
-                ui=ui,
-                parser_registry=build_parser_registry(config),
-                scheduler=config.build_scheduler(),
+                ui=ui, parser_registry=build_parser_registry(config), scheduler=config.build_scheduler()
             )
 
             scheduler = Mock()
@@ -152,10 +141,7 @@ class ReviewSessionRunTest(unittest.TestCase):
                 patch.object(
                     session.cards_manager,
                     "load_due_cards",
-                    return_value=[
-                        ReviewCard(card=card_1, note_context_blocks={}),
-                        ReviewCard(card=card_2, note_context_blocks={}),
-                    ],
+                    return_value=[ReviewCard(card=card_1, context={}), ReviewCard(card=card_2, context={})],
                 ),
                 patch("core.session.time.monotonic_ns", side_effect=[0, 1_000_000, 2_000_000, 3_000_000]),
                 patch("core.util.get_index_path", return_value=os.path.join(repo_root, ".srs", "index.txt")),

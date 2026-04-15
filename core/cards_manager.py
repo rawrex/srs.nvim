@@ -12,7 +12,7 @@ LineRange = tuple[int, int]
 @dataclass(frozen=True)
 class ReviewCard:
     card: Card
-    note_context_blocks: dict[LineRange, str]
+    context: dict[LineRange, str]
 
 
 class CardFactory:
@@ -36,27 +36,27 @@ class CardsManager:
     def load_due_cards(self) -> list[ReviewCard]:
         now = datetime.now(timezone.utc)
         index_entries = self.index.load_entries()
-        cards_with_paths, note_context_blocks = self._build_cards_with_note_context(index_entries)
+        cards, note_context_blocks = self._build_cards_with_note_context(index_entries)
         claimed_lines_by_note: dict[str, set[int]] = {}
         for entry in index_entries:
             claimed_lines_by_note.setdefault(entry.note_abs_path, set()).update(
                 range(entry.start_line, entry.end_line + 1)
             )
         self._add_unclaimed_note_context(note_context_blocks, claimed_lines_by_note)
-        return self._filter_due_cards(cards_with_paths, note_context_blocks, now)
+        return self._filter_due_cards(cards, note_context_blocks, now)
 
     def _build_cards_with_note_context(
         self, index_entries: list[IndexEntry]
-    ) -> tuple[list[tuple[Card, str]], dict[str, dict[LineRange, str]]]:
-        cards_with_paths: list[tuple[Card, str]] = []
+    ) -> tuple[list[Card], dict[str, dict[LineRange, str]]]:
+        cards: list[Card] = []
         context_blocks: dict[str, dict[LineRange, str]] = {}
         for entry in index_entries:
             card = self.factory.make_card(index_entry=entry)
+            cards.append(card)
             context_blocks.setdefault(entry.note_abs_path, {})[(entry.start_line, entry.end_line)] = (
                 card.context_view().primary_block().text
             )
-            cards_with_paths.append((card, entry.note_abs_path))
-        return cards_with_paths, context_blocks
+        return cards, context_blocks
 
     def _add_unclaimed_note_context(
         self, note_context_blocks: dict[str, dict[LineRange, str]], claimed_lines_by_note: dict[str, set[int]]
@@ -68,15 +68,14 @@ class CardsManager:
                     context_blocks.setdefault(line_range, block)
 
     def _filter_due_cards(
-        self,
-        cards_with_paths: list[tuple[Card, str]],
-        note_context_blocks: dict[str, dict[LineRange, str]],
-        now: datetime,
+        self, cards: list[Card], context_blocks: dict[str, dict[LineRange, str]], now: datetime
     ) -> list[ReviewCard]:
         due_cards: list[ReviewCard] = []
-        for card, note_path in cards_with_paths:
+        for card in cards:
             if card.is_due(now):
-                due_cards.append(ReviewCard(card=card, note_context_blocks=note_context_blocks.get(note_path, {})))
+                note_path = card.index_entry.note_abs_path
+                review_card = ReviewCard(card=card, context=context_blocks.get(note_path, {}))
+                due_cards.append(review_card)
         return due_cards
 
     def _read_unclaimed_line_blocks(self, note_path: str, claimed_lines: set[int]) -> dict[LineRange, str]:
