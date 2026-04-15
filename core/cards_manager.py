@@ -41,6 +41,7 @@ class CardsManager:
             metadata = entry.read_metadata()
             if metadata.scheduler_card.due > now:
                 index_entries.pop(index)
+        # Loosing the ability to fetch the context views for non-due cards!
 
         # Context formation
         cards: list[Card] = []
