@@ -20,5 +20,5 @@ class CardFactory:
         for sibling in siblings:
             sibling_card = self.make_card(sibling)
             context[sibling.start_line, sibling.end_line] = sibling_card.context_view().primary_block().text
-        context.pop((card.index_entry.start_line, card.index_entry.end_line))
+        # context.pop((card.index_entry.start_line, card.index_entry.end_line))
         return context

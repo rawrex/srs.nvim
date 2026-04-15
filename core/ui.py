@@ -61,7 +61,7 @@ class ReviewUI:
     def intro(self, total: int) -> None:
         self.intro_ui.show_start_menu(total)
 
-    def run_question_step(
+    def question_step(
         self, title: str, card: Card, note_context_blocks: dict[tuple[int, int], str] | None = None
     ) -> CardView:
         current_view = card.question_view()
@@ -79,14 +79,14 @@ class ReviewUI:
             if maybe_view is not None:
                 current_view = maybe_view
 
-    def show_answer_step(
+    def answer_step(
         self, title: str, card: Card, view: CardView, note_context_blocks: dict[tuple[int, int], str] | None = None
     ) -> None:
         self._clear_screen()
         self.console.print(title)
         self._print_view(card, view, note_context_blocks)
 
-    def prompt_rating_step(self, default_rating: Rating | None) -> Rating:
+    def rating_step(self, default_rating: Rating | None) -> Rating:
         prompt = self._rating_prompt(default_rating)
         while True:
             self.console.print(prompt, end="", markup=False, highlight=False)

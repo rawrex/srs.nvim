@@ -47,26 +47,26 @@ class ReviewSession:
         self.ui.intro(total)
 
         for idx, card in enumerate(cards, start=1):
-            question_title = f"\n[{idx}/{total}] {os.path.basename(card.index_entry.note_abs_path)}"
+            note_name = os.path.basename(card.index_entry.note_abs_path)
+            question_title = f"\n[{idx}/{total}] {note_name}"
 
-            # Step 1: question + reveals.
+            # Step 1. Question
             question_started_ns = time.monotonic_ns()
-            self.ui.run_question_step(question_title, card, note_context_blocks=card.context)
+            self.ui.question_step(question_title, card, note_context_blocks=card.context)
+            duration_ms = max(0, (time.monotonic_ns() - question_started_ns) // 1_000_000)
+            review_duration_s = duration_ms / 1000
+            answer_title = f"\n[{idx}/{total}] {note_name} — answer ({review_duration_s:.1f}s)"
 
-            review_duration_ms = max(0, (time.monotonic_ns() - question_started_ns) // 1_000_000)
-            review_duration_s = review_duration_ms / 1000
-            answer_title = f"\n[{idx}/{total}] {os.path.basename(card.index_entry.note_abs_path)} — answer ({review_duration_s:.1f}s)"
-
-            # Step 2: answer view.
+            # Step 2. Answer view
             suggested_rating = card.suggested_rating()
             answer_view = card.answer_view()
-            self.ui.show_answer_step(answer_title, card, answer_view, note_context_blocks=card.context)
+            self.ui.answer_step(answer_title, card, answer_view, note_context_blocks=card.context)
 
-            # Step 3: rating.
+            # Step 3. Rating
             self.ui.print_message("")
-            rating = self.ui.prompt_rating_step(suggested_rating)
+            rating = self.ui.rating_step(suggested_rating)
             updated_card, review_log = self.scheduler.review_card(
-                card.metadata.scheduler_card, rating, review_duration=int(review_duration_ms)
+                card.metadata.scheduler_card, rating, review_duration=int(duration_ms)
             )
             card.metadata.scheduler_card = updated_card
             card.metadata.review_logs.append(review_log)

@@ -67,7 +67,7 @@ class ClozePackTest(unittest.TestCase):
         ui = ReviewUI(config=ReviewConfig(), console=console)  # type: ignore[arg-type]
 
         with patch("core.ui.os.system", return_value=0), patch("core.ui.read_single_key", side_effect=["A", "\n"]):
-            ui.run_question_step("title", card)
+            ui.question_step("title", card)
 
         frames = [item.markup for item, _kwargs in console.printed if isinstance(item, Markdown)]
         self.assertGreaterEqual(len(frames), 2)
@@ -96,7 +96,7 @@ class ClozePackTest(unittest.TestCase):
         )
 
         with patch("core.ui.os.system", return_value=0), patch("core.ui.read_single_key", side_effect=["\n"]):
-            ui.run_question_step("title", card, note_context_blocks=note_context_blocks)
+            ui.question_step("title", card, note_context_blocks=note_context_blocks)
 
         calls = [item.markup for item, _kwargs in console.printed if isinstance(item, Markdown)]
         self.assertGreaterEqual(len(calls), 1)
@@ -127,7 +127,7 @@ class ClozePackTest(unittest.TestCase):
         )
 
         with patch("core.ui.os.system", return_value=0), patch("core.ui.read_single_key", side_effect=["\n"]):
-            ui.run_question_step("title", card, note_context_blocks=note_context_blocks)
+            ui.question_step("title", card, note_context_blocks=note_context_blocks)
 
         calls = [item.markup for item, _kwargs in console.printed if isinstance(item, Markdown)]
         self.assertGreaterEqual(len(calls), 1)

@@ -1,7 +1,6 @@
 import os
 import unittest
-from unittest.mock import Mock
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from fsrs import Rating
 from rich.markdown import Markdown
@@ -18,7 +17,7 @@ class ReviewUiRatingTest(unittest.TestCase):
         ui = ReviewUI(config=ReviewConfig(), console=console)  # type: ignore[arg-type]
 
         with patch("core.ui.read_single_key", return_value="\n"):
-            rating = ui.prompt_rating_step(default_rating=Rating.Good)
+            rating = ui.rating_step(default_rating=Rating.Good)
 
         self.assertEqual(Rating.Good, rating)
         self.assertIn(("Set rating: Good", {}), console.printed)
@@ -28,7 +27,7 @@ class ReviewUiRatingTest(unittest.TestCase):
         ui = ReviewUI(config=ReviewConfig(), console=console)  # type: ignore[arg-type]
 
         with patch("core.ui.read_single_key", side_effect=["\n", "i"]):
-            rating = ui.prompt_rating_step(default_rating=None)
+            rating = ui.rating_step(default_rating=None)
 
         self.assertEqual(Rating.Good, rating)
         self.assertIn(("Invalid rating", {}), console.printed)
