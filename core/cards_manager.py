@@ -43,11 +43,22 @@ class CardsManager:
                 index_entries.pop(index)
 
         # Context formation
+        cards: list[Card] = []
+        context_blocks: dict[str, dict[LineRange, str]] = {}
         note_to_claimed_lines: dict[str, set[int]] = {}
+
         for entry in index_entries:
             note_to_claimed_lines.setdefault(entry.note_abs_path, set())
             note_to_claimed_lines[entry.note_abs_path].update(range(entry.start_line, entry.end_line + 1))
-        cards, context_blocks = self._build_cards_with_note_context(index_entries)
+
+        for entry in index_entries:
+            card = self.factory.make_card(index_entry=entry)
+            view = card.context_view()
+            cards.append(card)
+            line_range = (entry.start_line, entry.end_line)
+            context_blocks.setdefault(entry.note_abs_path, {})
+            context_blocks[entry.note_abs_path][line_range] = view.primary_block().text
+
         self._add_unclaimed_note_context(context_blocks, note_to_claimed_lines)
 
         # Form the review ready card items
@@ -57,22 +68,8 @@ class CardsManager:
             due_cards.append(ReviewCard(card=card, context=context_blocks.get(note_path, {})))
         return due_cards
 
-    def _build_cards_with_note_context(
-        self, index_entries: list[IndexEntry]
-    ) -> tuple[list[Card], dict[str, dict[LineRange, str]]]:
-        cards: list[Card] = []
-        context_blocks: dict[str, dict[LineRange, str]] = {}
-        for entry in index_entries:
-            card = self.factory.make_card(index_entry=entry)
-            view = card.context_view()
-            cards.append(card)
-            line_range = (entry.start_line, entry.end_line)
-            context_blocks.setdefault(entry.note_abs_path, {})
-            context_blocks[entry.note_abs_path][line_range] = view.primary_block().text
-        return cards, context_blocks
-
     def _add_unclaimed_note_context(
-        self, note_context_blocks: dict[str, dict[LineRange, str]], note_to_claimed_lines: dict[str, set[int]]
+        self, context_blocks: dict[str, dict[LineRange, str]], note_to_claimed_lines: dict[str, set[int]]
     ) -> None:
         for note_path, claimed in note_to_claimed_lines.items():
             with open(note_path, "r", encoding="utf-8") as handle:
@@ -82,6 +79,6 @@ class CardsManager:
                 for line_number, line in enumerate(lines, start=1)
                 if line_number not in claimed and line.strip()
             }
-            context_blocks = note_context_blocks.setdefault(note_path, {})
+            note_context_blocks = context_blocks.setdefault(note_path, {})
             for line_range, block in plaintext_blocks.items():
-                context_blocks.setdefault(line_range, block)
+                note_context_blocks.setdefault(line_range, block)
