@@ -47,14 +47,14 @@ class CardsManager:
         for entry in index_entries:
             claimed_lines_by_note.setdefault(entry.note_abs_path, set())
             claimed_lines_by_note[entry.note_abs_path].update(range(entry.start_line, entry.end_line + 1))
-        cards, note_context_blocks = self._build_cards_with_note_context(index_entries)
-        self._add_unclaimed_note_context(note_context_blocks, claimed_lines_by_note)
+        cards, context_blocks = self._build_cards_with_note_context(index_entries)
+        self._add_unclaimed_note_context(context_blocks, claimed_lines_by_note)
 
         # Form the review ready card items
         due_cards: list[ReviewCard] = []
         for card in cards:
             note_path = card.index_entry.note_abs_path
-            due_cards.append(ReviewCard(card=card, context=note_context_blocks.get(note_path, {})))
+            due_cards.append(ReviewCard(card=card, context=context_blocks.get(note_path, {})))
         return due_cards
 
     def _build_cards_with_note_context(
@@ -74,16 +74,13 @@ class CardsManager:
         self, note_context_blocks: dict[str, dict[LineRange, str]], claimed_lines_by_note: dict[str, set[int]]
     ) -> None:
         for note_path, claimed_lines in claimed_lines_by_note.items():
-            if fallback_blocks := self._read_unclaimed_line_blocks(note_path, claimed_lines):
-                context_blocks = note_context_blocks.setdefault(note_path, {})
-                for line_range, block in fallback_blocks.items():
-                    context_blocks.setdefault(line_range, block)
-
-    def _read_unclaimed_line_blocks(self, note_path: str, claimed_lines: set[int]) -> dict[LineRange, str]:
-        with open(note_path, "r", encoding="utf-8") as handle:
-            lines = handle.readlines()
-        return {
-            (line_number, line_number): line
-            for line_number, line in enumerate(lines, start=1)
-            if line_number not in claimed_lines and line.strip()
-        }
+            with open(note_path, "r", encoding="utf-8") as handle:
+                lines = handle.readlines()
+            fallback_blocks = {
+                (line_number, line_number): line
+                for line_number, line in enumerate(lines, start=1)
+                if line_number not in claimed_lines and line.strip()
+            }
+            context_blocks = note_context_blocks.setdefault(note_path, {})
+            for line_range, block in fallback_blocks.items():
+                context_blocks.setdefault(line_range, block)
