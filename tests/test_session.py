@@ -17,6 +17,16 @@ class _DummyUI:
 
 
 class ReviewSessionTest(unittest.TestCase):
+    def test_init_does_not_require_separate_session_entry_ui(self) -> None:
+        config = ReviewConfig()
+        session = ReviewSession(
+            ui=_DummyUI(),  # type: ignore[arg-type]
+            parser_registry=build_parser_registry(config),
+            scheduler=config.build_scheduler(),
+        )
+
+        self.assertIsNotNone(session)
+
     def test_init_uses_scheduler_passed_to_session(self) -> None:
         config = ReviewConfig(
             scheduler_parameters=(
@@ -52,7 +62,6 @@ class ReviewSessionTest(unittest.TestCase):
         session = ReviewSession(
             ui=_DummyUI(),  # type: ignore[arg-type]
             parser_registry=build_parser_registry(config),
-            session_entry_ui=None,
             scheduler=config.build_scheduler(),
         )
 
@@ -82,7 +91,6 @@ class ReviewSessionTest(unittest.TestCase):
                 session = ReviewSession(
                     ui=_DummyUI(),  # type: ignore[arg-type]
                     parser_registry=build_parser_registry(ReviewConfig()),
-                    session_entry_ui=None,
                     scheduler=ReviewConfig().build_scheduler(),
                 )
 

@@ -49,7 +49,6 @@ class ReviewSessionRunTest(unittest.TestCase):
             session = ReviewSession(
                 ui=ui,
                 parser_registry=build_parser_registry(config),
-                session_entry_ui=None,
                 scheduler=config.build_scheduler(),
             )
 
@@ -66,7 +65,6 @@ class ReviewSessionRunTest(unittest.TestCase):
             session = ReviewSession(
                 ui=ui,
                 parser_registry=build_parser_registry(config),
-                session_entry_ui=None,
                 scheduler=config.build_scheduler(),
             )
 
@@ -83,14 +81,12 @@ class ReviewSessionRunTest(unittest.TestCase):
         with temporary_session_repo(with_index=True) as repo_root:
             config = ReviewConfig()
             ui = Mock()
-            session_entry_ui = Mock()
             ui.prompt_rating_step.return_value = Rating.Good
             ui.run_question_step.side_effect = ["answer1", "answer2"]
 
             session = ReviewSession(
                 ui=ui,
                 parser_registry=build_parser_registry(config),
-                session_entry_ui=session_entry_ui,
                 scheduler=config.build_scheduler(),
             )
 
@@ -130,20 +126,18 @@ class ReviewSessionRunTest(unittest.TestCase):
         card_1.index_entry.write_metadata.assert_called_once_with(card_1.metadata)
         card_2.index_entry.write_metadata.assert_called_once_with(card_2.metadata)
         self.assertEqual(2, scheduler.review_card.call_count)
-        session_entry_ui.show_start_menu.assert_called_once_with(2)
+        ui.intro.assert_called_once_with(2)
 
     def test_run_raises_interrupt_during_rating(self) -> None:
         with temporary_session_repo(with_index=True) as repo_root:
             config = ReviewConfig()
             ui = Mock()
-            session_entry_ui = Mock()
             ui.run_question_step.return_value = "answer"
             ui.prompt_rating_step.side_effect = [Rating.Good, KeyboardInterrupt]
 
             session = ReviewSession(
                 ui=ui,
                 parser_registry=build_parser_registry(config),
-                session_entry_ui=session_entry_ui,
                 scheduler=config.build_scheduler(),
             )
 
@@ -169,4 +163,4 @@ class ReviewSessionRunTest(unittest.TestCase):
                 with self.assertRaises(KeyboardInterrupt):
                     session.run()
 
-        session_entry_ui.show_start_menu.assert_called_once_with(2)
+        ui.intro.assert_called_once_with(2)
