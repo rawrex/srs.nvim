@@ -214,6 +214,7 @@ class ClozeParser(Parser):
             source_text=source_text,
             index_entry=index_entry,
             metadata=metadata,
+            context={},
             reveal_mode=self.reveal_mode,
             cloze_open=self.cloze_open,
             cloze_close=self.cloze_close,

@@ -28,9 +28,8 @@ class ReviewSession:
         total = len(cards)
         self.ui.intro(total)
 
-        for idx, due_card in enumerate(cards, start=1):
-            card = due_card.card
-            context_blocks = due_card.context
+        for idx, card in enumerate(cards, start=1):
+            context_blocks = card.context
             question_title = f"\n[{idx}/{total}] {os.path.basename(card.index_entry.note_abs_path)}"
 
             # Step 1: question + reveals.

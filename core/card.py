@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
+from types import CodeType
 from typing import List
 
 from fsrs import Card as SchedulerCard
@@ -40,11 +41,12 @@ class CardView:
         return ViewBlock(start_line=1, text="", is_primary=True)
 
 
-@dataclass(kw_only=True)
+@dataclass()
 class Card(ABC):
     source_text: str
     index_entry: IndexEntry
     metadata: Metadata
+    context: dict[tuple[int, int], str]
 
     def is_due(self, now: datetime) -> bool:
         due = self.metadata.scheduler_card.due

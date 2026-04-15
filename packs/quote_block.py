@@ -94,7 +94,7 @@ class QuoteBlockParser(Parser):
         return cards
 
     def build_card(self, source_text: str, index_entry: IndexEntry, metadata: Metadata) -> Card:
-        return QuoteBlockCard(source_text=source_text, index_entry=index_entry, metadata=metadata)
+        return QuoteBlockCard(source_text=source_text, index_entry=index_entry, metadata=metadata, context={})
 
 
 def register_pack(registry: "ParserRegistry", _config: object) -> None:
