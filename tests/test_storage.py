@@ -8,6 +8,7 @@ from fsrs import Card as SchedulerCard
 from fsrs import Rating, Scheduler
 
 from core.index.model import REVIEW_LOGS_KEY, IndexEntry, Metadata
+from tests.setup_test_helpers import runtime_context
 
 
 class StorageTest(unittest.TestCase):
@@ -26,7 +27,7 @@ class StorageTest(unittest.TestCase):
             with open(card_path, "w", encoding="utf-8") as handle:
                 json.dump(payload, handle)
 
-            with patch("core.index.model.util.get_srs_path", return_value=temp_dir):
+            with patch("core.util._RUNTIME_CONTEXT", runtime_context(temp_dir, srs_path=temp_dir), create=True):
                 metadata = entry.read_metadata()
 
             self.assertEqual(1, len(metadata.review_logs))
@@ -38,7 +39,7 @@ class StorageTest(unittest.TestCase):
             entry = self._entry()
             card_path = os.path.join(temp_dir, "1.json")
 
-            with patch("core.index.model.util.get_srs_path", return_value=temp_dir):
+            with patch("core.util._RUNTIME_CONTEXT", runtime_context(temp_dir, srs_path=temp_dir), create=True):
                 entry.write_metadata(metadata)
 
             self.assertTrue(os.path.exists(card_path))
@@ -55,7 +56,7 @@ class StorageTest(unittest.TestCase):
             entry = IndexEntry(card_id=2, note_path="/note.md", parser_id="cloze", start_line=1, end_line=1)
             card_path = os.path.join(temp_dir, "2.json")
 
-            with patch("core.index.model.util.get_srs_path", return_value=temp_dir):
+            with patch("core.util._RUNTIME_CONTEXT", runtime_context(temp_dir, srs_path=temp_dir), create=True):
                 entry.write_metadata(metadata)
 
             with open(card_path, "r", encoding="utf-8") as handle:

@@ -4,12 +4,13 @@ from pathlib import Path
 from unittest.mock import patch
 
 from setup.install import find_repeat_tracked_paths
+from tests.setup_test_helpers import runtime_context
 
 
 class InstallDiscoveryTest(unittest.TestCase):
     @staticmethod
     def _find_repeat_tracked_paths(repo_dir: Path) -> list[str]:
-        with patch("core.index.tracking.util.get_repo_root_path", return_value=str(repo_dir)):
+        with patch("core.util._RUNTIME_CONTEXT", runtime_context(str(repo_dir)), create=True):
             return find_repeat_tracked_paths()
 
     def test_find_repeat_tracked_paths_returns_empty_without_markers(self) -> None:

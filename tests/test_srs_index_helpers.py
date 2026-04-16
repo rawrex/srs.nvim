@@ -1,11 +1,12 @@
 import os
 import tempfile
 import unittest
-from unittest.mock import patch
 
+from core import util
 from core.api import Parser
 from core.index.index import Index
 from core.parsers import ParserRegistry
+from tests.setup_test_helpers import runtime_context
 
 
 class _StaticParser(Parser):
@@ -30,8 +31,9 @@ class SrsIndexHelperTest(unittest.TestCase):
 
     @staticmethod
     def _index_with_registry(index_path: str, parser_registry: ParserRegistry) -> Index:
-        with patch("core.index.index.util.get_index_path", return_value=index_path):
-            return Index(parser_registry=parser_registry)
+        repo_root = os.path.dirname(os.path.dirname(index_path))
+        util._RUNTIME_CONTEXT = runtime_context(repo_root)
+        return Index(parser_registry=parser_registry)
 
     def _create_index_path(self, repo_root: str) -> str:
         index_path = os.path.join(repo_root, ".srs", "index.txt")
@@ -129,8 +131,7 @@ class SrsIndexHelperTest(unittest.TestCase):
 
             index = self._index_with_registry(index_path, parser_registry)
 
-            with patch("core.index.model.util.get_srs_path", return_value=srs_dir):
-                added = index.add_missing_tracked_paths({"/note.md"})
+            added = index.add_missing_tracked_paths({"/note.md"})
             self.assertEqual(1, added)
 
             entries = index.load_entries()
@@ -147,11 +148,9 @@ class SrsIndexHelperTest(unittest.TestCase):
             self.assertEqual(index.card_path(note_id), card_path)
             self.assertTrue(os.path.exists(os.path.join(srs_dir, f"{note_id}.json")))
 
-            with patch("core.index.model.util.get_srs_path", return_value=srs_dir):
-                changed = index.sync_tracked_paths(set(), repo_root="")
+            changed = index.sync_tracked_paths(set(), repo_root="")
             self.assertTrue(changed)
             self.assertEqual([], index.load_entries())
             self.assertFalse(os.path.exists(os.path.join(srs_dir, f"{note_id}.json")))
 
-            with patch("core.index.model.util.get_srs_path", return_value=srs_dir):
-                self.assertFalse(index.sync_tracked_paths(set(), repo_root=""))
+            self.assertFalse(index.sync_tracked_paths(set(), repo_root=""))

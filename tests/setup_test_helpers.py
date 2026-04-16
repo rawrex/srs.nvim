@@ -5,9 +5,33 @@ import sys
 from contextlib import contextmanager
 from pathlib import Path
 
+from core import util
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 INSTALL_SCRIPT = REPO_ROOT / "setup" / "install.py"
 UNINSTALL_SCRIPT = REPO_ROOT / "setup" / "uninstall.py"
+
+
+def runtime_context(
+    repo_root: str,
+    *,
+    cwd: str | None = None,
+    git_dir: str | None = None,
+    srs_path: str | None = None,
+) -> util.RuntimeContext:
+    repo_root_path = str(repo_root)
+    resolved_cwd = cwd if cwd is not None else repo_root_path
+    resolved_git_dir = git_dir if git_dir is not None else str(Path(repo_root_path) / ".git")
+    resolved_srs_path = srs_path if srs_path is not None else str(Path(repo_root_path) / util.SRS_DIR_NAME)
+    return util.RuntimeContext(
+        cwd=resolved_cwd,
+        repo_root_path=repo_root_path,
+        git_dir=resolved_git_dir,
+        srs_path=resolved_srs_path,
+        index_path=str(Path(resolved_srs_path) / util.INDEX_FILENAME),
+        config_path=str(Path(resolved_srs_path) / util.CONFIG_FILENAME),
+        hooks_path=str(Path(resolved_git_dir) / "hooks"),
+    )
 
 
 class FakeConsole:

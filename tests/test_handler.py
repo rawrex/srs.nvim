@@ -2,12 +2,13 @@ import unittest
 from unittest.mock import Mock, call, patch
 
 from hooks.handler import Handler
+from tests.setup_test_helpers import runtime_context
 
 
 class HandlerTest(unittest.TestCase):
     @staticmethod
     def _handler() -> Handler:
-        with patch("hooks.handler.util.get_repo_root_path", return_value="/repo"):
+        with patch("hooks.handler.util._RUNTIME_CONTEXT", runtime_context("/repo"), create=True):
             return Handler()
 
     def test_handle_pre_commit_applies_diff_and_syncs_tracked_paths(self) -> None:

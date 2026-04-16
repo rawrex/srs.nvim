@@ -10,7 +10,7 @@ from fsrs import Scheduler
 from core.config import ReviewConfig
 from core.parsers import build_parser_registry
 from core.session import ReviewSession
-from tests.setup_test_helpers import temporary_session_repo
+from tests.setup_test_helpers import runtime_context, temporary_session_repo
 
 
 class _DummyUI:
@@ -50,11 +50,12 @@ class ReviewSessionTest(unittest.TestCase):
             scheduler_enable_fuzzing=False,
         )
 
-        session = ReviewSession(
-            ui=_DummyUI(),  # type: ignore[arg-type]
-            parser_registry=build_parser_registry(config),
-            scheduler=config.build_scheduler(),
-        )
+        with patch("core.util._RUNTIME_CONTEXT", runtime_context("/repo"), create=True):
+            session = ReviewSession(
+                ui=_DummyUI(),  # type: ignore[arg-type]
+                parser_registry=build_parser_registry(config),
+                scheduler=config.build_scheduler(),
+            )
 
         self.assertEqual(0.5, session.scheduler.parameters[0])
         self.assertEqual(0.88, session.scheduler.desired_retention)
@@ -76,11 +77,7 @@ class ReviewSessionTest(unittest.TestCase):
             with open(os.path.join(repo_root, ".srs", "1.json"), "w", encoding="utf-8") as handle:
                 json.dump(json.loads(scheduler_card.to_json()), handle)
 
-            with (
-                patch("core.util.get_index_path", return_value=os.path.join(repo_root, ".srs", "index.txt")),
-                patch("core.util.get_srs_path", return_value=os.path.join(repo_root, ".srs")),
-                patch("core.util.get_repo_root_path", return_value=repo_root),
-            ):
+            with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
                 session = ReviewSession(
                     ui=_DummyUI(),  # type: ignore[arg-type]
                     parser_registry=build_parser_registry(ReviewConfig()),
@@ -119,11 +116,7 @@ class ReviewSessionTest(unittest.TestCase):
             with open(os.path.join(repo_root, ".srs", "2.json"), "w", encoding="utf-8") as handle:
                 json.dump(json.loads(future_card.to_json()), handle)
 
-            with (
-                patch("core.util.get_index_path", return_value=os.path.join(repo_root, ".srs", "index.txt")),
-                patch("core.util.get_srs_path", return_value=os.path.join(repo_root, ".srs")),
-                patch("core.util.get_repo_root_path", return_value=repo_root),
-            ):
+            with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
                 session = ReviewSession(
                     ui=_DummyUI(),  # type: ignore[arg-type]
                     parser_registry=build_parser_registry(ReviewConfig()),
@@ -157,11 +150,7 @@ class ReviewSessionTest(unittest.TestCase):
             with open(os.path.join(repo_root, ".srs", "1.json"), "w", encoding="utf-8") as handle:
                 json.dump(json.loads(scheduler_card.to_json()), handle)
 
-            with (
-                patch("core.util.get_index_path", return_value=os.path.join(repo_root, ".srs", "index.txt")),
-                patch("core.util.get_srs_path", return_value=os.path.join(repo_root, ".srs")),
-                patch("core.util.get_repo_root_path", return_value=repo_root),
-            ):
+            with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
                 session = ReviewSession(
                     ui=_DummyUI(),  # type: ignore[arg-type]
                     parser_registry=build_parser_registry(ReviewConfig()),
@@ -184,11 +173,7 @@ class ReviewSessionTest(unittest.TestCase):
             with open(os.path.join(repo_root, ".srs", "1.json"), "w", encoding="utf-8") as handle:
                 json.dump(json.loads(scheduler_card.to_json()), handle)
 
-            with (
-                patch("core.util.get_index_path", return_value=os.path.join(repo_root, ".srs", "index.txt")),
-                patch("core.util.get_srs_path", return_value=os.path.join(repo_root, ".srs")),
-                patch("core.util.get_repo_root_path", return_value=repo_root),
-            ):
+            with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
                 session = ReviewSession(
                     ui=_DummyUI(),  # type: ignore[arg-type]
                     parser_registry=build_parser_registry(ReviewConfig()),

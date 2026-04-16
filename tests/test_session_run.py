@@ -1,4 +1,3 @@
-import os
 import unittest
 from unittest.mock import Mock, patch
 
@@ -7,7 +6,7 @@ from fsrs import Rating
 from core.config import ReviewConfig
 from core.parsers import build_parser_registry
 from core.session import ReviewSession
-from tests.setup_test_helpers import temporary_session_repo
+from tests.setup_test_helpers import runtime_context, temporary_session_repo
 
 
 class _DummyMetadata:
@@ -45,11 +44,10 @@ class ReviewSessionRunTest(unittest.TestCase):
         with temporary_session_repo(with_index=False) as repo_root:
             ui = Mock()
             config = ReviewConfig()
-            session = ReviewSession(
-                ui=ui, parser_registry=build_parser_registry(config), scheduler=config.build_scheduler()
-            )
-
-            with patch("core.util.get_index_path", return_value=os.path.join(repo_root, ".srs", "index.txt")):
+            with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
+                session = ReviewSession(
+                    ui=ui, parser_registry=build_parser_registry(config), scheduler=config.build_scheduler()
+                )
                 code = session.run()
 
         self.assertEqual(1, code)
@@ -59,15 +57,13 @@ class ReviewSessionRunTest(unittest.TestCase):
         with temporary_session_repo(with_index=True) as repo_root:
             ui = Mock()
             config = ReviewConfig()
-            session = ReviewSession(
-                ui=ui, parser_registry=build_parser_registry(config), scheduler=config.build_scheduler()
-            )
+            with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
+                session = ReviewSession(
+                    ui=ui, parser_registry=build_parser_registry(config), scheduler=config.build_scheduler()
+                )
 
-            with (
-                patch("core.util.get_index_path", return_value=os.path.join(repo_root, ".srs", "index.txt")),
-                patch.object(session, "load_due_cards", return_value=[]),
-            ):
-                code = session.run()
+                with patch.object(session, "load_due_cards", return_value=[]):
+                    code = session.run()
 
         self.assertEqual(0, code)
         ui.print_message.assert_called_once_with("🎉 No due cards 🎉")
@@ -79,30 +75,30 @@ class ReviewSessionRunTest(unittest.TestCase):
             ui.rating_step.return_value = Rating.Good
             ui.question_step.side_effect = [None, None]
 
-            session = ReviewSession(
-                ui=ui, parser_registry=build_parser_registry(config), scheduler=config.build_scheduler()
-            )
+            with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
+                session = ReviewSession(
+                    ui=ui, parser_registry=build_parser_registry(config), scheduler=config.build_scheduler()
+                )
 
-            scheduler = Mock()
-            old_card_1 = object()
-            old_card_2 = object()
-            new_card_1 = object()
-            new_card_2 = object()
-            log_1 = object()
-            log_2 = object()
-            scheduler.review_card.side_effect = [(new_card_1, log_1), (new_card_2, log_2)]
-            session.scheduler = scheduler
+                scheduler = Mock()
+                old_card_1 = object()
+                old_card_2 = object()
+                new_card_1 = object()
+                new_card_2 = object()
+                log_1 = object()
+                log_2 = object()
+                scheduler.review_card.side_effect = [(new_card_1, log_1), (new_card_2, log_2)]
+                session.scheduler = scheduler
 
-            card_1 = _DummyCard("one.md", old_card_1, "1")
-            card_2 = _DummyCard("two.md", old_card_2, "2")
+                card_1 = _DummyCard("one.md", old_card_1, "1")
+                card_2 = _DummyCard("two.md", old_card_2, "2")
 
-            with (
-                patch.object(session, "load_due_cards", return_value=[card_1, card_2]),
-                patch("core.session.time.monotonic_ns") as monotonic_ns,
-                patch("core.util.get_index_path", return_value=os.path.join(repo_root, ".srs", "index.txt")),
-            ):
-                monotonic_ns.side_effect = [0, 1_200_000_000, 2_000_000_000, 2_900_000_000]
-                code = session.run()
+                with (
+                    patch.object(session, "load_due_cards", return_value=[card_1, card_2]),
+                    patch("core.session.time.monotonic_ns") as monotonic_ns,
+                ):
+                    monotonic_ns.side_effect = [0, 1_200_000_000, 2_000_000_000, 2_900_000_000]
+                    code = session.run()
 
         self.assertEqual(0, code)
         self.assertEqual(new_card_1, card_1.metadata.scheduler_card)
@@ -121,23 +117,23 @@ class ReviewSessionRunTest(unittest.TestCase):
             ui.question_step.return_value = None
             ui.rating_step.side_effect = [Rating.Good, KeyboardInterrupt]
 
-            session = ReviewSession(
-                ui=ui, parser_registry=build_parser_registry(config), scheduler=config.build_scheduler()
-            )
+            with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
+                session = ReviewSession(
+                    ui=ui, parser_registry=build_parser_registry(config), scheduler=config.build_scheduler()
+                )
 
-            scheduler = Mock()
-            scheduler.review_card.return_value = (object(), object())
-            session.scheduler = scheduler
+                scheduler = Mock()
+                scheduler.review_card.return_value = (object(), object())
+                session.scheduler = scheduler
 
-            card_1 = _DummyCard("one.md", object(), "1")
-            card_2 = _DummyCard("two.md", object(), "2")
+                card_1 = _DummyCard("one.md", object(), "1")
+                card_2 = _DummyCard("two.md", object(), "2")
 
-            with (
-                patch.object(session, "load_due_cards", return_value=[card_1, card_2]),
-                patch("core.session.time.monotonic_ns", side_effect=[0, 1_000_000, 2_000_000, 3_000_000]),
-                patch("core.util.get_index_path", return_value=os.path.join(repo_root, ".srs", "index.txt")),
-            ):
-                with self.assertRaises(KeyboardInterrupt):
-                    session.run()
+                with (
+                    patch.object(session, "load_due_cards", return_value=[card_1, card_2]),
+                    patch("core.session.time.monotonic_ns", side_effect=[0, 1_000_000, 2_000_000, 3_000_000]),
+                ):
+                    with self.assertRaises(KeyboardInterrupt):
+                        session.run()
 
         ui.intro.assert_called_once_with(2)

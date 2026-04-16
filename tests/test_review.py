@@ -9,6 +9,7 @@ from fsrs import Scheduler
 
 from core.card import RevealMode
 from core.config import DEFAULT_RATING_BUTTONS, load_review_config
+from tests.setup_test_helpers import runtime_context
 
 
 class ReviewConfigTest(unittest.TestCase):
@@ -20,10 +21,7 @@ class ReviewConfigTest(unittest.TestCase):
 
     @classmethod
     def _load_config(cls, repo_root: str):
-        with (
-            patch("core.config.util.get_config_path", return_value=cls._config_path(repo_root)),
-            patch("core.config.util.get_repo_root_path", return_value=repo_root),
-        ):
+        with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
             return load_review_config()
 
     def test_load_review_config_uses_defaults_when_missing(self) -> None:
