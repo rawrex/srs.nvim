@@ -12,7 +12,7 @@ class _StaticParser(Parser):
     parser_id = ""
     priority = 0
 
-    def __init__(self, parser_id: str, priority: int, rows):
+    def __init__(self, parser_id: str, priority: int, rows: list[tuple[int, int]]):
         self.parser_id = parser_id
         self.priority = priority
         self._rows = rows
@@ -66,8 +66,8 @@ class SrsIndexHelperTest(unittest.TestCase):
             with open(note_path, "w", encoding="utf-8") as handle:
                 handle.write("one\ntwo\nthree\n")
 
-            high = _StaticParser(parser_id="high", priority=10, rows=[(1, 2, "one\ntwo\n")])
-            low = _StaticParser(parser_id="low", priority=0, rows=[(2, 2, "two\n"), (3, 3, "three\n")])
+            high = _StaticParser(parser_id="high", priority=10, rows=[(1, 2)])
+            low = _StaticParser(parser_id="low", priority=0, rows=[(2, 2), (3, 3)])
             parser_registry = ParserRegistry(parsers={})
             parser_registry.register(high)
             parser_registry.register(low)
@@ -125,7 +125,7 @@ class SrsIndexHelperTest(unittest.TestCase):
                 handle.write("one\ntwo\nthree\nfour\n")
 
             parser_registry = ParserRegistry(parsers={})
-            parser_registry.register(_StaticParser(parser_id="cloze", priority=0, rows=[(2, 4, "two\nthree\nfour\n")]))
+            parser_registry.register(_StaticParser(parser_id="cloze", priority=0, rows=[(2, 4)]))
 
             index = self._index_with_registry(index_path, parser_registry)
 

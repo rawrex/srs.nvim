@@ -33,7 +33,7 @@ class _DummyCard:
     def suggested_rating(self) -> Rating | None:
         return None
 
-    def reveal_for_label(self, _label: str) -> str:
+    def reveal_for_label(self, _: str) -> str:
         return "answer"
 
     def answer_view(self) -> str:
@@ -97,11 +97,7 @@ class ReviewSessionRunTest(unittest.TestCase):
             card_2 = _DummyCard("two.md", old_card_2, "2")
 
             with (
-                patch.object(
-                    session,
-                    "load_due_cards",
-                    return_value=[card_1, card_2],
-                ),
+                patch.object(session, "load_due_cards", return_value=[card_1, card_2]),
                 patch("core.session.time.monotonic_ns") as monotonic_ns,
                 patch("core.util.get_index_path", return_value=os.path.join(repo_root, ".srs", "index.txt")),
             ):
@@ -137,11 +133,7 @@ class ReviewSessionRunTest(unittest.TestCase):
             card_2 = _DummyCard("two.md", object(), "2")
 
             with (
-                patch.object(
-                    session,
-                    "load_due_cards",
-                    return_value=[card_1, card_2],
-                ),
+                patch.object(session, "load_due_cards", return_value=[card_1, card_2]),
                 patch("core.session.time.monotonic_ns", side_effect=[0, 1_000_000, 2_000_000, 3_000_000]),
                 patch("core.util.get_index_path", return_value=os.path.join(repo_root, ".srs", "index.txt")),
             ):

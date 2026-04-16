@@ -36,11 +36,11 @@ class QuoteBlockPackTest(unittest.TestCase):
         cases = [
             (
                 "Intro\n>[!code]- Example\n>```cpp\n>int x = 1;\n>```\nEnd\n",
-                [(2, 5, ">[!code]- Example\n>```cpp\n>int x = 1;\n>```\n")],
+                [(2, 5)],
             ),
             (
                 "Intro\n >[!code]- Example\n >```cpp\n >int x = 1;\n >```\nEnd\n",
-                [(2, 5, " >[!code]- Example\n >```cpp\n >int x = 1;\n >```\n")],
+                [(2, 5)],
             ),
         ]
         for note_text, expected in cases:

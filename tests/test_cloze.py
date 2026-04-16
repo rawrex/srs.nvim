@@ -188,7 +188,7 @@ class ClozePackTest(unittest.TestCase):
         note_text = "A\n  ~{B}\n    C\n~{D}\n\nE ~{F}\n"
         parser = ClozeParser(reveal_mode=RevealMode.WHOLE, cloze_open="~{", cloze_close="}", mask_char="▇")
         cards = parser.interpret_text(note_text)
-        self.assertEqual([(2, 2, "  ~{B}\n"), (4, 4, "~{D}\n"), (6, 6, "E ~{F}\n")], cards)
+        self.assertEqual([(2, 2), (4, 4), (6, 6)], cards)
 
     def test_suggested_rating_supports_single_cloze_cards(self) -> None:
         card = ClozeCard(

@@ -33,11 +33,11 @@ class QuoteBlockClozePackTest(unittest.TestCase):
         cases = [
             (
                 "Intro\n> plain quote\n> still plain\nMiddle\n> quoted start\n> includes ~{cloze}\nEnd\n",
-                [(5, 6, "> quoted start\n> includes ~{cloze}\n")],
+                [(5, 6)],
             ),
             (
                 "Intro\n > plain quote\n > still plain\nMiddle\n > quoted start\n > includes ~{cloze}\nEnd\n",
-                [(5, 6, " > quoted start\n > includes ~{cloze}\n")],
+                [(5, 6)],
             ),
         ]
         for note_text, expected in cases:
