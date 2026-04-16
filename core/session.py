@@ -19,7 +19,7 @@ class ReviewSession:
         self.index = Index(parser_registry=parser_registry)
         self.factory = CardFactory(parser_registry=parser_registry)
 
-    def load_due_cards(self, time_point: datetime = datetime.now(timezone.utc)) -> list[Card]:
+    def load_due_cards(self, time_point: datetime) -> list[Card]:
         all_entries = self.index.load_entries()
         due = [e for e in all_entries if e.read_metadata().scheduler_card.due <= time_point]
         cards: list[Card] = []
@@ -34,7 +34,7 @@ class ReviewSession:
             self.ui.print_message("Missing index")
             return 1
 
-        cards = self.load_due_cards()
+        cards = self.load_due_cards(time_point=datetime.now(timezone.utc))
         if not cards:
             self.ui.print_message("No due cards.")
             return 0
