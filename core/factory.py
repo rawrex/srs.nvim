@@ -20,16 +20,16 @@ class CardFactory:
             return card
 
     def make_context(self, card: Card, all: list[IndexEntry], note_text: str) -> dict[tuple[int, int], str]:
+        context: dict[tuple[int, int], str] = {}
         path = card.index_entry.note_abs_path
         if self.context_cache.__contains__(path):
             return self.context_cache[path]
 
         processed: set[int] = set()
         for sibling in [c for c in all if c.note_abs_path == card.index_entry.note_abs_path]:
-            card.context[sibling.start_line, sibling.end_line] = self.make_card(sibling).context_view().text
+            context[sibling.start_line, sibling.end_line] = self.make_card(sibling).context_view().text
             processed.update(set(range(sibling.start_line, sibling.end_line + 1)))
 
-        context: dict[tuple[int, int], str] = {}
         for index, line in enumerate(note_text.splitlines(keepends=True), start=1):
             if index not in processed:
                 context[(index, index)] = line
