@@ -15,10 +15,21 @@ class CardFactory:
             return parser.build_card(source_text=block, index_entry=index_entry, metadata=index_entry.read_metadata())
 
     def make_context(self, card: Card, all_entries: list[IndexEntry]) -> dict[tuple[int, int], str]:
+        processed: set[int] = set()
         context: dict[tuple[int, int], str] = {}
         siblings = [c for c in all_entries if c.note_abs_path == card.index_entry.note_abs_path]
+
         for sibling in siblings:
             sibling_card = self.make_card(sibling)
             context[sibling.start_line, sibling.end_line] = sibling_card.context_view().primary_block().text
+            processed.update(set(range(sibling.start_line, sibling.end_line + 1)))
+
+        # currently the UI will match the current review card against its context
+        # to position its lines accordingly, so we keep a card in its own context
         # context.pop((card.index_entry.start_line, card.index_entry.end_line))
+
+        with open(card.index_entry.note_abs_path, "r", encoding="utf-8") as handle:
+            for index, line in enumerate(handle.readlines(), start=1):
+                if index not in processed:
+                    context[(index, index)] = line
         return context
