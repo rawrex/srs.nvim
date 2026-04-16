@@ -24,9 +24,7 @@ class ReviewSession:
         due = [e for e in all_entries if e.read_metadata().scheduler_card.due <= time_point]
         cards: list[Card] = []
         for entry in due:
-            card = self.factory.make_card(entry)
-            card.context = self.factory.make_context(card, all_entries)
-            cards.append(card)
+            cards.append(self.factory.make_card(entry, all_entries=all_entries))
         return cards
 
     def run(self) -> int:
