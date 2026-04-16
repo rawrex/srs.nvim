@@ -33,10 +33,8 @@ def main() -> int:
     index = Index(parser_registry=parser_registry)
     handler = Handler()
 
-    if event == "pre-commit":
+    if event in {"pre-commit", "pre-merge-commit"}:
         handler.handle_pre_commit(index)
-    elif event == "pre-merge-commit":
-        handler.handle_pre_merge_commit(index)
     elif event == "post-checkout":
         handler.handle_post_checkout(index, sys.argv[2:])
     elif event == "post-rewrite":

@@ -18,12 +18,6 @@ class ParserRegistry:
     def get(self, parser_id: str) -> Parser:
         return self.parsers[parser_id]
 
-    def default(self) -> Parser:
-        ordered = self.ordered()
-        if not ordered:
-            raise KeyError("No parsers are registered")
-        return ordered[-1]
-
     def ordered(self) -> list[Parser]:
         return sorted(self.parsers.values(), key=lambda parser: (-parser.priority, parser.parser_id))
 

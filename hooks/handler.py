@@ -17,9 +17,6 @@ class Handler:
     def handle_pre_commit(self, index: Index) -> None:
         self._handle_cached_diff(index)
 
-    def handle_pre_merge_commit(self, index: Index) -> None:
-        self._handle_cached_diff(index)
-
     def _handle_cached_diff(self, index: Index) -> None:
         args = ["diff", "--cached", "--name-status", "-M", "-C"]
         if not self.is_rev_exists("HEAD"):

@@ -17,6 +17,10 @@ WIKI_IMAGE_RE = re.compile(r"!\[\[[^\]]+\]\]")
 SESSION_LOGO_PATH = Path(__file__).with_name("session_logo.txt")
 
 
+def clear_screen() -> None:
+    os.system("cls" if os.name == "nt" else "clear")
+
+
 class SessionEntryUI:
     def __init__(self, console: Console) -> None:
         self.console = console
@@ -24,7 +28,7 @@ class SessionEntryUI:
 
     def show_start_menu(self, due_cards_count: int) -> None:
         while True:
-            self._clear_screen()
+            clear_screen()
             self.console.print(self.session_logo, markup=False, highlight=False)
             self.console.print("")
             self.console.print(f"Due cards: {due_cards_count}")
@@ -35,9 +39,6 @@ class SessionEntryUI:
                 continue
             if key in {"\r", "\n"}:
                 return
-
-    def _clear_screen(self) -> None:
-        os.system("cls" if os.name == "nt" else "clear")
 
     def _load_session_logo(self) -> str:
         return SESSION_LOGO_PATH.read_text(encoding="utf-8").rstrip("\n")
@@ -64,7 +65,7 @@ class ReviewUI:
     def question_step(self, title: str, card: Card) -> ViewBlock:
         current_view = card.question_view()
         while True:
-            self._clear_screen()
+            clear_screen()
             self.console.print(title)
             self._print_view(card, current_view)
 
@@ -78,7 +79,7 @@ class ReviewUI:
                 current_view = maybe_view
 
     def answer_step(self, title: str, card: Card, view: ViewBlock) -> None:
-        self._clear_screen()
+        clear_screen()
         self.console.print(title)
         self._print_view(card, view)
 
@@ -104,9 +105,6 @@ class ReviewUI:
             self.console.print("")
             self.console.print(f"Set rating: {rating.name}")
             return rating
-
-    def _clear_screen(self) -> None:
-        os.system("cls" if os.name == "nt" else "clear")
 
     def _rating_prompt(self, default_rating: Rating | None) -> str:
         parts = [

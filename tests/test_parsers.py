@@ -39,20 +39,6 @@ class ParsersTest(unittest.TestCase):
 
         self.assertEqual(["a_high", "z_low"], ordered_ids)
 
-    def test_registry_default_returns_last_ordered_parser(self) -> None:
-        registry = ParserRegistry(parsers={})
-        registry.register(_HighParser())
-        registry.register(_LowParser())
-
-        default_parser = registry.default()
-
-        self.assertEqual("z_low", default_parser.parser_id)
-
-    def test_registry_default_raises_when_empty(self) -> None:
-        registry = ParserRegistry(parsers={})
-        with self.assertRaises(KeyError):
-            registry.default()
-
     def test_build_parser_registry_loads_builtin_packs(self) -> None:
         registry = build_parser_registry(ReviewConfig())
 

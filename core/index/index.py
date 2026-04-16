@@ -216,9 +216,6 @@ class Index:
     def repo_root(self) -> str:
         return os.path.dirname(os.path.dirname(self.path))
 
-    def _card_abs_path(self, card_id: int) -> str:
-        return os.path.join(os.path.dirname(self.path), f"{card_id}.json")
-
     def read_note_text(self, indexed_path: str) -> str | None:
         note_path = os.path.join(self.repo_root(), indexed_path.lstrip("/"))
         if os.path.exists(note_path):
@@ -249,5 +246,3 @@ class Index:
 
     def _format_entry(self, entry: IndexEntry) -> str:
         return f"'{entry.card_id}','{entry.note_path}','{entry.parser_id}','{entry.start_line}','{entry.end_line}'\n"
-
-    __all__ = ["Index"]

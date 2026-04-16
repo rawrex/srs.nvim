@@ -70,7 +70,7 @@ class ReviewSessionRunTest(unittest.TestCase):
                 code = session.run()
 
         self.assertEqual(0, code)
-        ui.print_message.assert_called_once_with("No due cards.")
+        ui.print_message.assert_called_once_with("🎉 No due cards 🎉")
 
     def test_run_reviews_cards_and_persists(self) -> None:
         with temporary_session_repo(with_index=True) as repo_root:

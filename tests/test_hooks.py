@@ -37,7 +37,7 @@ class HooksCliTest(unittest.TestCase):
             code = hooks.main()
 
         self.assertEqual(0, code)
-        handler.handle_pre_merge_commit.assert_called_once()
+        handler.handle_pre_commit.assert_called_once()
 
     def test_main_dispatches_post_checkout_with_args(self) -> None:
         handler = Mock()
