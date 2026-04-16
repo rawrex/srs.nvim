@@ -48,24 +48,24 @@ class QuoteBlockClozePackTest(unittest.TestCase):
         block_text = ">[!code]- Example\n>let x = ~{1};\n"
         card = self._card(block_text)
 
-        question = card.question_view().primary_block().text
+        question = card.question_view().text
         self.assertEqual(">[a] Example\n>\n", question)
         self.assertEqual("code", card.callout_kind)
 
         opened = card.reveal_for_label("a")
         self.assertIsNotNone(opened)
         assert opened is not None
-        self.assertIn(">let x = [b]▇;", opened.primary_block().text)
+        self.assertIn(">let x = [b]▇;", opened.text)
 
         revealed = card.reveal_for_label("b")
         self.assertIsNotNone(revealed)
         assert revealed is not None
-        self.assertIn(">let x = `1`", revealed.primary_block().text)
+        self.assertIn(">let x = `1`", revealed.text)
 
         reveal_all = card.reveal_for_label(REVEAL_ALL_LABEL)
         self.assertIsNotNone(reveal_all)
         assert reveal_all is not None
-        self.assertIn(">let x = `1`", reveal_all.primary_block().text)
+        self.assertIn(">let x = `1`", reveal_all.text)
 
     def test_suggested_rating_for_quote_block_cloze_uses_only_clozes(self) -> None:
         block_text = ">[!code]- Example\n>let x = ~{ab}; and y = ~{cd};\n"
@@ -81,7 +81,7 @@ class QuoteBlockClozePackTest(unittest.TestCase):
         block_text = ">[!code]- Example\n>let x = ~{1};\n"
         card = self._card(block_text)
 
-        context = card.context_view().primary_block().text
+        context = card.context_view().text
 
         self.assertNotIn("block[a]", context)
         self.assertNotIn("[b]", context)
@@ -92,6 +92,6 @@ class QuoteBlockClozePackTest(unittest.TestCase):
         block_text = ">[!code]- Example\n>let x = ~{1};\n"
         card = self._card(block_text)
 
-        answer = card.answer_view().primary_block().text
+        answer = card.answer_view().text
 
         self.assertEqual(">Example\n>\n>let x = `1`;\n", answer)

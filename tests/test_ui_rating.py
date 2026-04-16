@@ -5,7 +5,7 @@ from unittest.mock import Mock, patch
 from fsrs import Rating
 from rich.markdown import Markdown
 
-from core.card import CardView, ViewBlock
+from core.card import ViewBlock
 from core.config import ReviewConfig
 from core.ui import ReviewUI, SessionEntryUI
 from tests.setup_test_helpers import FakeConsole
@@ -98,12 +98,7 @@ class ReviewUiRatingTest(unittest.TestCase):
         captured: list[str] = []
         ui._print_markdown_with_images = captured.append  # type: ignore[method-assign]
 
-        view = CardView(
-            blocks=[
-                ViewBlock(start_line=1, text=">[!note]- Primary\n>Line 1\n", is_primary=True),
-                ViewBlock(start_line=3, text=">[!note]- Context\n>Line 2\n", is_primary=False),
-            ]
-        )
+        view = ViewBlock(start_line=1, text=">[!note]- Primary\n>Line 1\n")
 
         card = Mock()
         card.context = {

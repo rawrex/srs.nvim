@@ -34,17 +34,17 @@ class ClozePackTest(unittest.TestCase):
             cloze_close="}",
             mask_char="▇",
         )
-        hidden_question = card.question_view().primary_block().text
+        hidden_question = card.question_view().text
         self.assertIn("The [a]▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇ is Paris.", hidden_question)
 
         revealed_question_view = card.reveal_for_label("a")
         self.assertIsNotNone(revealed_question_view)
-        revealed_question = card.question_view().primary_block().text
+        revealed_question = card.question_view().text
         self.assertIn("The `capital of France` is Paris.", revealed_question)
         final_view = card.reveal_for_label(REVEAL_ALL_LABEL)
         self.assertIsNotNone(final_view)
         assert final_view is not None
-        self.assertIn("The `capital of France` is Paris.", final_view.primary_block().text)
+        self.assertIn("The `capital of France` is Paris.", final_view.text)
         self.assertEqual(["# Title\nThe ", " is Paris."], text_parts)
 
     def test_mask_hidden_text_hides_spaces(self) -> None:
@@ -158,8 +158,8 @@ class ClozePackTest(unittest.TestCase):
         view = card.reveal_for_label(REVEAL_ALL_LABEL)
         self.assertIsNotNone(view)
         assert view is not None
-        self.assertEqual(1, len(view.blocks))
-        self.assertIn("First `hidden` block.", view.primary_block().text)
+        self.assertIn("First `hidden` block.", view.text)
+        self.assertNotIn("context cloze", view.text)
 
     def test_context_view_masks_primary_cloze_without_labels(self) -> None:
         card = ClozeCard(
@@ -173,7 +173,7 @@ class ClozePackTest(unittest.TestCase):
             mask_char="▇",
         )
 
-        context = card.context_view().primary_block().text
+        context = card.context_view().text
 
         self.assertNotIn("[a]", context)
         self.assertIn("▇▇▇▇▇▇", context)
