@@ -34,7 +34,7 @@ class ReviewSession:
 
         cards = self.load_due_cards(time_point=datetime.now(timezone.utc))
         if not cards:
-            self.ui.print_message("No due cards.")
+            self.ui.print_message("🎉 No due cards 🎉")
             return 0
 
         total = len(cards)
