@@ -1,6 +1,6 @@
 import re
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, ClassVar, List, Tuple
+from typing import TYPE_CHECKING, ClassVar
 
 from core.api import Parser
 from core.card import REVEAL_ALL_LABEL, Card, ViewBlock
@@ -63,10 +63,10 @@ class QuoteBlockParser(Parser):
     def _is_quote_line(self, line: str) -> bool:
         return line.lstrip().startswith(">")
 
-    def interpret_text(self, note_text: str) -> List[Tuple[int, int, str]]:
-        cards: List[Tuple[int, int, str]] = []
+    def interpret_text(self, note_text: str) -> list[tuple[int, int]]:
+        cards: list[tuple[int, int]] = []
         current_start: int | None = None
-        current_lines: List[str] = []
+        current_lines: list[str] = []
 
         for line_number, line in enumerate(note_text.splitlines(keepends=True), start=1):
             if self._is_quote_line(line):
@@ -76,12 +76,12 @@ class QuoteBlockParser(Parser):
                 continue
 
             if current_start is not None:
-                cards.append((current_start, line_number - 1, "".join(current_lines)))
+                cards.append((current_start, line_number - 1))
                 current_start = None
                 current_lines = []
 
         if current_start is not None:
-            cards.append((current_start, current_start + len(current_lines) - 1, "".join(current_lines)))
+            cards.append((current_start, current_start + len(current_lines) - 1))
 
         return cards
 

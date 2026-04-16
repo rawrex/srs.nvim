@@ -201,12 +201,12 @@ class ClozeParser(Parser):
     cloze_close: str
     mask_char: str
 
-    def interpret_text(self, note_text: str) -> List[Tuple[int, int, str]]:
-        cards: List[Tuple[int, int, str]] = []
+    def interpret_text(self, note_text: str) -> List[Tuple[int, int]]:
+        cards: list[tuple[int, int]] = []
         cloze_re = re.compile(re.escape(self.cloze_open) + r".*?" + re.escape(self.cloze_close))
         for line_number, line in enumerate(note_text.splitlines(keepends=True), start=1):
             if cloze_re.search(line):
-                cards.append((line_number, line_number, line))
+                cards.append((line_number, line_number))
         return cards
 
     def build_card(self, source_text: str, index_entry: IndexEntry, metadata: Metadata) -> Card:

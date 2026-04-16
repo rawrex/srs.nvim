@@ -11,7 +11,7 @@ class Handler:
         self.root_path = util.get_repo_root_path()
 
     def is_rev_exists(self, rev: str) -> bool:
-        code, _out, _err = util.run_git(["rev-parse", "--verify", rev], cwd=self.root_path)
+        code, _, _ = util.run_git(["rev-parse", "--verify", rev], cwd=self.root_path)
         return code == 0
 
     def handle_pre_commit(self, index: Index) -> None:
@@ -27,7 +27,7 @@ class Handler:
 
         index.apply_diff(diff_text)
 
-        code, out, _err = util.run_git(["ls-files"], cwd=self.root_path)
+        code, out, _ = util.run_git(["ls-files"], cwd=self.root_path)
         if code != 0:
             tracked_paths = set(find_repeat_tracked_paths())
         else:

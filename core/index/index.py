@@ -200,7 +200,7 @@ class Index:
         claimed_ranges: list[tuple[int, int]] = []
         for parser in self.parser_registry.ordered():
             cards = parser.interpret_text(note_text)
-            for line_start, line_end, _ in cards:
+            for line_start, line_end in cards:
                 if not any(
                     line_start <= claimed_end and line_end >= claimed_start
                     for claimed_start, claimed_end in claimed_ranges

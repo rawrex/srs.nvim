@@ -1,6 +1,6 @@
 import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, ClassVar, List, Tuple
+from typing import TYPE_CHECKING, ClassVar
 
 from core.api import Parser
 from core.card import REVEAL_ALL_LABEL, Card, ViewBlock
@@ -74,10 +74,10 @@ class QuoteBlockClozeParser(ClozeParser, QuoteBlockParser, Parser):
     parser_id: ClassVar[str] = QUOTE_BLOCK_CLOZE_PARSER_ID
     priority: ClassVar[int] = 20
 
-    def interpret_text(self, note_text: str) -> List[Tuple[int, int, str]]:
-        cards: List[Tuple[int, int, str]] = []
+    def interpret_text(self, note_text: str) -> list[tuple[int, int]]:
+        cards: list[tuple[int, int]] = []
         current_start: int | None = None
-        current_lines: List[str] = []
+        current_lines: list[str] = []
         cloze_re = re.compile(re.escape(self.cloze_open) + r".*?" + re.escape(self.cloze_close), re.DOTALL)
 
         for line_number, line in enumerate(note_text.splitlines(keepends=True), start=1):
@@ -90,14 +90,14 @@ class QuoteBlockClozeParser(ClozeParser, QuoteBlockParser, Parser):
             if current_start is not None:
                 block = "".join(current_lines)
                 if cloze_re.search(block):
-                    cards.append((current_start, line_number - 1, block))
+                    cards.append((current_start, line_number - 1))
                 current_start = None
                 current_lines = []
 
         if current_start is not None:
             block = "".join(current_lines)
             if cloze_re.search(block):
-                cards.append((current_start, current_start + len(current_lines) - 1, block))
+                cards.append((current_start, current_start + len(current_lines) - 1))
 
         return cards
 
