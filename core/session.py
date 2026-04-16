@@ -19,17 +19,13 @@ class ReviewSession:
         self.index = Index(parser_registry=parser_registry)
         self.factory = CardFactory(parser_registry=parser_registry)
 
-    def load_due_cards(self) -> list[Card]:
-        now = datetime.now(timezone.utc)
-        index_entries = self.index.load_entries()
-        for index, entry in enumerate(index_entries):
-            metadata = entry.read_metadata()
-            if metadata.scheduler_card.due > now:
-                index_entries.pop(index)
+    def load_due_cards(self, time_point: datetime = datetime.now(timezone.utc)) -> list[Card]:
+        all_entries = self.index.load_entries()
+        due = [e for e in all_entries if e.read_metadata().scheduler_card.due > time_point]
         cards: list[Card] = []
-        for entry in index_entries:
-            card = self.factory.make_card(index_entry=entry)
-            card.context = self.factory.make_context(card, index_entries)
+        for entry in due:
+            card = self.factory.make_card(entry)
+            card.context = self.factory.make_context(card, all_entries)
             cards.append(card)
         return cards
 
