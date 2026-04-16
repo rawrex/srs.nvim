@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar, List, Tuple
 
 from core.api import Parser
-from core.card import REVEAL_ALL_LABEL, Card, CardView
+from core.card import REVEAL_ALL_LABEL, Card, ViewBlock
 from core.config import ReviewConfig
 from core.index.model import IndexEntry, Metadata
 from packs.cloze import LABEL_CHARS, ClozeCard, ClozeParser
@@ -26,7 +26,7 @@ class QuoteBlockClozeCard(ClozeCard, QuoteBlockCard):
         self.labels = [LABEL_CHARS[idx + 1] for idx in range(len(self.clozes))]
         self.label_to_index = {label: idx for idx, label in enumerate(self.labels)}
 
-    def reveal_for_label(self, label: str) -> CardView | None:
+    def reveal_for_label(self, label: str) -> ViewBlock | None:
         if label == self.block_open_label:
             if self.block_opened:
                 return None
@@ -38,7 +38,7 @@ class QuoteBlockClozeCard(ClozeCard, QuoteBlockCard):
 
         return super().reveal_for_label(label)
 
-    def question_view(self) -> CardView:
+    def question_view(self) -> ViewBlock:
         if self.block_opened:
             return super().question_view()
 
@@ -47,18 +47,18 @@ class QuoteBlockClozeCard(ClozeCard, QuoteBlockCard):
         first_line = self._strip_callout_heading(first_line)
         return self._build_view(current_block=self._with_block_open_label(first_line))
 
-    def answer_view(self) -> CardView:
+    def answer_view(self) -> ViewBlock:
         self.block_opened = True
         return super().answer_view()
 
-    def context_view(self) -> CardView:
+    def context_view(self) -> ViewBlock:
         masked_block = self._masked_context_block(self.source_text)
         lines = masked_block.splitlines(keepends=True)
         first_line = lines[0] if lines else masked_block
         collapsed_block = first_line + ("\n" * (len(lines) - 1))
         return self._build_view(current_block=collapsed_block)
 
-    def _build_view(self, current_block: str) -> CardView:
+    def _build_view(self, current_block: str) -> ViewBlock:
         return ClozeCard._build_view(self, self._strip_callout_heading(current_block))
 
     def _with_block_open_label(self, first_line: str) -> str:

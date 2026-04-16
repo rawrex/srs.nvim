@@ -1,14 +1,13 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import List
 
 from fsrs import Card as SchedulerCard
 from fsrs import Rating
 
 from core.index.model import IndexEntry, Metadata
 
-__all__ = ["SchedulerCard", "REVEAL_ALL_LABEL", "RevealMode", "ViewBlock", "CardView", "Card"]
+__all__ = ["SchedulerCard", "REVEAL_ALL_LABEL", "RevealMode", "ViewBlock", "Card"]
 
 
 REVEAL_ALL_LABEL = ""
@@ -23,20 +22,6 @@ class RevealMode(str, Enum):
 class ViewBlock:
     start_line: int
     text: str
-    is_primary: bool
-
-
-@dataclass(frozen=True)
-class CardView:
-    blocks: List[ViewBlock]
-
-    def primary_block(self) -> ViewBlock:
-        for block in self.blocks:
-            if block.is_primary:
-                return block
-        if self.blocks:
-            return self.blocks[0]
-        return ViewBlock(start_line=1, text="", is_primary=True)
 
 
 @dataclass(kw_only=True)
@@ -47,19 +32,19 @@ class Card(ABC):
     context: dict[tuple[int, int], str]
 
     @abstractmethod
-    def reveal_for_label(self, label: str) -> CardView | None:
+    def reveal_for_label(self, label: str) -> ViewBlock | None:
         raise NotImplementedError
 
     @abstractmethod
-    def question_view(self) -> CardView:
+    def question_view(self) -> ViewBlock:
         raise NotImplementedError
 
     @abstractmethod
-    def answer_view(self) -> CardView:
+    def answer_view(self) -> ViewBlock:
         raise NotImplementedError
 
     @abstractmethod
-    def context_view(self) -> CardView:
+    def context_view(self) -> ViewBlock:
         raise NotImplementedError
 
     def suggested_rating(self) -> Rating | None:

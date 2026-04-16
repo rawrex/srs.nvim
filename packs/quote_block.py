@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, ClassVar, List, Tuple
 
 from core.api import Parser
-from core.card import REVEAL_ALL_LABEL, Card, CardView, ViewBlock
+from core.card import REVEAL_ALL_LABEL, Card, ViewBlock
 from core.index.model import IndexEntry, Metadata
 
 if TYPE_CHECKING:
@@ -18,18 +18,18 @@ CALLOUT_HEADING_RE = re.compile(r"^>\s*\[!(?P<kind>[^\]]+)\](?:[+-])?\s*(?P<titl
 class QuoteBlockCard(Card):
     callout_kind: str | None = field(default=None, init=False)
 
-    def reveal_for_label(self, label: str) -> CardView | None:
+    def reveal_for_label(self, label: str) -> ViewBlock | None:
         if label != REVEAL_ALL_LABEL:
             return None
         return self.answer_view()
 
-    def question_view(self) -> CardView:
+    def question_view(self) -> ViewBlock:
         return self._build_view(current_block=self._first_line_with_padding())
 
-    def answer_view(self) -> CardView:
+    def answer_view(self) -> ViewBlock:
         return self._build_view(current_block=self.source_text)
 
-    def context_view(self) -> CardView:
+    def context_view(self) -> ViewBlock:
         return self._build_view(current_block=self._first_line_with_padding())
 
     def _first_line_with_padding(self) -> str:
@@ -37,16 +37,8 @@ class QuoteBlockCard(Card):
             return lines[0] + ("\n" * (len(lines) - 1))
         return self.source_text
 
-    def _build_view(self, current_block: str) -> CardView:
-        return CardView(
-            blocks=[
-                ViewBlock(
-                    start_line=self.index_entry.start_line,
-                    text=self._strip_callout_heading(current_block),
-                    is_primary=True,
-                )
-            ]
-        )
+    def _build_view(self, current_block: str) -> ViewBlock:
+        return ViewBlock(start_line=self.index_entry.start_line, text=self._strip_callout_heading(current_block))
 
     def _strip_callout_heading(self, block: str) -> str:
         lines = block.splitlines(keepends=True)

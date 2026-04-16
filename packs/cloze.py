@@ -8,7 +8,7 @@ from fsrs import Rating
 
 from core.api import Parser
 from core.autograde import suggest_rating
-from core.card import REVEAL_ALL_LABEL, Card, CardView, RevealMode, ViewBlock
+from core.card import REVEAL_ALL_LABEL, Card, RevealMode, ViewBlock
 from core.config import ReviewConfig
 from core.index.model import IndexEntry, Metadata
 
@@ -100,7 +100,7 @@ class ClozeCard(Card):
         self.whole_revealed = [False] * len(self.clozes)
         self.incremental_states = [build_incremental_reveal_state(hidden) for hidden in self.clozes]
 
-    def reveal_for_label(self, label: str) -> CardView | None:
+    def reveal_for_label(self, label: str) -> ViewBlock | None:
         if label == REVEAL_ALL_LABEL:
             return self.answer_view()
 
@@ -136,11 +136,11 @@ class ClozeCard(Card):
     def _hidden_char_count(self, hidden: str) -> int:
         return sum(1 for ch in hidden if ch != "\n")
 
-    def question_view(self) -> CardView:
+    def question_view(self) -> ViewBlock:
         current = self._question_block()
         return self._build_view(current_block=current)
 
-    def answer_view(self) -> CardView:
+    def answer_view(self) -> ViewBlock:
         if self.reveal_mode == RevealMode.INCREMENTAL:
             for state in self.incremental_states:
                 state.fully_revealed = True
@@ -149,7 +149,7 @@ class ClozeCard(Card):
                 self.whole_revealed[idx] = True
         return self._build_view(current_block=self._question_block())
 
-    def context_view(self) -> CardView:
+    def context_view(self) -> ViewBlock:
         return self._build_view(current_block=self._masked_context_block(self.source_text))
 
     def _question_block(self) -> str:
@@ -168,8 +168,8 @@ class ClozeCard(Card):
             parts.append(self.text_parts[idx + 1])
         return "".join(parts)
 
-    def _build_view(self, current_block: str) -> CardView:
-        return CardView(blocks=[ViewBlock(start_line=self.index_entry.start_line, text=current_block, is_primary=True)])
+    def _build_view(self, current_block: str) -> ViewBlock:
+        return ViewBlock(start_line=self.index_entry.start_line, text=current_block)
 
     def _masked_context_block(self, block: str) -> str:
         text_parts, clozes = parse_note_clozes(block, self.cloze_open, self.cloze_close)

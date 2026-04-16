@@ -10,7 +10,7 @@ from fsrs import Rating
 from rich.console import Console
 from rich.markdown import Markdown
 
-from core.card import Card, CardView
+from core.card import Card, ViewBlock
 from core.config import ReviewConfig
 
 WIKI_IMAGE_RE = re.compile(r"!\[\[[^\]]+\]\]")
@@ -61,7 +61,7 @@ class ReviewUI:
     def intro(self, total: int) -> None:
         self.intro_ui.show_start_menu(total)
 
-    def question_step(self, title: str, card: Card) -> CardView:
+    def question_step(self, title: str, card: Card) -> ViewBlock:
         current_view = card.question_view()
         while True:
             self._clear_screen()
@@ -77,7 +77,7 @@ class ReviewUI:
             if maybe_view is not None:
                 current_view = maybe_view
 
-    def answer_step(self, title: str, card: Card, view: CardView) -> None:
+    def answer_step(self, title: str, card: Card, view: ViewBlock) -> None:
         self._clear_screen()
         self.console.print(title)
         self._print_view(card, view)
@@ -119,23 +119,20 @@ class ReviewUI:
             parts.append(f"Enter={default_rating.name}")
         return f"Rate [{', '.join(parts)}]: "
 
-    def _print_view(self, card: Card, view: CardView) -> None:
-        primary_block = self._mark_active_line(view.primary_block().text)
+    def _print_view(self, card: Card, view: ViewBlock) -> None:
+        view_text = self._mark_active_line(view.text)
 
         if not self.show_context:
-            self._print_markdown_with_images(primary_block.rstrip("\n"))
+            self._print_markdown_with_images(view_text.rstrip("\n"))
             return
 
-        rendered_blocks, primary_block_index = self._rendered_context_blocks(card, view, primary_block)
+        rendered_blocks, primary_block_index = self._rendered_context_blocks_for_card(
+            card.context, card.index_entry.start_line, card.index_entry.end_line, view_text
+        )
         merged_text = "\n\n".join(block.rstrip("\n") for block in rendered_blocks)
         target_line_index = self._line_index_for_block(rendered_blocks, primary_block_index)
         viewport_text = self._center_viewport_on_line(merged_text.rstrip("\n"), target_line_index)
         self._print_markdown_with_images(viewport_text)
-
-    def _rendered_context_blocks(self, card: Card, view: CardView, primary_block: str) -> tuple[list[str], int]:
-        return self._rendered_context_blocks_for_card(
-            card.context, card.index_entry.start_line, card.index_entry.end_line, primary_block
-        )
 
     def _rendered_context_blocks_for_card(
         self, note_context_blocks: dict[tuple[int, int], str], start_line: int, end_line: int, primary_block: str

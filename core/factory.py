@@ -21,7 +21,7 @@ class CardFactory:
 
         for sibling in siblings:
             sibling_card = self.make_card(sibling)
-            context[sibling.start_line, sibling.end_line] = sibling_card.context_view().primary_block().text
+            context[sibling.start_line, sibling.end_line] = sibling_card.context_view().text
             processed.update(set(range(sibling.start_line, sibling.end_line + 1)))
 
         # currently the UI will match the current review card against its context
