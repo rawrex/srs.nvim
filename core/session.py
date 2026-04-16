@@ -28,7 +28,7 @@ class ReviewSession:
         return cards
 
     def run(self) -> int:
-        if not os.path.exists(util.get_index_path()):
+        if not os.path.exists(util._RUNTIME_CONTEXT.index_path):
             self.ui.print_message("Missing index")
             return 1
 

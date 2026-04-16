@@ -55,8 +55,9 @@ def initialize_index_from_repeat_markers() -> int:
 
 
 def main() -> int:
-    repo_root = util.get_repo_root_path()
-    hooks_dir = util.get_hooks_path()
+    util.init_runtime_context(os.getcwd())
+    repo_root = util._RUNTIME_CONTEXT.repo_root_path
+    hooks_dir = util._RUNTIME_CONTEXT.hooks_path
     os.makedirs(hooks_dir, exist_ok=True)
 
     hooks_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "hooks", "hooks.py"))

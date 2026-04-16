@@ -8,7 +8,7 @@ from core.index.tracking import find_repeat_tracked_paths, tracked_paths_from_re
 
 class Handler:
     def __init__(self) -> None:
-        self.root_path = util.get_repo_root_path()
+        self.root_path = util._RUNTIME_CONTEXT.repo_root_path
 
     def is_rev_exists(self, rev: str) -> bool:
         code, _, _ = util.run_git(["rev-parse", "--verify", rev], cwd=self.root_path)

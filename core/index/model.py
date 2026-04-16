@@ -55,11 +55,11 @@ class IndexEntry:
 
     @property
     def card_path(self) -> str:
-        return os.path.join(util.get_srs_path(), f"{self.card_id}.json")
+        return os.path.join(util._RUNTIME_CONTEXT.srs_path, f"{self.card_id}.json")
 
     @property
     def note_abs_path(self) -> str:
-        return os.path.join(util.get_repo_root_path(), self.note_path.lstrip("/"))
+        return os.path.join(util._RUNTIME_CONTEXT.repo_root_path, self.note_path.lstrip("/"))
 
     def read_metadata(self) -> Metadata:
         with open(self.card_path, "r", encoding="utf-8") as handle:

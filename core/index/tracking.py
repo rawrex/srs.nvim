@@ -48,7 +48,7 @@ def tracked_paths_from_repo_paths(repo_paths: list[str]) -> set[str]:
 
 
 def find_repeat_tracked_paths() -> list[str]:
-    repo_root = util.get_repo_root_path()
+    repo_root = util._RUNTIME_CONTEXT.repo_root_path
     tracked_paths: set[str] = set()
 
     def walk(current_dir: str, tracked_parent: bool) -> None:

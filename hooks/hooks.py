@@ -20,11 +20,12 @@ def main() -> int:
         return 1
     event = sys.argv[1]
 
-    repo_root = util.get_repo_root_path()
+    util.init_runtime_context(os.getcwd())
+    repo_root = util._RUNTIME_CONTEXT.repo_root_path
     if not repo_root:
         return 0
 
-    index_path = util.get_index_path()
+    index_path = util._RUNTIME_CONTEXT.index_path
     if not os.path.exists(index_path):
         return 0
 

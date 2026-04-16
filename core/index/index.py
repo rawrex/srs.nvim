@@ -10,7 +10,7 @@ from core.parsers import ParserRegistry
 
 class Index:
     def __init__(self, parser_registry: ParserRegistry) -> None:
-        self.path = util.get_index_path()
+        self.path = util._RUNTIME_CONTEXT.index_path
         self.parser_registry = parser_registry
         self.entry_re = re.compile(r"^'(\d+)','([^']*)','([^']*)','(\d+)','(\d+)'\s*$")
 
@@ -27,7 +27,7 @@ class Index:
         touched_paths = set(result.touched_paths)
         touched_paths.add(self.index_file_path())
 
-        self._stage_paths(util.get_repo_root_path(), touched_paths)
+        self._stage_paths(util._RUNTIME_CONTEXT.repo_root_path, touched_paths)
         return True
 
     def sync_tracked_paths(self, tracked_paths: set[str], repo_root: str) -> bool:

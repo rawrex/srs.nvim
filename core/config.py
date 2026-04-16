@@ -47,7 +47,7 @@ class ReviewConfig:
 
 
 def load_review_config() -> ReviewConfig:
-    path = util.get_config_path()
+    path = util._RUNTIME_CONTEXT.config_path
     defaults = ReviewConfig()
     raw = _load_raw_config(path)
     if raw is None:
@@ -159,7 +159,7 @@ def _parse_media_directory(raw_value: object, default: str | None) -> str | None
         return default
     if os.path.isabs(candidate):
         return os.path.normpath(candidate)
-    return os.path.normpath(os.path.join(util.get_repo_root_path(), candidate))
+    return os.path.normpath(os.path.join(util._RUNTIME_CONTEXT.repo_root_path, candidate))
 
 
 def _parse_rating_buttons(raw: object) -> dict[Rating, str]:

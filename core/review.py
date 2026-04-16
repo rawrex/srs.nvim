@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # ruff: noqa: E402
+import os
 import sys
 from pathlib import Path
 
@@ -18,7 +19,8 @@ from core.ui import ReviewUI
 
 def main() -> int:
     try:
-        repo_root = util.get_repo_root_path()
+        util.init_runtime_context(os.getcwd())
+        repo_root = util._RUNTIME_CONTEXT.repo_root_path
         if not repo_root:
             print("Not inside a git repository.")
             return 1

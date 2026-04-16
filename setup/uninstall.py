@@ -47,13 +47,14 @@ def remove_srs_dir(srs_dir: str) -> bool:
 
 
 def main() -> int:
-    repo_root = util.get_repo_root_path()
+    util.init_runtime_context(os.getcwd())
+    repo_root = util._RUNTIME_CONTEXT.repo_root_path
     if not repo_root:
         print("Not inside a git repository.")
         return 1
 
-    hooks_dir = util.get_hooks_path()
-    srs_dir = util.get_srs_path()
+    hooks_dir = util._RUNTIME_CONTEXT.hooks_path
+    srs_dir = util._RUNTIME_CONTEXT.srs_path
 
     removed_hooks = remove_installed_hooks(hooks_dir) if hooks_dir else 0
     removed_srs = remove_srs_dir(srs_dir) if srs_dir else False
