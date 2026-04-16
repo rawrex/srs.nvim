@@ -21,7 +21,7 @@ class ReviewSession:
 
     def load_due_cards(self, time_point: datetime = datetime.now(timezone.utc)) -> list[Card]:
         all_entries = self.index.load_entries()
-        due = [e for e in all_entries if e.read_metadata().scheduler_card.due > time_point]
+        due = [e for e in all_entries if e.read_metadata().scheduler_card.due <= time_point]
         cards: list[Card] = []
         for entry in due:
             card = self.factory.make_card(entry)
