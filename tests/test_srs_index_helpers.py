@@ -40,21 +40,23 @@ class SrsIndexHelperTest(unittest.TestCase):
             pass
         return index_path
 
-    def test_index_parse_parses_valid_row_and_rejects_invalid(self) -> None:
+    def test_load_entries_parses_valid_rows_and_skips_invalid_rows(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
             index_path = self._create_index_path(repo_root)
+            with open(index_path, "w", encoding="utf-8") as handle:
+                handle.write("'1','/note.md','cloze','2','3'\n")
+                handle.write("bad-row\n")
+
             index = self._index(index_path)
+            rows = index.load_entries()
 
-        row = index._parse("'1','/note.md','cloze','2','3'\n")
-
-        self.assertIsNotNone(row)
-        assert row is not None
+        self.assertEqual(1, len(rows))
+        row = rows[0]
         self.assertEqual(1, row.card_id)
         self.assertEqual("/note.md", row.note_path)
         self.assertEqual("cloze", row.parser_id)
         self.assertEqual(2, row.start_line)
         self.assertEqual(3, row.end_line)
-        self.assertIsNone(index._parse("bad-row"))
 
     def test_collect_parsed_blocks_uses_priority_and_skips_overlaps(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:

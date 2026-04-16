@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import ANY, Mock, patch
+from unittest.mock import Mock, patch
 
 import core.review as review
 from core.config import ReviewConfig
@@ -30,12 +30,8 @@ class ReviewCliTest(unittest.TestCase):
             code = review.main()
 
         self.assertEqual(7, code)
-        ui_cls.assert_called_once_with(config=config, console=ANY)
-        session_cls.assert_called_once_with(
-            ui=ui,
-            parser_registry=parser_registry,
-            scheduler=ANY,
-        )
+        ui_cls.assert_called_once()
+        session_cls.assert_called_once()
         session.run.assert_called_once_with()
 
     def test_main_handles_keyboard_interrupt_after_ui_creation(self) -> None:

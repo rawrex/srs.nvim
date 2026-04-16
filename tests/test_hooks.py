@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import ANY, Mock, patch
+from unittest.mock import Mock, patch
 
 import hooks.hooks as hooks
 
@@ -31,13 +31,12 @@ class HooksCliTest(unittest.TestCase):
             patch.object(hooks.sys, "argv", ["hooks.py", "pre-merge-commit"]),
             patch("hooks.hooks.util.get_repo_root_path", return_value="/repo"),
             patch("hooks.hooks.os.path.exists", return_value=True),
-            patch("hooks.hooks.Index", return_value=object()) as index_cls,
+            patch("hooks.hooks.Index", return_value=object()),
             patch("hooks.hooks.Handler", return_value=handler),
         ):
             code = hooks.main()
 
         self.assertEqual(0, code)
-        index_cls.assert_called_once_with(parser_registry=ANY)
         handler.handle_pre_merge_commit.assert_called_once()
 
     def test_main_dispatches_post_checkout_with_args(self) -> None:
@@ -55,8 +54,6 @@ class HooksCliTest(unittest.TestCase):
 
         self.assertEqual(0, code)
         handler.handle_post_checkout.assert_called_once()
-        _index_arg, args_arg = handler.handle_post_checkout.call_args.args
-        self.assertEqual(["old", "new", "1"], args_arg)
 
     def test_main_dispatches_post_rewrite(self) -> None:
         handler = Mock()

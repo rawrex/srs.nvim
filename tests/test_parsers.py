@@ -1,12 +1,11 @@
 import tempfile
-import types
 import unittest
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 from core.api import Parser
 from core.config import ReviewConfig
-from core.parsers import ParserRegistry, _load_pack_module, _load_registered_packs, _pack_module_names
+from core.parsers import ParserRegistry, build_parser_registry
 
 
 class _Parser(Parser):
@@ -54,33 +53,17 @@ class ParsersTest(unittest.TestCase):
         with self.assertRaises(KeyError):
             registry.default()
 
-    def test_pack_module_names_filters_private_and_init(self) -> None:
+    def test_build_parser_registry_loads_builtin_packs(self) -> None:
+        registry = build_parser_registry(ReviewConfig())
+
+        self.assertIn("cloze", registry.parsers)
+        self.assertIn("quote_block", registry.parsers)
+        self.assertIn("quote_block_cloze", registry.parsers)
+
+    def test_build_parser_registry_raises_when_no_pack_modules_found(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             packs_dir = Path(temp_dir)
-            for name in ["__init__.py", "_private.py", "alpha.py", "beta.py"]:
-                (packs_dir / name).write_text("", encoding="utf-8")
 
             with patch("core.parsers._pack_modules_dir", return_value=packs_dir):
-                names = _pack_module_names()
-
-        self.assertEqual(["alpha", "beta"], names)
-
-    def test_load_pack_module_returns_none_when_missing(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            packs_dir = Path(temp_dir)
-            with patch("core.parsers._pack_modules_dir", return_value=packs_dir):
-                self.assertIsNone(_load_pack_module("missing"))
-
-    def test_load_registered_packs_calls_register_pack_when_callable(self) -> None:
-        registry = ParserRegistry(parsers={})
-        register_pack = Mock()
-        module_with_register = types.SimpleNamespace(register_pack=register_pack)
-        module_without_register = types.SimpleNamespace(register_pack=1)
-
-        with (
-            patch("core.parsers._pack_module_names", return_value=["a", "b"]),
-            patch("core.parsers._load_pack_module", side_effect=[module_with_register, module_without_register]),
-        ):
-            _load_registered_packs(registry, ReviewConfig())
-
-        register_pack.assert_called_once_with(registry, ReviewConfig())
+                with self.assertRaises(RuntimeError):
+                    build_parser_registry(ReviewConfig())

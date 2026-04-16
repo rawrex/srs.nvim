@@ -28,6 +28,7 @@ class ClozePackTest(unittest.TestCase):
             source_text=note,
             index_entry=self._entry(),
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
+            context={},
             reveal_mode=RevealMode.WHOLE,
             cloze_open="~{",
             cloze_close="}",
@@ -59,6 +60,7 @@ class ClozePackTest(unittest.TestCase):
             source_text=note,
             index_entry=self._entry(),
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
+            context={},
             reveal_mode=RevealMode.WHOLE,
             cloze_open="~{",
             cloze_close="}",
@@ -85,6 +87,7 @@ class ClozePackTest(unittest.TestCase):
             source_text=note_context_blocks[(1, 1)],
             index_entry=self._entry(start_line=1, end_line=1),
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
+            context=note_context_blocks,
             reveal_mode=RevealMode.WHOLE,
             cloze_open="~{",
             cloze_close="}",
@@ -96,7 +99,7 @@ class ClozePackTest(unittest.TestCase):
         )
 
         with patch("core.ui.os.system", return_value=0), patch("core.ui.read_single_key", side_effect=["\n"]):
-            ui.question_step("title", card, note_context_blocks=note_context_blocks)
+            ui.question_step("title", card)
 
         calls = [item.markup for item, _kwargs in console.printed if isinstance(item, Markdown)]
         self.assertGreaterEqual(len(calls), 1)
@@ -116,6 +119,7 @@ class ClozePackTest(unittest.TestCase):
             source_text=note_context_blocks[(1, 1)],
             index_entry=self._entry(start_line=1, end_line=1),
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
+            context=note_context_blocks,
             reveal_mode=RevealMode.WHOLE,
             cloze_open="~{",
             cloze_close="}",
@@ -127,7 +131,7 @@ class ClozePackTest(unittest.TestCase):
         )
 
         with patch("core.ui.os.system", return_value=0), patch("core.ui.read_single_key", side_effect=["\n"]):
-            ui.question_step("title", card, note_context_blocks=note_context_blocks)
+            ui.question_step("title", card)
 
         calls = [item.markup for item, _kwargs in console.printed if isinstance(item, Markdown)]
         self.assertGreaterEqual(len(calls), 1)
@@ -144,6 +148,7 @@ class ClozePackTest(unittest.TestCase):
             source_text=note_context_blocks[(1, 1)],
             index_entry=self._entry(start_line=1, end_line=1),
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
+            context=note_context_blocks,
             reveal_mode=RevealMode.WHOLE,
             cloze_open="~{",
             cloze_close="}",
@@ -161,6 +166,7 @@ class ClozePackTest(unittest.TestCase):
             source_text="Term [a]~{hidden}",
             index_entry=self._entry(),
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
+            context={},
             reveal_mode=RevealMode.WHOLE,
             cloze_open="~{",
             cloze_close="}",
@@ -189,6 +195,7 @@ class ClozePackTest(unittest.TestCase):
             source_text="A ~{single} B",
             index_entry=self._entry(),
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
+            context={},
             reveal_mode=RevealMode.WHOLE,
             cloze_open="~{",
             cloze_close="}",
@@ -204,6 +211,7 @@ class ClozePackTest(unittest.TestCase):
             source_text="A ~{abcd} B ~{efgh}",
             index_entry=self._entry(),
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
+            context={},
             reveal_mode=RevealMode.INCREMENTAL,
             cloze_open="~{",
             cloze_close="}",

@@ -16,6 +16,7 @@ class QuoteBlockPackTest(unittest.TestCase):
             source_text=block_text,
             index_entry=self._entry(),
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
+            context={},
         )
 
     def test_quote_block_card_question_normalizes_callout_heading_variants(self) -> None:

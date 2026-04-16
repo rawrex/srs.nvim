@@ -21,6 +21,7 @@ class QuoteBlockClozePackTest(unittest.TestCase):
             source_text=block_text,
             index_entry=self._entry(),
             metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
+            context={},
             reveal_mode=RevealMode.WHOLE,
             cloze_open="~{",
             cloze_close="}",
