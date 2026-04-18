@@ -33,11 +33,7 @@ class ReviewUiRatingTest(unittest.TestCase):
         self.assertIn(("Invalid rating", {}), console.printed)
 
     def test_print_markdown_with_images_renders_markdown_when_chafa_unavailable(self) -> None:
-        cases = [
-            "![](diagram.png)\n",
-            "![[diagram.png]]\n",
-            "> ![[_Pasted image 20241023210525.png]]\n",
-        ]
+        cases = ["![](diagram.png)\n", "![[diagram.png]]\n", "> ![[_Pasted image 20241023210525.png]]\n"]
 
         for text in cases:
             with self.subTest(text=text):
@@ -101,15 +97,13 @@ class ReviewUiRatingTest(unittest.TestCase):
         view = ViewBlock(start_line=1, text=">[!note]- Primary\n>Line 1\n")
 
         card = Mock()
-        card.context = {
-            (1, 2): ">[!note]- Primary\n>Line 1\n",
-            (3, 4): ">[!note]- Context\n>Line 2\n",
-        }
+        card.context = {(1, 2): ">[!note]- Primary\n>Line 1\n", (3, 4): ">[!note]- Context\n>Line 2\n"}
         card.index_entry = Mock(start_line=1, end_line=2)
 
         ui._print_view(card=card, view=view)
 
         self.assertEqual([">[!note]- Primary <|---\n>Line 1\n\n>[!note]- Context\n>Line 2"], captured)
+
 
 class SessionEntryUiTest(unittest.TestCase):
     def test_show_start_menu_returns_on_enter(self) -> None:
