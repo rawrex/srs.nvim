@@ -124,64 +124,31 @@ class ReviewUI:
             self._print_markdown_with_images(view_text.rstrip("\n"))
             return
 
-        rendered_blocks, primary_block_index = self._rendered_context_blocks_for_card(
+        rendered_blocks = self._rendered_context_blocks_for_card(
             card.context, card.index_entry.start_line, card.index_entry.end_line, view_text
         )
         merged_text = "\n\n".join(block.rstrip("\n") for block in rendered_blocks)
-        target_line_index = self._line_index_for_block(rendered_blocks, primary_block_index)
-        viewport_text = self._center_viewport_on_line(merged_text.rstrip("\n"), target_line_index)
-        self._print_markdown_with_images(viewport_text)
+        self._print_markdown_with_images(merged_text.rstrip("\n"))
 
     def _rendered_context_blocks_for_card(
         self, note_context_blocks: dict[tuple[int, int], str], start_line: int, end_line: int, primary_block: str
-    ) -> tuple[list[str], int]:
+    ) -> list[str]:
         rendered_blocks: list[str] = []
         primary_line_range = (start_line, end_line)
-        primary_block_index = 0
         found_primary = False
 
-        for idx, line_range in enumerate(sorted(note_context_blocks)):
+        for line_range in sorted(note_context_blocks):
             if line_range == primary_line_range:
                 rendered_blocks.append(primary_block)
-                primary_block_index = idx
                 found_primary = True
                 continue
             rendered_blocks.append(note_context_blocks[line_range])
 
         if not rendered_blocks:
-            return [primary_block], 0
+            return [primary_block]
         if not found_primary:
             rendered_blocks.insert(0, primary_block)
-            return rendered_blocks, 0
-        return rendered_blocks, primary_block_index
-
-    def _line_index_for_block(self, blocks: list[str], block_index: int) -> int:
-        line_index = 0
-        for idx, block in enumerate(blocks):
-            if idx == block_index:
-                return line_index
-            line_index += len(block.rstrip("\n").splitlines())
-            if idx < len(blocks) - 1:
-                line_index += 1
-        return line_index
-
-    def _center_viewport_on_line(self, text: str, target_line_index: int) -> str:
-        lines = text.splitlines(keepends=True)
-        if not lines:
-            return text
-
-        terminal_size = shutil.get_terminal_size()
-        viewport_height = max(1, terminal_size.lines - 2)
-        if len(lines) <= viewport_height:
-            return text
-
-        clamped_target = min(max(0, target_line_index), len(lines) - 1)
-        start = max(0, clamped_target - ((viewport_height - 1) // 2))
-        end = start + viewport_height
-        if end > len(lines):
-            end = len(lines)
-            start = max(0, end - viewport_height)
-        return "".join(lines[start:end]).rstrip("\n")
+        return rendered_blocks
 
     def _print_markdown_with_images(self, text: str) -> None:
         markdown_lines: list[str] = []
