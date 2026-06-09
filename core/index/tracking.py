@@ -2,7 +2,7 @@
 import os
 
 from core import util
-from core.util import EXCLUDE_FROM_TRACKING, NOREPEAT_MARKER_FILENAME, REPEAT_MARKER_FILENAME
+from core.util import EXCLUDE_FROM_TRACKING, GIT_RELATED_FILENAMES, NOREPEAT_MARKER_FILENAME, REPEAT_MARKER_FILENAME
 
 
 def _to_indexed_path(repo_root: str, abs_path: str) -> str:
@@ -38,6 +38,8 @@ def tracked_paths_from_repo_paths(repo_paths: list[str]) -> set[str]:
         if name == NOREPEAT_MARKER_FILENAME:
             norepeat_dirs.add(os.path.dirname(repo_path))
             continue
+        if name in GIT_RELATED_FILENAMES:
+            continue
         file_paths.append(repo_path)
 
     tracked_paths: set[str] = set()
@@ -69,6 +71,8 @@ def find_repeat_tracked_paths() -> list[str]:
             if not tracked_here:
                 continue
             if entry.name in {REPEAT_MARKER_FILENAME, NOREPEAT_MARKER_FILENAME}:
+                continue
+            if entry.name in GIT_RELATED_FILENAMES:
                 continue
             if entry.is_file(follow_symlinks=False):
                 tracked_paths.add(_to_indexed_path(repo_root, entry.path))

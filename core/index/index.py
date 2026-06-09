@@ -6,6 +6,7 @@ from core import util
 from core.card import SchedulerCard
 from core.index.model import DiffChangeSet, IndexEntry, IndexUpdateResult, Metadata
 from core.parsers import ParserRegistry
+from core.util import GIT_RELATED_FILENAMES
 
 
 class Index:
@@ -180,6 +181,11 @@ class Index:
         return touched_card_paths
 
     def _is_note_path(self, indexed_path: str) -> bool:
+        if not indexed_path:
+            return False
+        name = indexed_path.rsplit("/", 1)[-1]
+        if name in GIT_RELATED_FILENAMES:
+            return False
         return not (
             indexed_path.startswith("/.srs/")
             or indexed_path == "/.srs"
