@@ -46,8 +46,8 @@ class ReviewSession:
 
             # Step 1. Question
             question_started_ns = time.monotonic_ns()
-            self.ui.question_step(question_title, card)
-            duration_ms = max(0, (time.monotonic_ns() - question_started_ns) // 1_000_000)
+            _view, pause_ns = self.ui.question_step(question_title, card)
+            duration_ms = max(0, (time.monotonic_ns() - question_started_ns - pause_ns) // 1_000_000)
             review_duration_s = duration_ms / 1000
             answer_title = f"\n[{idx}/{total}] {note_name} — answer ({review_duration_s:.1f}s)"
 

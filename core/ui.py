@@ -4,7 +4,9 @@ import shutil
 import signal
 import subprocess
 import sys
+import time
 from pathlib import Path
+from typing import Tuple
 
 from fsrs import Rating
 from rich.console import Console
@@ -62,18 +64,34 @@ class ReviewUI:
     def intro(self, total: int) -> None:
         self.intro_ui.show_start_menu(total)
 
-    def question_step(self, title: str, card: Card) -> ViewBlock:
+    def question_step(self, title: str, card: Card) -> Tuple[ViewBlock, int]:
         current_view = card.question_view()
+        paused = False
+        pause_total_ns = 0
+        pause_start_ns = 0
         while True:
             clear_screen()
-            self.console.print(title)
+            display_title = title
+            if paused:
+                display_title = title + " (PAUSED)"
+            self.console.print(display_title)
             self._print_view(card, current_view)
 
             key = read_single_key()
             if maybe_suspend_for_key(key):
                 continue
+            if key == " ":
+                if not paused:
+                    paused = True
+                    pause_start_ns = time.monotonic_ns()
+                else:
+                    paused = False
+                    pause_total_ns += time.monotonic_ns() - pause_start_ns
+                continue
             if key in {"\r", "\n"}:
-                return current_view
+                if paused:
+                    pause_total_ns += time.monotonic_ns() - pause_start_ns
+                return current_view, pause_total_ns
             maybe_view = card.reveal_for_label(key)
             if maybe_view is not None:
                 current_view = maybe_view

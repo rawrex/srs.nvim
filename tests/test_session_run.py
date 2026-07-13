@@ -73,7 +73,7 @@ class ReviewSessionRunTest(unittest.TestCase):
             config = ReviewConfig()
             ui = Mock()
             ui.rating_step.return_value = Rating.Good
-            ui.question_step.side_effect = [None, None]
+            ui.question_step.side_effect = [(None, 0), (None, 0)]
 
             with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
                 session = ReviewSession(
@@ -114,7 +114,7 @@ class ReviewSessionRunTest(unittest.TestCase):
         with temporary_session_repo(with_index=True) as repo_root:
             config = ReviewConfig()
             ui = Mock()
-            ui.question_step.return_value = None
+            ui.question_step.return_value = (None, 0)
             ui.rating_step.side_effect = [Rating.Good, KeyboardInterrupt]
 
             with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
