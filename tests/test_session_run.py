@@ -108,7 +108,7 @@ class ReviewSessionRunTest(unittest.TestCase):
         card_1.index_entry.write_metadata.assert_called_once_with(card_1.metadata)
         card_2.index_entry.write_metadata.assert_called_once_with(card_2.metadata)
         self.assertEqual(2, scheduler.review_card.call_count)
-        ui.intro.assert_called_once_with(2)
+        ui.intro.assert_called_once_with(2, ["one", "two"])
 
     def test_run_raises_interrupt_during_rating(self) -> None:
         with temporary_session_repo(with_index=True) as repo_root:
@@ -136,4 +136,4 @@ class ReviewSessionRunTest(unittest.TestCase):
                     with self.assertRaises(KeyboardInterrupt):
                         session.run()
 
-        ui.intro.assert_called_once_with(2)
+        ui.intro.assert_called_once_with(2, ["one", "two"])

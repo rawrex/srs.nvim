@@ -38,7 +38,8 @@ class ReviewSession:
             return 0
 
         total = len(cards)
-        self.ui.intro(total)
+        note_paths = sorted({os.path.splitext(card.index_entry.note_path.lstrip("/"))[0] for card in cards})
+        self.ui.intro(total, note_paths)
 
         for idx, card in enumerate(cards, start=1):
             note_name = os.path.basename(card.index_entry.note_abs_path)

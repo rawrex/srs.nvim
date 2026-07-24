@@ -112,7 +112,7 @@ class SessionEntryUiTest(unittest.TestCase):
             ui = SessionEntryUI(console=console)  # type: ignore[arg-type]
 
         with patch("core.ui.os.system", return_value=0), patch("core.ui.read_single_key", return_value="\n"):
-            ui.show_start_menu(due_cards_count=3)
+            ui.show_start_menu(due_cards_count=3, note_paths=[])
 
         self.assertIn(("ASCII LOGO", {"markup": False, "highlight": False}), console.printed)
         self.assertIn(("Due cards: 3", {}), console.printed)
@@ -124,7 +124,7 @@ class SessionEntryUiTest(unittest.TestCase):
         ui = SessionEntryUI(console=console)  # type: ignore[arg-type]
 
         with patch("core.ui.os.system", return_value=0), patch("core.ui.read_single_key", side_effect=["x", "\n"]):
-            ui.show_start_menu(due_cards_count=1)
+            ui.show_start_menu(due_cards_count=1, note_paths=[])
 
         prompts = [value for value, _kwargs in console.printed if isinstance(value, str)]
         self.assertGreaterEqual(prompts.count("Press Enter to start"), 2)

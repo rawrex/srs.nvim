@@ -28,12 +28,16 @@ class SessionEntryUI:
         self.console = console
         self.session_logo = self._load_session_logo()
 
-    def show_start_menu(self, due_cards_count: int) -> None:
+    def show_start_menu(self, due_cards_count: int, note_paths: list[str]) -> None:
         while True:
             clear_screen()
             self.console.print(self.session_logo, markup=False, highlight=False)
             self.console.print("")
             self.console.print(f"Due cards: {due_cards_count}")
+            self.console.print("")
+            for path in note_paths:
+                self.console.print(f"  {path}")
+            self.console.print("")
             self.console.print("Press Enter to start")
 
             key = read_single_key()
@@ -61,8 +65,8 @@ class ReviewUI:
     def print_message(self, message: str) -> None:
         self.console.print(message)
 
-    def intro(self, total: int) -> None:
-        self.intro_ui.show_start_menu(total)
+    def intro(self, total: int, note_paths: list[str]) -> None:
+        self.intro_ui.show_start_menu(total, note_paths)
 
     def question_step(self, title: str, card: Card) -> Tuple[ViewBlock, int]:
         current_view = card.question_view()
