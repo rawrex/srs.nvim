@@ -97,6 +97,24 @@ def load_review_config() -> ReviewConfig:
     )
 
 
+def write_scheduler_parameters(parameters: tuple[float, ...] | list[float]) -> None:
+    path = util._RUNTIME_CONTEXT.config_path
+    raw = _load_raw_config(path)
+    if raw is None:
+        raw = {}
+
+    scheduler = dict(_dict_or_empty(raw.get("scheduler")))
+    scheduler["parameters"] = list(parameters)
+    raw["scheduler"] = scheduler
+
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp_path = path + ".tmp"
+    with open(tmp_path, "w", encoding="utf-8") as handle:
+        json.dump(raw, handle, ensure_ascii=False, indent=4, sort_keys=True)
+        handle.write("\n")
+    os.replace(tmp_path, path)
+
+
 def _load_raw_config(path: str) -> dict[str, object] | None:
     if not os.path.exists(path):
         return None

@@ -8,7 +8,7 @@ from fsrs import Rating
 from fsrs import Scheduler
 
 from core.card import RevealMode
-from core.config import DEFAULT_RATING_BUTTONS, load_review_config
+from core.config import DEFAULT_RATING_BUTTONS, load_review_config, write_scheduler_parameters
 from tests.setup_test_helpers import runtime_context
 
 
@@ -177,3 +177,49 @@ class ReviewConfigTest(unittest.TestCase):
             config = self._load_config(repo_root)
 
         self.assertEqual(Scheduler().to_dict(), config.build_scheduler().to_dict())
+
+    def test_write_scheduler_parameters_preserves_other_keys(self) -> None:
+        with tempfile.TemporaryDirectory() as repo_root:
+            path = self._config_path(repo_root)
+            with open(path, "w", encoding="utf-8") as handle:
+                json.dump({"review": {"show_context": False}, "scheduler": {"desired_retention": 0.9}}, handle)
+
+            with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
+                write_scheduler_parameters((0.1, 0.2, 0.3))
+
+            with open(path, "r", encoding="utf-8") as handle:
+                stored = json.load(handle)
+
+        self.assertEqual([0.1, 0.2, 0.3], stored["scheduler"]["parameters"])
+        self.assertEqual(0.9, stored["scheduler"]["desired_retention"])
+        self.assertEqual({"show_context": False}, stored["review"])
+
+    def test_write_scheduler_parameters_creates_config_when_missing(self) -> None:
+        parameters = list(Scheduler().parameters)
+        parameters[0] = 0.5
+        with tempfile.TemporaryDirectory() as repo_root:
+            with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
+                write_scheduler_parameters(parameters)
+                config = load_review_config()
+
+            path = os.path.join(repo_root, ".srs", "config.json")
+            self.assertTrue(os.path.exists(path))
+            with open(path, "r", encoding="utf-8") as handle:
+                stored = json.load(handle)
+
+        self.assertEqual(parameters, stored["scheduler"]["parameters"])
+        self.assertEqual(0.5, config.build_scheduler().parameters[0])
+
+    def test_write_scheduler_parameters_uses_atomic_replace_with_newline(self) -> None:
+        with tempfile.TemporaryDirectory() as repo_root:
+            path = self._config_path(repo_root)
+
+            with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
+                write_scheduler_parameters((0.1,))
+
+            self.assertTrue(os.path.exists(path))
+            self.assertFalse(os.path.exists(path + ".tmp"))
+            with open(path, "r", encoding="utf-8") as handle:
+                raw_text = handle.read()
+
+        self.assertTrue(raw_text.endswith("\n"))
