@@ -52,25 +52,23 @@ def optimize_review_logs(review_logs: list[ReviewLog], verbose: bool = False) ->
 
 
 def run_optimization(entries: list[IndexEntry], verbose: bool = False, dry_run: bool = False) -> OptimizationReport:
-    if review_logs := collect_review_logs(entries):
-        card_count = len({log.card_id for log in review_logs})
-        parameters = optimize_review_logs(review_logs, verbose=verbose)
-        if [float(value) for value in parameters] == list(DEFAULT_PARAMETERS):
-            return OptimizationReport(
-                card_count=card_count,
-                review_log_count=len(review_logs),
-                parameters=tuple(parameters),
-                changed=False,
-                skipped_reason=SKIPPED_INSUFFICIENT_DATA,
-            )
-        if dry_run:
-            return OptimizationReport(
-                card_count=card_count,
-                review_log_count=len(review_logs),
-                parameters=tuple(parameters),
-                changed=not dry_run,
-            )
+    review_logs = collect_review_logs(entries)
+    if not review_logs:
+        return OptimizationReport(
+            card_count=0, review_log_count=0, parameters=(), changed=False, skipped_reason=SKIPPED_NO_LOGS
+        )
+    card_count = len({log.card_id for log in review_logs})
+    parameters = optimize_review_logs(review_logs, verbose=verbose)
+    if [float(value) for value in parameters] == list(DEFAULT_PARAMETERS):
+        return OptimizationReport(
+            card_count=card_count,
+            review_log_count=len(review_logs),
+            parameters=tuple(parameters),
+            changed=False,
+            skipped_reason=SKIPPED_INSUFFICIENT_DATA,
+        )
+    if not dry_run:
         write_scheduler_parameters(parameters)
     return OptimizationReport(
-        card_count=0, review_log_count=0, parameters=(), changed=False, skipped_reason=SKIPPED_NO_LOGS
+        card_count=card_count, review_log_count=len(review_logs), parameters=tuple(parameters), changed=not dry_run
     )
