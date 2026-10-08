@@ -1,15 +1,18 @@
 import io
 import json
+import os
 import unittest
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
+from fsrs import Card as SchedulerCard
 from fsrs import Rating
 
 from core.card import ViewBlock
 from core.config import ReviewConfig
 from core.rpc import JsonLineTransport, RpcReviewUI, run
-from tests.setup_test_helpers import runtime_context
+from tests.setup_test_helpers import runtime_context, temporary_session_repo
 
 
 class _FakeCard:
@@ -124,6 +127,45 @@ class RpcRunTest(unittest.TestCase):
         engine_cls.assert_called_once()
         self.assertIsInstance(engine_cls.call_args.kwargs["ui"], RpcReviewUI)
         engine.run.assert_called_once_with()
+
+    def test_run_reviews_real_repo_and_persists_review_log(self) -> None:
+        with temporary_session_repo(with_index=True) as repo_root:
+            with open(os.path.join(repo_root, "note.md"), "w", encoding="utf-8") as handle:
+                handle.write("Prelude line\nTerm ~{hidden}\nTail line\n")
+            with open(os.path.join(repo_root, ".srs", "index.txt"), "w", encoding="utf-8") as handle:
+                handle.write("'1','/note.md','cloze','2','2'\n")
+
+            scheduler_card = SchedulerCard()
+            scheduler_card.due = datetime(1970, 1, 1, tzinfo=timezone.utc)
+            card_path = os.path.join(repo_root, ".srs", "1.json")
+            with open(card_path, "w", encoding="utf-8") as handle:
+                json.dump(json.loads(scheduler_card.to_json()), handle)
+
+            events = [
+                {"name": "start"},
+                {"name": "reveal", "label": ""},
+                {"name": "next"},
+                {"name": "rate", "rating": "Good"},
+            ]
+            reader = io.StringIO("".join(json.dumps(event) + "\n" for event in events))
+            writer = io.StringIO()
+            with (
+                patch("core.rpc.util.init_runtime_context"),
+                patch("core.rpc.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True),
+            ):
+                code = run(reader, writer)
+
+            with open(card_path, "r", encoding="utf-8") as handle:
+                stored = json.load(handle)
+
+        messages = _sent(writer)
+        self.assertEqual(0, code)
+        self.assertEqual(1, len(stored["review_logs"]))
+        self.assertIn({"type": "message", "text": "Saved"}, messages)
+        renders = [message for message in messages if message["type"] == "render"]
+        self.assertEqual(["question", "question", "answer"], [render["state"] for render in renders])
+        self.assertNotIn("hidden", renders[0]["view"])
+        self.assertIn("hidden", renders[1]["view"])
 
 
 if __name__ == "__main__":
