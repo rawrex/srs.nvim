@@ -22,9 +22,9 @@ class ReviewCliTest(unittest.TestCase):
     def test_main_runs_session_with_loaded_config(self) -> None:
         config = ReviewConfig()
         ui = Mock()
-        session = Mock()
+        engine = Mock()
         parser_registry = Mock()
-        session.run.return_value = 7
+        engine.run.return_value = 7
         runtime = runtime_context("/repo")
 
         with (
@@ -33,14 +33,14 @@ class ReviewCliTest(unittest.TestCase):
             patch("core.review.load_review_config", return_value=config),
             patch("core.review.build_parser_registry", return_value=parser_registry),
             patch("core.review.ReviewUI", return_value=ui) as ui_cls,
-            patch("core.review.ReviewSession", return_value=session) as session_cls,
+            patch("core.review.ReviewEngine", return_value=engine) as engine_cls,
         ):
             code = review.main()
 
         self.assertEqual(7, code)
         ui_cls.assert_called_once()
-        session_cls.assert_called_once()
-        session.run.assert_called_once_with()
+        engine_cls.assert_called_once()
+        engine.run.assert_called_once_with()
 
     def test_main_handles_keyboard_interrupt_after_ui_creation(self) -> None:
         runtime = runtime_context("/repo")
@@ -50,7 +50,7 @@ class ReviewCliTest(unittest.TestCase):
             patch("core.review.load_review_config", return_value=ReviewConfig()),
             patch("core.review.build_parser_registry", return_value=Mock()),
             patch("core.review.ReviewUI", return_value=Mock()),
-            patch("core.review.ReviewSession", side_effect=KeyboardInterrupt),
+            patch("core.review.ReviewEngine", side_effect=KeyboardInterrupt),
             patch("builtins.print") as print_mock,
         ):
             code = review.main()

@@ -5,7 +5,7 @@ from fsrs import Rating
 
 from core.config import ReviewConfig
 from core.parsers import build_parser_registry
-from core.session import ReviewSession
+from core.engine import ReviewEngine
 from tests.setup_test_helpers import runtime_context, temporary_session_repo
 
 
@@ -39,13 +39,13 @@ class _DummyCard:
         return "answer"
 
 
-class ReviewSessionRunTest(unittest.TestCase):
+class ReviewEngineRunTest(unittest.TestCase):
     def test_run_returns_1_when_index_missing(self) -> None:
         with temporary_session_repo(with_index=False) as repo_root:
             ui = Mock()
             config = ReviewConfig()
             with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
-                session = ReviewSession(
+                session = ReviewEngine(
                     ui=ui, parser_registry=build_parser_registry(config), scheduler=config.build_scheduler()
                 )
                 code = session.run()
@@ -58,7 +58,7 @@ class ReviewSessionRunTest(unittest.TestCase):
             ui = Mock()
             config = ReviewConfig()
             with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
-                session = ReviewSession(
+                session = ReviewEngine(
                     ui=ui, parser_registry=build_parser_registry(config), scheduler=config.build_scheduler()
                 )
 
@@ -76,7 +76,7 @@ class ReviewSessionRunTest(unittest.TestCase):
             ui.question_step.side_effect = [(None, 0), (None, 0)]
 
             with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
-                session = ReviewSession(
+                session = ReviewEngine(
                     ui=ui, parser_registry=build_parser_registry(config), scheduler=config.build_scheduler()
                 )
 
@@ -95,7 +95,7 @@ class ReviewSessionRunTest(unittest.TestCase):
 
                 with (
                     patch.object(session, "load_due_cards", return_value=[card_1, card_2]),
-                    patch("core.session.time.monotonic_ns") as monotonic_ns,
+                    patch("core.engine.time.monotonic_ns") as monotonic_ns,
                 ):
                     monotonic_ns.side_effect = [0, 1_200_000_000, 2_000_000_000, 2_900_000_000]
                     code = session.run()
@@ -118,7 +118,7 @@ class ReviewSessionRunTest(unittest.TestCase):
             ui.rating_step.side_effect = [Rating.Good, KeyboardInterrupt]
 
             with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
-                session = ReviewSession(
+                session = ReviewEngine(
                     ui=ui, parser_registry=build_parser_registry(config), scheduler=config.build_scheduler()
                 )
 
@@ -131,7 +131,7 @@ class ReviewSessionRunTest(unittest.TestCase):
 
                 with (
                     patch.object(session, "load_due_cards", return_value=[card_1, card_2]),
-                    patch("core.session.time.monotonic_ns", side_effect=[0, 1_000_000, 2_000_000, 3_000_000]),
+                    patch("core.engine.time.monotonic_ns", side_effect=[0, 1_000_000, 2_000_000, 3_000_000]),
                 ):
                     with self.assertRaises(KeyboardInterrupt):
                         session.run()

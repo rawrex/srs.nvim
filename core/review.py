@@ -13,7 +13,7 @@ from rich.console import Console
 from core import util
 from core.config import load_review_config
 from core.parsers import build_parser_registry
-from core.session import ReviewSession
+from core.engine import ReviewEngine
 from core.ui import ReviewUI
 
 
@@ -25,12 +25,12 @@ def main() -> int:
             print("Not inside a git repository.")
             return 1
         config = load_review_config()
-        session = ReviewSession(
+        engine = ReviewEngine(
             ui=ReviewUI(config=config, console=Console()),
             parser_registry=build_parser_registry(config),
             scheduler=config.build_scheduler(),
         )
-        return session.run()
+        return engine.run()
     except KeyboardInterrupt:
         print("\nExit.")
         return 0
