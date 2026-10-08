@@ -23,6 +23,41 @@ def clear_screen() -> None:
     os.system("cls" if os.name == "nt" else "clear")
 
 
+def mark_active_line(text: str) -> str:
+    mark = "<|---"
+    first_line, sep, rest = text.partition("\n")
+    return f"{first_line} {mark}{sep}{rest}"
+
+
+def rendered_context_blocks(
+    note_context_blocks: dict[tuple[int, int], str], start_line: int, end_line: int, primary_block: str
+) -> list[str]:
+    rendered_blocks: list[str] = []
+    primary_line_range = (start_line, end_line)
+    found_primary = False
+
+    for line_range in sorted(note_context_blocks):
+        if line_range == primary_line_range:
+            rendered_blocks.append(primary_block)
+            found_primary = True
+            continue
+        rendered_blocks.append(note_context_blocks[line_range])
+
+    if not rendered_blocks:
+        return [primary_block]
+    if not found_primary:
+        rendered_blocks.insert(0, primary_block)
+    return rendered_blocks
+
+
+def compose_view_text(card: Card, view: ViewBlock, show_context: bool) -> str:
+    view_text = mark_active_line(view.text)
+    if not show_context:
+        return view_text.rstrip("\n")
+    blocks = rendered_context_blocks(card.context, card.index_entry.start_line, card.index_entry.end_line, view_text)
+    return "\n\n".join(block.rstrip("\n") for block in blocks).rstrip("\n")
+
+
 class SessionEntryUI:
     def __init__(self, console: Console) -> None:
         self.console = console
@@ -140,37 +175,7 @@ class ReviewUI:
         return f"Rate [{', '.join(parts)}]: "
 
     def _print_view(self, card: Card, view: ViewBlock) -> None:
-        view_text = self._mark_active_line(view.text)
-
-        if not self.show_context:
-            self._print_markdown_with_images(view_text.rstrip("\n"))
-            return
-
-        rendered_blocks = self._rendered_context_blocks_for_card(
-            card.context, card.index_entry.start_line, card.index_entry.end_line, view_text
-        )
-        merged_text = "\n\n".join(block.rstrip("\n") for block in rendered_blocks)
-        self._print_markdown_with_images(merged_text.rstrip("\n"))
-
-    def _rendered_context_blocks_for_card(
-        self, note_context_blocks: dict[tuple[int, int], str], start_line: int, end_line: int, primary_block: str
-    ) -> list[str]:
-        rendered_blocks: list[str] = []
-        primary_line_range = (start_line, end_line)
-        found_primary = False
-
-        for line_range in sorted(note_context_blocks):
-            if line_range == primary_line_range:
-                rendered_blocks.append(primary_block)
-                found_primary = True
-                continue
-            rendered_blocks.append(note_context_blocks[line_range])
-
-        if not rendered_blocks:
-            return [primary_block]
-        if not found_primary:
-            rendered_blocks.insert(0, primary_block)
-        return rendered_blocks
+        self._print_markdown_with_images(compose_view_text(card, view, self.show_context))
 
     def _print_markdown_with_images(self, text: str) -> None:
         markdown_lines: list[str] = []
@@ -253,11 +258,6 @@ class ReviewUI:
         if result.returncode != 0:
             return None
         return result.stdout
-
-    def _mark_active_line(self, text: str) -> str:
-        mark = "<|---"
-        first_line, sep, rest = text.partition("\n")
-        return f"{first_line} {mark}{sep}{rest}"
 
 
 def read_single_key() -> str:
