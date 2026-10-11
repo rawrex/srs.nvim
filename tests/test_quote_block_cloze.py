@@ -82,6 +82,23 @@ class QuoteBlockClozePackTest(unittest.TestCase):
         self.assertNotIn("1", context)
         self.assertEqual(">[!code]- Example\n", context)
 
+    def test_title_cloze_is_masked_while_block_is_closed(self) -> None:
+        block_text = ">[!question]- What is ~{42}?\n>body\n"
+        card = self._card(block_text)
+
+        self.assertEqual(">[!question]- What is [b]▇▇?\n", card.question_view().text)
+        self.assertEqual(">[!question]- What is ▇▇?\n", card.context_view().text)
+
+        revealed = card.reveal_for_label("b")
+        self.assertIsNotNone(revealed)
+        assert revealed is not None
+        self.assertEqual(">[!question]- What is `42`?\n", revealed.text)
+
+        opened = card.reveal_for_label("a")
+        self.assertIsNotNone(opened)
+        assert opened is not None
+        self.assertEqual(">[!question]- What is `42`?\n>body\n", opened.text)
+
     def test_answer_view_keeps_revealed_callout_content(self) -> None:
         block_text = ">[!code]- Example\n>let x = ~{1};\n"
         card = self._card(block_text)

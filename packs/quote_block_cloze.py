@@ -42,14 +42,18 @@ class QuoteBlockClozeCard(ClozeCard, QuoteBlockCard):
     def question_view(self) -> ViewBlock:
         if self.block_opened:
             return super().question_view()
-        return self._build_view(current_block=self.first_line())
+        return self._build_view(current_block=self._collapsed_question_block())
 
     def answer_view(self) -> ViewBlock:
         self.block_opened = True
         return super().answer_view()
 
     def context_view(self) -> ViewBlock:
-        return self._build_view(current_block=self.first_line())
+        return self._build_view(current_block=self._masked_context_block(self.first_line()))
+
+    def _collapsed_question_block(self) -> str:
+        lines = self._question_block().splitlines(keepends=True)
+        return lines[0] if lines else self._question_block()
 
     def _build_view(self, current_block: str) -> ViewBlock:
         return ClozeCard._build_view(self, current_block)
