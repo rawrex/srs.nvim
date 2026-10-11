@@ -14,9 +14,19 @@ QUOTE_BLOCK_PARSER_ID = "quote_block"
 CALLOUT_HEADING_RE = re.compile(r"^>\s*\[!(?P<kind>[^\]]+)\](?:[+-])?\s*(?P<title>.*)$")
 
 
+def detect_callout_kind(text: str) -> str | None:
+    if lines := text.splitlines():
+        match = CALLOUT_HEADING_RE.match(lines[0].rstrip("\n"))
+        return match.group("kind") if match else None
+    return None
+
+
 @dataclass
 class QuoteBlockCard(Card):
     callout_kind: str | None = field(default=None, init=False)
+
+    def __post_init__(self) -> None:
+        self.callout_kind = detect_callout_kind(self.source_text)
 
     def reveal_for_label(self, label: str) -> ViewBlock | None:
         if label != REVEAL_ALL_LABEL:
@@ -24,35 +34,20 @@ class QuoteBlockCard(Card):
         return self.answer_view()
 
     def question_view(self) -> ViewBlock:
-        return self._build_view(current_block=self._first_line_with_padding())
+        return self._build_view(current_block=self.first_line())
 
     def answer_view(self) -> ViewBlock:
         return self._build_view(current_block=self.source_text)
 
     def context_view(self) -> ViewBlock:
-        return self._build_view(current_block=self._first_line_with_padding())
+        return self._build_view(current_block=self.first_line())
 
-    def _first_line_with_padding(self) -> str:
-        if lines := self.source_text.splitlines(keepends=True):
-            return lines[0] + ("\n" * (len(lines) - 1))
-        return self.source_text
+    def first_line(self) -> str:
+        lines = self.source_text.splitlines(keepends=True)
+        return lines[0] if lines else self.source_text
 
     def _build_view(self, current_block: str) -> ViewBlock:
-        return ViewBlock(start_line=self.index_entry.start_line, text=self._strip_callout_heading(current_block))
-
-    def _strip_callout_heading(self, block: str) -> str:
-        lines = block.splitlines(keepends=True)
-        if not lines:
-            return block
-
-        heading_match = CALLOUT_HEADING_RE.match(lines[0].rstrip("\n"))
-        if heading_match is None:
-            return block
-
-        self.callout_kind = heading_match.group("kind")
-        newline = "\n" if lines[0].endswith("\n") else ""
-        rendered_heading = f">{heading_match.group('title')}{newline}"
-        return "".join([rendered_heading, ">\n", *lines[1:]])
+        return ViewBlock(start_line=self.index_entry.start_line, text=current_block)
 
 
 @dataclass(frozen=True)

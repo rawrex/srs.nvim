@@ -19,7 +19,7 @@ class QuoteBlockPackTest(unittest.TestCase):
             context={},
         )
 
-    def test_quote_block_card_question_normalizes_callout_heading_variants(self) -> None:
+    def test_question_view_is_the_raw_callout_line(self) -> None:
         cases = [
             ">[!code] Example\n>```cpp\n>int x = 1;\n>```\n",
             "> [!code] Example\n>```cpp\n>int x = 1;\n>```\n",
@@ -28,20 +28,14 @@ class QuoteBlockPackTest(unittest.TestCase):
         for block_text in cases:
             with self.subTest(block_text=block_text.splitlines()[0]):
                 card = self._card(block_text)
-                self.assertEqual(">Example\n>\n\n\n\n", card.question_view().text)
+                self.assertEqual(block_text.splitlines(keepends=True)[0], card.question_view().text)
                 self.assertEqual("code", card.callout_kind)
 
     def test_quote_block_parser_claims_adjacent_and_indented_quoted_lines(self) -> None:
         parser = QuoteBlockParser()
         cases = [
-            (
-                "Intro\n>[!code]- Example\n>```cpp\n>int x = 1;\n>```\nEnd\n",
-                [(2, 5)],
-            ),
-            (
-                "Intro\n >[!code]- Example\n >```cpp\n >int x = 1;\n >```\nEnd\n",
-                [(2, 5)],
-            ),
+            ("Intro\n>[!code]- Example\n>```cpp\n>int x = 1;\n>```\nEnd\n", [(2, 5)]),
+            ("Intro\n >[!code]- Example\n >```cpp\n >int x = 1;\n >```\nEnd\n", [(2, 5)]),
         ]
         for note_text, expected in cases:
             with self.subTest(note_text=note_text.splitlines()[1]):
@@ -51,16 +45,16 @@ class QuoteBlockPackTest(unittest.TestCase):
         block_text = ">[!code]- Example\n>```cpp\n>int x = 1;\n>```\n"
         card = self._card(block_text)
 
-        self.assertEqual(">Example\n>\n\n\n\n", card.question_view().text)
+        self.assertEqual(">[!code]- Example\n", card.question_view().text)
         self.assertEqual("code", card.callout_kind)
         answer = card.reveal_for_label(REVEAL_ALL_LABEL)
         self.assertIsNotNone(answer)
         assert answer is not None
-        self.assertEqual(">Example\n>\n>```cpp\n>int x = 1;\n>```\n", answer.text)
+        self.assertEqual(block_text, answer.text)
 
     def test_quote_block_card_context_is_first_line(self) -> None:
         block_text = ">[!code]- Example\n>```cpp\n>int x = 1;\n>```\n"
         card = self._card(block_text)
 
-        self.assertEqual(">Example\n>\n\n\n\n", card.context_view().text)
+        self.assertEqual(">[!code]- Example\n", card.context_view().text)
         self.assertEqual("code", card.callout_kind)

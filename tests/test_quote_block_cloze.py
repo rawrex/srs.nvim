@@ -31,14 +31,8 @@ class QuoteBlockClozePackTest(unittest.TestCase):
     def test_parser_claims_quoted_blocks_with_clozes_for_indented_and_unindented_quotes(self) -> None:
         parser = self._parser()
         cases = [
-            (
-                "Intro\n> plain quote\n> still plain\nMiddle\n> quoted start\n> includes ~{cloze}\nEnd\n",
-                [(5, 6)],
-            ),
-            (
-                "Intro\n > plain quote\n > still plain\nMiddle\n > quoted start\n > includes ~{cloze}\nEnd\n",
-                [(5, 6)],
-            ),
+            ("Intro\n> plain quote\n> still plain\nMiddle\n> quoted start\n> includes ~{cloze}\nEnd\n", [(5, 6)]),
+            ("Intro\n > plain quote\n > still plain\nMiddle\n > quoted start\n > includes ~{cloze}\nEnd\n", [(5, 6)]),
         ]
         for note_text, expected in cases:
             with self.subTest(note_text=note_text.splitlines()[1]):
@@ -49,7 +43,7 @@ class QuoteBlockClozePackTest(unittest.TestCase):
         card = self._card(block_text)
 
         question = card.question_view().text
-        self.assertEqual(">[a] Example\n>\n", question)
+        self.assertEqual(">[!code]- Example\n", question)
         self.assertEqual("code", card.callout_kind)
 
         opened = card.reveal_for_label("a")
@@ -86,7 +80,7 @@ class QuoteBlockClozePackTest(unittest.TestCase):
         self.assertNotIn("block[a]", context)
         self.assertNotIn("[b]", context)
         self.assertNotIn("1", context)
-        self.assertEqual(">Example\n>\n\n", context)
+        self.assertEqual(">[!code]- Example\n", context)
 
     def test_answer_view_keeps_revealed_callout_content(self) -> None:
         block_text = ">[!code]- Example\n>let x = ~{1};\n"
@@ -94,4 +88,4 @@ class QuoteBlockClozePackTest(unittest.TestCase):
 
         answer = card.answer_view().text
 
-        self.assertEqual(">Example\n>\n>let x = `1`;\n", answer)
+        self.assertEqual(">[!code]- Example\n>let x = `1`;\n", answer)

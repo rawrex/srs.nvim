@@ -18,7 +18,6 @@ from core.card import Card, ViewBlock
 from core.config import ReviewConfig, load_review_config
 from core.engine import ReviewEngine
 from core.parsers import build_parser_registry
-from core.ui import compose_view_text
 
 
 class JsonLineTransport:
@@ -61,7 +60,7 @@ class RpcReviewUI:
         pause_total_ns: int = 0
         pause_start_ns: int = 0
         while True:
-            self._send_render("question", title, card, view, paused=paused)
+            self._send_render("question", card, view)
             event: dict[str, Any] = self._await_event()
             name = event.get("name")
             if name == "pause":
@@ -81,7 +80,7 @@ class RpcReviewUI:
                     view = revealed
 
     def answer_step(self, title: str, card: Card, view: ViewBlock) -> None:
-        self._send_render("answer", title, card, view)
+        self._send_render("answer", card, view)
 
     def rating_step(self, default_rating: Rating | None) -> Rating:
         self.transport.send(
@@ -106,15 +105,14 @@ class RpcReviewUI:
             except KeyError:
                 self.transport.send({"type": "error", "text": "Invalid rating"})
 
-    def _send_render(self, state: str, title: str, card: Card, view: ViewBlock, paused: bool = False) -> None:
+    def _send_render(self, state: str, card: Card, view: ViewBlock) -> None:
+        start, end = card.index_entry.start_line, card.index_entry.end_line
+        segments = [
+            {"start": r0, "end": r1, "text": view.text if (r0, r1) == (start, end) else text}
+            for (r0, r1), text in sorted(card.context.items())
+        ] or [{"start": start, "end": end, "text": view.text}]
         self.transport.send(
-            {
-                "type": "render",
-                "state": state,
-                "title": f"{title} (PAUSED)" if paused else title,
-                "view": compose_view_text(card, view, self.config.show_context),
-                "start_line": view.start_line,
-            }
+            {"type": "render", "state": state, "note": card.index_entry.note_abs_path, "segments": segments}
         )
 
     def _await_event(self) -> dict[str, Any]:

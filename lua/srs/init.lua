@@ -9,8 +9,6 @@ local state = {
 	prev_buf = nil,
 	quitting = false,
 	mode = "idle", -- "intro" | "question" | "rating" | "idle"
-	title = "",
-	view = "",
 	buttons = {},
 }
 
@@ -41,39 +39,44 @@ end
 
 -- Rendering -----------------------------------------------------------------
 
-local function footer()
-	if state.mode == "intro" then
-		return "enter/esc"
-	elseif state.mode == "question" then
-		return "enter/<char>/esc"
-	elseif state.mode == "rating" then
-		local parts = {}
-		for name, char in pairs(state.buttons) do
-			table.insert(parts, char .. ": " .. name)
-		end
-		table.sort(parts)
-		table.insert(parts, "enter/esc")
-		return table.concat(parts, "   ")
-	end
-	return "esc"
+local function set_lines(lines)
+	vim.bo[state.buf].modifiable = true
+	vim.api.nvim_buf_set_lines(state.buf, 0, -1, false, lines)
+	vim.bo[state.buf].modifiable = false
+	vim.api.nvim_win_set_cursor(state.win, { 1, 0 })
 end
 
 local function screen(title, body)
 	local lines = {}
 	if title ~= "" then
 		vim.list_extend(lines, vim.split(title, "\n", { plain = true }))
-		table.insert(lines, "")
 	end
 	if body ~= "" then
 		vim.list_extend(lines, vim.split(body, "\n", { plain = true }))
 	end
-	table.insert(lines, "")
-	table.insert(lines, footer())
+	set_lines(lines)
+end
 
-	vim.bo[state.buf].modifiable = true
-	vim.api.nvim_buf_set_lines(state.buf, 0, -1, false, lines)
-	vim.bo[state.buf].modifiable = false
-	vim.api.nvim_win_set_cursor(state.win, { 1, 0 })
+local function set_note_name(path)
+	if not path or path == "" then
+		return
+	end
+	if not pcall(vim.api.nvim_buf_set_name, state.buf, path) then
+		pcall(vim.api.nvim_buf_set_name, state.buf, vim.fn.fnamemodify(path, ":t") .. " [srs]")
+	end
+end
+
+local function render_note(message)
+	set_note_name(message.note)
+	local parts = {}
+	for _, segment in ipairs(message.segments or {}) do
+		table.insert(parts, segment.text)
+	end
+	local lines = vim.split(table.concat(parts), "\n", { plain = true })
+	if lines[#lines] == "" then
+		table.remove(lines)
+	end
+	set_lines(lines)
 end
 
 -- Events --------------------------------------------------------------------
@@ -94,12 +97,10 @@ local function handle_message(message)
 		screen("Due cards: " .. tostring(message.total or 0), table.concat(message.notes or {}, "\n"))
 	elseif kind == "render" then
 		state.mode = message.state
-		state.title, state.view = message.title or "", message.view or ""
-		screen(state.title, state.view)
+		render_note(message)
 	elseif kind == "rating" then
 		state.mode = "rating"
 		state.buttons = message.buttons or {}
-		screen(state.title, state.view .. "\n\nsuggested: " .. tostring(message.suggested or "-"))
 	elseif kind == "message" then
 		if message.text ~= "" then
 			screen("", message.text)
@@ -160,6 +161,7 @@ function M.review()
 	state.win = vim.api.nvim_get_current_win()
 	state.buf = vim.api.nvim_create_buf(false, true)
 	vim.bo[state.buf].filetype = "markdown"
+	vim.bo[state.buf].bufhidden = "wipe"
 	vim.api.nvim_win_set_buf(state.win, state.buf)
 	state.quitting = false
 	setup_keymaps()

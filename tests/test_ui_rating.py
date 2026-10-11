@@ -102,7 +102,7 @@ class ReviewUiRatingTest(unittest.TestCase):
 
         ui._print_view(card=card, view=view)
 
-        self.assertEqual([">[!note]- Primary <|---\n>Line 1\n\n>[!note]- Context\n>Line 2"], captured)
+        self.assertEqual([">Primary <|---\n>\n>Line 1\n\n>Context\n>\n>Line 2"], captured)
 
 
 class SessionEntryUiTest(unittest.TestCase):

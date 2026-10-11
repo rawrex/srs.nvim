@@ -18,7 +18,7 @@ from tests.setup_test_helpers import runtime_context, temporary_session_repo
 class _FakeCard:
     def __init__(self) -> None:
         self.context: dict[tuple[int, int], str] = {}
-        self.index_entry = SimpleNamespace(start_line=1, end_line=1)
+        self.index_entry = SimpleNamespace(start_line=1, end_line=1, note_abs_path="/tmp/note.md")
 
     def question_view(self) -> ViewBlock:
         return ViewBlock(start_line=1, text="question")
@@ -58,8 +58,8 @@ class RpcReviewUiTest(unittest.TestCase):
         self.assertEqual(0, pause_ns)
         renders = [message for message in _sent(writer) if message["type"] == "render"]
         self.assertEqual(2, len(renders))
-        self.assertEqual("question <|---", renders[0]["view"])
-        self.assertEqual("revealed <|---", renders[1]["view"])
+        self.assertEqual([{"start": 1, "end": 1, "text": "question"}], renders[0]["segments"])
+        self.assertEqual([{"start": 1, "end": 1, "text": "revealed"}], renders[1]["segments"])
 
     def test_question_step_tracks_pause_time(self) -> None:
         ui, _writer = _make_ui([{"name": "pause"}, {"name": "next"}])
@@ -164,8 +164,12 @@ class RpcRunTest(unittest.TestCase):
         self.assertIn({"type": "message", "text": "Saved"}, messages)
         renders = [message for message in messages if message["type"] == "render"]
         self.assertEqual(["question", "question", "answer"], [render["state"] for render in renders])
-        self.assertNotIn("hidden", renders[0]["view"])
-        self.assertIn("hidden", renders[1]["view"])
+
+        def render_text(render: dict[str, object]) -> str:
+            return "".join(segment["text"] for segment in render["segments"])
+
+        self.assertNotIn("hidden", render_text(renders[0]))
+        self.assertIn("hidden", render_text(renders[1]))
 
 
 if __name__ == "__main__":

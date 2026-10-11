@@ -16,6 +16,7 @@ from core.card import Card, ViewBlock
 from core.config import ReviewConfig
 
 WIKI_IMAGE_RE = re.compile(r"!\[\[[^\]]+\]\]")
+CALLOUT_HEADING_RE = re.compile(r"^>\s*\[!(?P<kind>[^\]]+)\](?:[+-])?\s*(?P<title>.*)$")
 SESSION_LOGO_PATH = Path(__file__).with_name("session_logo.txt")
 
 
@@ -27,6 +28,48 @@ def mark_active_line(text: str) -> str:
     mark = "<|---"
     first_line, sep, rest = text.partition("\n")
     return f"{first_line} {mark}{sep}{rest}"
+
+
+def _pad_to_span(text: str, span: int) -> str:
+    missing = span - len(text.splitlines())
+    return text + "\n" * missing if missing > 0 else text
+
+
+def _format_callout_heading(text: str) -> str:
+    if lines := text.splitlines(keepends=True):
+        if heading := CALLOUT_HEADING_RE.match(lines[0].rstrip("\n")):
+            newline = "\n" if lines[0].endswith("\n") else ""
+            rendered_heading = f">{heading.group('title')}{newline}"
+            return "".join([rendered_heading, ">\n", *lines[1:]])
+    return text
+
+
+def _insert_block_open_label(text: str, label: str) -> str:
+    if lines := text.splitlines(keepends=True):
+        first = lines[0]
+        newline = "\n" if first.endswith("\n") else ""
+        body = first[:-1] if newline else first
+        if body.startswith(">"):
+            rest = body[1:]
+            lines[0] = f">[{label}]{newline}" if rest == "" else f">[{label}] {rest}{newline}"
+        else:
+            lines[0] = f"[{label}] {body}{newline}"
+        return "".join(lines)
+    return text
+
+
+def _block_open_label(card: Card) -> str | None:
+    label = getattr(card, "block_open_label", None)
+    if isinstance(label, str) and label and not getattr(card, "block_opened", False):
+        return label
+    return None
+
+
+def terminalize_block(text: str, span: int, block_open_label: str | None = None) -> str:
+    formatted = _format_callout_heading(_pad_to_span(text, span))
+    if block_open_label:
+        formatted = _insert_block_open_label(formatted, block_open_label)
+    return formatted
 
 
 def rendered_context_blocks(
@@ -41,7 +84,8 @@ def rendered_context_blocks(
             rendered_blocks.append(primary_block)
             found_primary = True
             continue
-        rendered_blocks.append(note_context_blocks[line_range])
+        span = line_range[1] - line_range[0] + 1
+        rendered_blocks.append(terminalize_block(note_context_blocks[line_range], span))
 
     if not rendered_blocks:
         return [primary_block]
@@ -51,7 +95,9 @@ def rendered_context_blocks(
 
 
 def compose_view_text(card: Card, view: ViewBlock, show_context: bool) -> str:
-    view_text = mark_active_line(view.text)
+    span = card.index_entry.end_line - card.index_entry.start_line + 1
+    primary_block = terminalize_block(view.text, span, _block_open_label(card))
+    view_text = mark_active_line(primary_block)
     if not show_context:
         return view_text.rstrip("\n")
     blocks = rendered_context_blocks(card.context, card.index_entry.start_line, card.index_entry.end_line, view_text)
