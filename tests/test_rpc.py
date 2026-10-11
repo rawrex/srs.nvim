@@ -69,6 +69,22 @@ class RpcReviewUiTest(unittest.TestCase):
 
         self.assertEqual(200, pause_ns)
 
+    def test_render_includes_structured_progress(self) -> None:
+        ui, writer = _make_ui([{"name": "next"}])
+
+        ui.question_step("[2/5] note.md", _FakeCard())
+
+        renders = [message for message in _sent(writer) if message["type"] == "render"]
+        self.assertEqual({"current": 2, "total": 5}, renders[0]["progress"])
+
+    def test_render_progress_is_null_without_counter(self) -> None:
+        ui, writer = _make_ui([{"name": "next"}])
+
+        ui.question_step("title", _FakeCard())
+
+        renders = [message for message in _sent(writer) if message["type"] == "render"]
+        self.assertIsNone(renders[0]["progress"])
+
     def test_rating_step_maps_rating_name(self) -> None:
         ui, writer = _make_ui([{"name": "rate", "rating": "Hard"}])
 

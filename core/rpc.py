@@ -2,6 +2,7 @@
 # ruff: noqa: E402
 import json
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -60,7 +61,7 @@ class RpcReviewUI:
         pause_total_ns: int = 0
         pause_start_ns: int = 0
         while True:
-            self._send_render("question", card, view)
+            self._send_render("question", title, card, view)
             event: dict[str, Any] = self._await_event()
             name = event.get("name")
             if name == "pause":
@@ -80,7 +81,7 @@ class RpcReviewUI:
                     view = revealed
 
     def answer_step(self, title: str, card: Card, view: ViewBlock) -> None:
-        self._send_render("answer", card, view)
+        self._send_render("answer", title, card, view)
 
     def rating_step(self, default_rating: Rating | None) -> Rating:
         self.transport.send(
@@ -105,14 +106,21 @@ class RpcReviewUI:
             except KeyError:
                 self.transport.send({"type": "error", "text": "Invalid rating"})
 
-    def _send_render(self, state: str, card: Card, view: ViewBlock) -> None:
+    def _send_render(self, state: str, title: str, card: Card, view: ViewBlock) -> None:
         start, end = card.index_entry.start_line, card.index_entry.end_line
         segments = [
             {"start": r0, "end": r1, "text": view.text if (r0, r1) == (start, end) else text}
             for (r0, r1), text in sorted(card.context.items())
         ] or [{"start": start, "end": end, "text": view.text}]
+        progress = re.search(r"\[(\d+)/(\d+)\]", title)
         self.transport.send(
-            {"type": "render", "state": state, "note": card.index_entry.note_abs_path, "segments": segments}
+            {
+                "type": "render",
+                "state": state,
+                "note": card.index_entry.note_abs_path,
+                "progress": {"current": int(progress.group(1)), "total": int(progress.group(2))} if progress else None,
+                "segments": segments,
+            }
         )
 
     def _await_event(self) -> dict[str, Any]:

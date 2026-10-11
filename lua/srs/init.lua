@@ -58,17 +58,18 @@ local function screen(title, body)
 	set_lines(lines)
 end
 
-local function set_note_name(path)
+local function set_note_name(path, progress)
 	if not path or path == "" then
 		return
 	end
-	if not pcall(vim.api.nvim_buf_set_name, state.buf, path) then
-		pcall(vim.api.nvim_buf_set_name, state.buf, vim.fn.fnamemodify(path, ":t") .. " [srs]")
+	local suffix = type(progress) == "table" and (" [" .. progress.current .. "/" .. progress.total .. "]") or ""
+	if not pcall(vim.api.nvim_buf_set_name, state.buf, path .. suffix) then
+		pcall(vim.api.nvim_buf_set_name, state.buf, vim.fn.fnamemodify(path, ":t") .. " [srs]" .. suffix)
 	end
 end
 
 local function render_note(message)
-	set_note_name(message.note)
+	set_note_name(message.note, message.progress)
 	local parts = {}
 	for _, segment in ipairs(message.segments or {}) do
 		table.insert(parts, segment.text)
