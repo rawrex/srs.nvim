@@ -4,6 +4,11 @@
 - Aiming to be non-invasive. Working on making the system to be pluggable into a given knowledge base, without diffs on its current content or future content.
 - Working on providing high degsee of customization, including: options config, pluggable parsers (so to say, card factories).
 
+### nvim plugin (in progress...)
+- Requires Neovim 0.10+.
+- Activate the venv that has `requirements.txt` installed
+- From a buffer inside a git repository with `.srs/index.txt`, run `:SrsReview`.
+
 ### Optimizing scheduler parameters
 FSRS scheduler parameters can be optimized from your accumulated review history:
 
