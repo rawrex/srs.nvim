@@ -10,6 +10,7 @@ local state = {
 	quitting = false,
 	mode = "idle", -- "intro" | "question" | "rating" | "idle"
 	buttons = {},
+	suggested = nil,
 }
 
 function M.setup(opts)
@@ -101,12 +102,13 @@ local function handle_message(message)
 	elseif kind == "rating" then
 		state.mode = "rating"
 		state.buttons = message.buttons or {}
+		state.suggested = type(message.suggested) == "string" and message.suggested or nil
 	elseif kind == "message" then
 		if message.text ~= "" then
-			screen("", message.text)
+			vim.notify("srs: " .. message.text)
 		end
 	elseif kind == "error" then
-		screen("error", message.text or "")
+		vim.notify("srs: " .. (message.text or ""), vim.log.levels.WARN)
 	end
 end
 
