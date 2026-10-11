@@ -114,6 +114,29 @@ class ReviewEngineTest(unittest.TestCase):
             self.assertIn("▇▇▇▇▇▇", blocks[(2, 2)])
             self.assertEqual("Tail line\n", blocks[(3, 3)])
 
+    def test_make_card_preserves_source_text_line_endings(self) -> None:
+        with temporary_session_repo(with_index=True) as repo_root:
+            with open(os.path.join(repo_root, "note.md"), "w", encoding="utf-8") as handle:
+                handle.write("Prelude line\nTerm ~{hidden}\nTail line\n")
+
+            with open(os.path.join(repo_root, ".srs", "index.txt"), "w", encoding="utf-8") as handle:
+                handle.write("'1','/note.md','cloze','2','2'\n")
+
+            scheduler_card = SchedulerCard()
+            scheduler_card.due = datetime(2024, 1, 1, tzinfo=timezone.utc)
+            with open(os.path.join(repo_root, ".srs", "1.json"), "w", encoding="utf-8") as handle:
+                json.dump(json.loads(scheduler_card.to_json()), handle)
+
+            with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
+                session = ReviewEngine(
+                    ui=_DummyUI(),  # type: ignore[arg-type]
+                    parser_registry=build_parser_registry(ReviewConfig()),
+                    scheduler=ReviewConfig().build_scheduler(),
+                )
+                cards = session.load_due_cards(time_point=datetime(2024, 1, 2, tzinfo=timezone.utc))
+
+            self.assertEqual("Term ~{hidden}\n", cards[0].source_text)
+
     def test_load_due_cards_filters_non_due_cards_and_keeps_them_in_context(self) -> None:
         with temporary_session_repo(with_index=True) as repo_root:
             note_path = os.path.join(repo_root, "note.md")

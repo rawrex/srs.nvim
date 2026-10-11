@@ -13,7 +13,8 @@ class CardFactory:
 
         with open(index_entry.note_abs_path, "r", encoding="utf-8") as handle:
             note_text = handle.read()
-            block = "\n".join(note_text.splitlines()[index_entry.start_line - 1 : index_entry.end_line])
+            lines = note_text.splitlines(keepends=True)
+            block = "".join(lines[index_entry.start_line - 1 : index_entry.end_line])
             card = parser.build_card(source_text=block, index_entry=index_entry, metadata=index_entry.read_metadata())
             if all:
                 card.context = self.make_context(card=card, all=all, note_text=note_text)
