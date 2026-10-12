@@ -62,10 +62,15 @@ local function set_note_name(card)
 	if not card or not card.note or card.note == "" then
 		return
 	end
-	local suffix = card.total and (" [" .. card.index .. "/" .. card.total .. "]") or ""
-	local path = card.note
-	if not pcall(vim.api.nvim_buf_set_name, state.buf, path .. suffix) then
-		pcall(vim.api.nvim_buf_set_name, state.buf, vim.fn.fnamemodify(path, ":t") .. " [srs]" .. suffix)
+	if not pcall(vim.api.nvim_buf_set_name, state.buf, card.note) then
+		pcall(vim.api.nvim_buf_set_name, state.buf, vim.fn.fnamemodify(card.note, ":t") .. " [srs]")
+	end
+end
+
+local function set_statusline(current, total, note)
+	if state.win and vim.api.nvim_win_is_valid(state.win) then
+		local label = (note and note ~= "") and ((note:gsub("^/", "")) .. " ") or ""
+		vim.wo[state.win].statusline = string.format("[%d/%d] %s", current or 0, total or 0, label)
 	end
 end
 
@@ -97,9 +102,13 @@ local function handle_message(message)
 	local kind = message.type
 	if kind == "intro" then
 		state.mode = "intro"
-		screen("Due cards: " .. tostring(message.due or 0), table.concat(message.notes or {}, "\n"))
+		set_statusline(0, message.due or 0, "SRS session")
+		screen("", table.concat(message.notes or {}, "\n"))
 	elseif kind == "render" then
 		state.mode = message.state
+		if message.card then
+			set_statusline(message.card.index or 0, message.card.total or 0, message.card.note)
+		end
 		render_note(message)
 	elseif kind == "rating" then
 		state.mode = "rating"
