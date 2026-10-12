@@ -148,6 +148,18 @@ local function setup_keymaps()
 	end
 end
 
+local function restore()
+	if
+		state.win
+		and vim.api.nvim_win_is_valid(state.win)
+		and state.prev_buf
+		and vim.api.nvim_buf_is_valid(state.prev_buf)
+	then
+		vim.api.nvim_win_set_buf(state.win, state.prev_buf)
+	end
+	state.mode = "idle"
+end
+
 function M.review()
 	if state.proc then
 		vim.notify("srs: review already running", vim.log.levels.WARN)
@@ -205,9 +217,13 @@ function M.review()
 	}, function(completed)
 		vim.schedule(function()
 			state.proc = nil
-			if completed.code ~= 0 and not state.quitting then
+			if state.quitting then
+				return
+			end
+			if completed.code ~= 0 then
 				vim.notify("srs: process exited with code " .. tostring(completed.code), vim.log.levels.ERROR)
 			end
+			restore()
 		end)
 	end)
 end
@@ -218,15 +234,7 @@ function M.close()
 		state.proc:kill(15)
 		state.proc = nil
 	end
-	if
-		state.win
-		and vim.api.nvim_win_is_valid(state.win)
-		and state.prev_buf
-		and vim.api.nvim_buf_is_valid(state.prev_buf)
-	then
-		vim.api.nvim_win_set_buf(state.win, state.prev_buf)
-	end
-	state.mode = "idle"
+	restore()
 end
 
 return M
