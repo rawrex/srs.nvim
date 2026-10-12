@@ -9,8 +9,6 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from rich.console import Console
-
 from core import util
 from core.config import load_review_config
 from core.index.index import Index
@@ -30,36 +28,35 @@ def build_arg_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _print_report(console: Console, report: OptimizationReport, dry_run: bool) -> None:
+def _print_report(report: OptimizationReport, dry_run: bool) -> None:
     parameters_text = ", ".join(f"{value:.4f}" for value in report.parameters)
     if report.skipped_reason == SKIPPED_NO_LOGS:
-        console.print("No review logs found. Nothing to optimize.", markup=False)
+        print("No review logs found. Nothing to optimize.")
         return
     if report.skipped_reason == SKIPPED_INSUFFICIENT_DATA:
-        console.print(INSUFFICIENT_DATA_MESSAGE, markup=False)
+        print(INSUFFICIENT_DATA_MESSAGE)
         return
 
     summary = f"Optimized {report.card_count} card(s) from {report.review_log_count} review log(s)."
-    console.print(summary, markup=False)
+    print(summary)
     if dry_run:
-        console.print(f"Dry run — optimized parameters not saved: {parameters_text}", markup=False)
+        print(f"Dry run — optimized parameters not saved: {parameters_text}")
         return
-    console.print(f"Saved scheduler parameters to {util._RUNTIME_CONTEXT.config_path}", markup=False)
-    console.print(parameters_text, markup=False)
+    print(f"Saved scheduler parameters to {util._RUNTIME_CONTEXT.config_path}")
+    print(parameters_text)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_arg_parser().parse_args(argv)
-    console = Console()
 
     util.init_runtime_context(os.getcwd())
     repo_root = util._RUNTIME_CONTEXT.repo_root_path
     if not repo_root:
-        console.print("Not inside a git repository.", markup=False)
+        print("Not inside a git repository.")
         return 1
 
     if not os.path.exists(util._RUNTIME_CONTEXT.index_path):
-        console.print("Missing index", markup=False)
+        print("Missing index")
         return 1
 
     config = load_review_config()
@@ -69,10 +66,10 @@ def main(argv: list[str] | None = None) -> int:
     try:
         report = run_optimization(entries, verbose=args.verbose, dry_run=args.dry_run)
     except ImportError:
-        console.print(OPTIMIZER_INSTALL_HINT, markup=False)
+        print(OPTIMIZER_INSTALL_HINT)
         return 1
 
-    _print_report(console, report, dry_run=args.dry_run)
+    _print_report(report, dry_run=args.dry_run)
     return 0
 
 
