@@ -9,7 +9,7 @@ from unittest.mock import Mock, patch
 from fsrs import Card as SchedulerCard
 from fsrs import Rating
 
-from core.card import ViewBlock
+from core.card import CardRef, ViewBlock
 from core.config import ReviewConfig
 from core.protocol import JsonLineTransport
 from core.rpc import TransportUI, run
@@ -31,6 +31,10 @@ class _FakeCard:
         return ViewBlock(start_line=1, text="revealed") if label == "a" else None
 
 
+def _card_ref(index: int = 1, total: int = 1, note: str = "/note.md") -> CardRef:
+    return CardRef(index=index, total=total, note_path=note)
+
+
 def _make_ui(events: list[dict[str, object]]) -> tuple[TransportUI, io.StringIO]:
     reader = io.StringIO("".join(json.dumps(event) + "\n" for event in events))
     writer = io.StringIO()
@@ -44,16 +48,16 @@ def _sent(writer: io.StringIO) -> list[dict[str, object]]:
 
 class TransportUiTest(unittest.TestCase):
     def test_intro_waits_for_start(self) -> None:
-        ui, writer = _make_ui([{"name": "ignored"}, {"name": "start"}])
+        ui, writer = _make_ui([{"type": "ignored"}, {"type": "start"}])
 
         ui.intro(2, ["note"])
 
-        self.assertEqual([{"type": "intro", "total": 2, "notes": ["note"]}], _sent(writer))
+        self.assertEqual([{"type": "intro", "due": 2, "notes": ["note"]}], _sent(writer))
 
     def test_question_step_reveals_and_finishes_on_next(self) -> None:
-        ui, writer = _make_ui([{"name": "reveal", "label": "a"}, {"name": "next"}])
+        ui, writer = _make_ui([{"type": "reveal", "label": "a"}, {"type": "next"}])
 
-        view, pause_ns = ui.question_step("title", _FakeCard())
+        view, pause_ns = ui.question_step(_card_ref(), _FakeCard())
 
         self.assertEqual("revealed", view.text)
         self.assertEqual(0, pause_ns)
@@ -63,58 +67,69 @@ class TransportUiTest(unittest.TestCase):
         self.assertEqual([{"start": 1, "end": 1, "text": "revealed"}], renders[1]["segments"])
 
     def test_question_step_tracks_pause_time(self) -> None:
-        ui, _writer = _make_ui([{"name": "pause"}, {"name": "next"}])
+        ui, _writer = _make_ui([{"type": "pause"}, {"type": "next"}])
 
         with patch("core.rpc.time.monotonic_ns", side_effect=[100, 300]):
-            _view, pause_ns = ui.question_step("title", _FakeCard())
+            _view, pause_ns = ui.question_step(_card_ref(), _FakeCard())
 
         self.assertEqual(200, pause_ns)
 
-    def test_render_includes_structured_progress(self) -> None:
-        ui, writer = _make_ui([{"name": "next"}])
+    def test_render_includes_structured_card_ref(self) -> None:
+        ui, writer = _make_ui([{"type": "next"}])
 
-        ui.question_step("[2/5] note.md", _FakeCard())
-
-        renders = [message for message in _sent(writer) if message["type"] == "render"]
-        self.assertEqual({"current": 2, "total": 5}, renders[0]["progress"])
-
-    def test_render_progress_is_null_without_counter(self) -> None:
-        ui, writer = _make_ui([{"name": "next"}])
-
-        ui.question_step("title", _FakeCard())
+        ui.question_step(_card_ref(index=2, total=5), _FakeCard())
 
         renders = [message for message in _sent(writer) if message["type"] == "render"]
-        self.assertIsNone(renders[0]["progress"])
+        self.assertEqual({"index": 2, "total": 5, "note": "/note.md"}, renders[0]["card"])
+        self.assertNotIn("duration_s", renders[0])
 
-    def test_render_includes_title_and_active(self) -> None:
-        ui, writer = _make_ui([{"name": "next"}])
+    def test_render_includes_active_and_note(self) -> None:
+        ui, writer = _make_ui([{"type": "next"}])
 
-        ui.question_step("[1/2] note.md", _FakeCard())
+        ui.question_step(_card_ref(note="/notes/x.md"), _FakeCard())
 
         render = [message for message in _sent(writer) if message["type"] == "render"][0]
-        self.assertEqual("[1/2] note.md", render["title"])
+        self.assertEqual("/notes/x.md", render["card"]["note"])
         self.assertEqual({"start": 1, "end": 1}, render["active"])
 
+    def test_answer_step_carries_duration(self) -> None:
+        ui, writer = _make_ui([])
+
+        ui.answer_step(_card_ref(), _FakeCard(), ViewBlock(start_line=1, text="answer"), 1.2)
+
+        render = [message for message in _sent(writer) if message["type"] == "render"][0]
+        self.assertEqual("answer", render["state"])
+        self.assertEqual(1.2, render["duration_s"])
+
     def test_rating_step_maps_rating_name(self) -> None:
-        ui, writer = _make_ui([{"name": "rate", "rating": "Hard"}])
+        ui, writer = _make_ui([{"type": "rate", "rating": "Hard"}])
 
         rating = ui.rating_step(Rating.Good)
 
         self.assertEqual(Rating.Hard, rating)
         self.assertEqual("Good", _sent(writer)[0]["suggested"])
+        self.assertEqual(
+            [
+                {"name": "Again", "key": "n"},
+                {"name": "Hard", "key": "e"},
+                {"name": "Good", "key": "i"},
+                {"name": "Easy", "key": "o"},
+            ],
+            _sent(writer)[0]["choices"],
+        )
 
     def test_rating_step_accepts_default_when_no_rating_sent(self) -> None:
-        ui, _writer = _make_ui([{"name": "rate"}])
+        ui, _writer = _make_ui([{"type": "rate"}])
 
         self.assertEqual(Rating.Good, ui.rating_step(Rating.Good))
 
     def test_rating_step_reports_invalid_rating_and_retries(self) -> None:
-        ui, writer = _make_ui([{"name": "rate", "rating": "Nope"}, {"name": "rate", "rating": "Easy"}])
+        ui, writer = _make_ui([{"type": "rate", "rating": "Nope"}, {"type": "rate", "rating": "Easy"}])
 
         rating = ui.rating_step(None)
 
         self.assertEqual(Rating.Easy, rating)
-        self.assertIn({"type": "error", "text": "Invalid rating"}, _sent(writer))
+        self.assertIn({"type": "notice", "level": "error", "text": "Invalid rating"}, _sent(writer))
 
     def test_await_event_interprets_eof_as_interrupt(self) -> None:
         ui, _writer = _make_ui([])
@@ -133,7 +148,7 @@ class RpcRunTest(unittest.TestCase):
             code = run(io.StringIO(), writer)
 
         self.assertEqual(1, code)
-        self.assertEqual({"type": "error", "text": "Not inside a git repository."}, _sent(writer)[0])
+        self.assertEqual({"type": "notice", "level": "error", "text": "Not inside a git repository."}, _sent(writer)[0])
 
     def test_run_drives_engine_with_rpc_ui(self) -> None:
         engine = Mock()
@@ -168,10 +183,10 @@ class RpcRunTest(unittest.TestCase):
                 json.dump(json.loads(scheduler_card.to_json()), handle)
 
             events = [
-                {"name": "start"},
-                {"name": "reveal", "label": ""},
-                {"name": "next"},
-                {"name": "rate", "rating": "Good"},
+                {"type": "start"},
+                {"type": "reveal", "label": ""},
+                {"type": "next"},
+                {"type": "rate", "rating": "Good"},
             ]
             reader = io.StringIO("".join(json.dumps(event) + "\n" for event in events))
             writer = io.StringIO()
@@ -187,7 +202,7 @@ class RpcRunTest(unittest.TestCase):
         messages = _sent(writer)
         self.assertEqual(0, code)
         self.assertEqual(1, len(stored["review_logs"]))
-        self.assertIn({"type": "message", "text": "Saved"}, messages)
+        self.assertIn({"type": "notice", "level": "info", "text": "Saved"}, messages)
         renders = [message for message in messages if message["type"] == "render"]
         self.assertEqual(["question", "question", "answer"], [render["state"] for render in renders])
 

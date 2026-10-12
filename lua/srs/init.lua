@@ -58,18 +58,19 @@ local function screen(title, body)
 	set_lines(lines)
 end
 
-local function set_note_name(path, progress)
-	if not path or path == "" then
+local function set_note_name(card)
+	if not card or not card.note or card.note == "" then
 		return
 	end
-	local suffix = type(progress) == "table" and (" [" .. progress.current .. "/" .. progress.total .. "]") or ""
+	local suffix = card.total and (" [" .. card.index .. "/" .. card.total .. "]") or ""
+	local path = card.note
 	if not pcall(vim.api.nvim_buf_set_name, state.buf, path .. suffix) then
 		pcall(vim.api.nvim_buf_set_name, state.buf, vim.fn.fnamemodify(path, ":t") .. " [srs]" .. suffix)
 	end
 end
 
 local function render_note(message)
-	set_note_name(message.note, message.progress)
+	set_note_name(message.card)
 	local parts = {}
 	for _, segment in ipairs(message.segments or {}) do
 		table.insert(parts, segment.text)
@@ -96,20 +97,21 @@ local function handle_message(message)
 	local kind = message.type
 	if kind == "intro" then
 		state.mode = "intro"
-		screen("Due cards: " .. tostring(message.total or 0), table.concat(message.notes or {}, "\n"))
+		screen("Due cards: " .. tostring(message.due or 0), table.concat(message.notes or {}, "\n"))
 	elseif kind == "render" then
 		state.mode = message.state
 		render_note(message)
 	elseif kind == "rating" then
 		state.mode = "rating"
-		state.buttons = message.buttons or {}
-		state.suggested = type(message.suggested) == "string" and message.suggested or nil
-	elseif kind == "message" then
-		if message.text ~= "" then
-			vim.notify("srs: " .. message.text)
+		state.buttons = {}
+		for _, choice in ipairs(message.choices or {}) do
+			state.buttons[choice.name] = choice.key
 		end
-	elseif kind == "error" then
-		vim.notify("srs: " .. (message.text or ""), vim.log.levels.WARN)
+		state.suggested = type(message.suggested) == "string" and message.suggested or nil
+	elseif kind == "notice" then
+		if message.text ~= "" then
+			vim.notify("srs: " .. message.text, message.level == "error" and vim.log.levels.WARN or vim.log.levels.INFO)
+		end
 	end
 end
 
@@ -117,12 +119,12 @@ local function handle_key(key)
 	if state.mode == "rating" then
 		for name, char in pairs(state.buttons) do
 			if char == key then
-				send({ name = "rate", rating = name })
+				send({ type = "rate", rating = name })
 				return
 			end
 		end
 	elseif state.mode == "question" then
-		send({ name = "reveal", label = key })
+		send({ type = "reveal", label = key })
 	end
 end
 
@@ -131,11 +133,11 @@ end
 local function setup_keymaps()
 	vim.keymap.set("n", "<CR>", function()
 		if state.mode == "intro" then
-			send({ name = "start" })
+			send({ type = "start" })
 		elseif state.mode == "question" then
-			send({ name = "next" })
+			send({ type = "next" })
 		elseif state.mode == "rating" then
-			send({ name = "rate" })
+			send({ type = "rate" })
 		end
 	end, { buffer = state.buf, desc = "SRS next" })
 

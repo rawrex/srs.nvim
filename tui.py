@@ -41,7 +41,6 @@ WIKI_IMAGE_RE = re.compile(r"!\[\[[^\]]+\]\]")
 CALLOUT_HEADING_RE = re.compile(r"^>\s*\[!(?P<kind>[^\]]+)\](?:[+-])?\s*(?P<title>.*)$")
 SESSION_LOGO_PATH = Path(__file__).with_name("session_logo.txt")
 BACKEND_SCRIPT = PROJECT_ROOT / "core" / "rpc.py"
-RATING_ORDER = ("Again", "Hard", "Good", "Easy")
 
 
 # Rendering primitives ------------------------------------------------------
@@ -302,7 +301,7 @@ class TuiClient:
         self.mode = "idle"
         self.paused = False
         self.suggested: str | None = None
-        self.buttons: dict[str, str] = {}
+        self.choices: list[dict[str, str]] = []
         self.button_to_rating: dict[str, str] = {}
 
     def run(self) -> int:
@@ -314,51 +313,56 @@ class TuiClient:
 
     def _handle(self, message: dict[str, Any]) -> None:
         kind = message.get("type")
-        if kind == "message":
+        if kind == "notice":
             self.renderer.print_message(message.get("text", ""))
-        elif kind == "error":
-            self.renderer.print_message(message.get("text", ""))
-            if self.mode == "rating":
+            if message.get("level") == "error" and self.mode == "rating":
                 self._rating_step()
         elif kind == "intro":
             self.mode = "intro"
-            self.renderer.intro(message.get("total", 0), message.get("notes", []))
-            self.transport.send({"name": "start"})
+            self.renderer.intro(message.get("due", 0), message.get("notes", []))
+            self.transport.send({"type": "start"})
         elif kind == "render":
             self.mode = message.get("state", "")
             self._render(message)
         elif kind == "rating":
             self.mode = "rating"
             self.suggested = message.get("suggested")
-            self.buttons = message.get("buttons") or {}
-            self.button_to_rating = {button: name for name, button in self.buttons.items()}
+            self.choices = message.get("choices") or []
+            self.button_to_rating = {choice["key"]: choice["name"] for choice in self.choices}
             self._rating_step()
 
     # Rendering ------------------------------------------------------------
 
     def _render(self, message: dict[str, Any]) -> None:
         state = message.get("state")
-        title = message.get("title", "")
         self.renderer.clear()
+        self.renderer.print_blank_line()
+        title = self._format_title(message.get("card") or {}, state, message.get("duration_s"))
+        if state == "question" and self.paused:
+            title = title + " (PAUSED)"
+        self.renderer.print_title(title)
+        self.renderer.print_view(message)
         if state == "question":
-            if self.paused:
-                title = title + " (PAUSED)"
-            self.renderer.print_title(title)
-            self.renderer.print_view(message)
             self._question_step()
-        else:
-            self.renderer.print_title(title)
-            self.renderer.print_view(message)
+
+    @staticmethod
+    def _format_title(card: dict[str, Any], state: str | None, duration_s: float | None) -> str:
+        note = card.get("note", "")
+        name = os.path.basename(note) if note else ""
+        title = f"[{card.get('index')}/{card.get('total')}] {name}"
+        if state == "answer" and duration_s is not None:
+            title += f" — answer ({duration_s:.1f}s)"
+        return title
 
     def _question_step(self) -> None:
         key = self._read_key()
         if key == " ":
             self.paused = not self.paused
-            self.transport.send({"name": "pause"})
+            self.transport.send({"type": "pause"})
         elif key in {"\r", "\n"}:
-            self.transport.send({"name": "next"})
+            self.transport.send({"type": "next"})
         else:
-            self.transport.send({"name": "reveal", "label": key})
+            self.transport.send({"type": "reveal", "label": key})
 
     def _rating_step(self) -> None:
         prompt = self._rating_prompt()
@@ -368,7 +372,7 @@ class TuiClient:
             if key in {"\r", "\n"} and self.suggested is not None:
                 self.renderer.print_blank_line()
                 self.renderer.print_set_rating(self.suggested)
-                self.transport.send({"name": "rate", "rating": self.suggested})
+                self.transport.send({"type": "rate", "rating": self.suggested})
                 return
             rating = self.button_to_rating.get(key)
             if rating is None:
@@ -377,11 +381,11 @@ class TuiClient:
                 continue
             self.renderer.print_blank_line()
             self.renderer.print_set_rating(rating)
-            self.transport.send({"name": "rate", "rating": rating})
+            self.transport.send({"type": "rate", "rating": rating})
             return
 
     def _rating_prompt(self) -> str:
-        parts = [f"{self.buttons.get(name, '')}={name}" for name in RATING_ORDER]
+        parts = [f"{choice['key']}={choice['name']}" for choice in self.choices]
         if self.suggested is not None:
             parts.append(f"Enter={self.suggested}")
         return f"Rate [{', '.join(parts)}]: "

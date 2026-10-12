@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 from fsrs import Rating
 
-from core.card import REVEAL_ALL_LABEL, RevealMode, SchedulerCard
+from core.card import REVEAL_ALL_LABEL, CardRef, RevealMode, SchedulerCard
 from core.config import ReviewConfig
 from core.index.model import IndexEntry, Metadata
 from core.protocol import JsonLineTransport
@@ -20,7 +20,7 @@ def _question_render_texts(card: ClozeCard, events: list[dict[str, object]], sho
     writer = io.StringIO()
     ui = TransportUI(config=ReviewConfig(show_context=show_context), transport=JsonLineTransport(reader, writer))
     with patch("core.util._RUNTIME_CONTEXT", runtime_context("/repo"), create=True):
-        ui.question_step("title", card)
+        ui.question_step(CardRef(index=1, total=1, note_path="/tmp/note.md"), card)
 
     texts: list[str] = []
     for line in writer.getvalue().splitlines():
@@ -86,7 +86,7 @@ class ClozePackTest(unittest.TestCase):
             mask_char="▇",
         )
 
-        texts = _question_render_texts(card, [{"name": "reveal", "label": "A"}, {"name": "next"}])
+        texts = _question_render_texts(card, [{"type": "reveal", "label": "A"}, {"type": "next"}])
 
         self.assertGreaterEqual(len(texts), 2)
         self.assertIn("[A]", texts[0])
@@ -109,7 +109,7 @@ class ClozePackTest(unittest.TestCase):
             mask_char="▇",
         )
 
-        rendered = "".join(_question_render_texts(card, [{"name": "next"}]))
+        rendered = "".join(_question_render_texts(card, [{"type": "next"}]))
 
         self.assertIn("[a]", rendered)
         self.assertIn("Second", rendered)
@@ -132,7 +132,7 @@ class ClozePackTest(unittest.TestCase):
             mask_char="▇",
         )
 
-        rendered = "".join(_question_render_texts(card, [{"name": "next"}], show_context=False))
+        rendered = "".join(_question_render_texts(card, [{"type": "next"}], show_context=False))
 
         self.assertIn("[a]", rendered)
         self.assertNotIn("Second", rendered)

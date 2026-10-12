@@ -7,7 +7,7 @@ from fsrs import Rating
 
 from core.index.model import IndexEntry, Metadata
 
-__all__ = ["SchedulerCard", "REVEAL_ALL_LABEL", "RevealMode", "ViewBlock", "Card"]
+__all__ = ["SchedulerCard", "REVEAL_ALL_LABEL", "RevealMode", "ViewBlock", "CardRef", "Card"]
 
 
 REVEAL_ALL_LABEL = ""
@@ -22,6 +22,18 @@ class RevealMode(str, Enum):
 class ViewBlock:
     start_line: int
     text: str
+
+
+@dataclass(frozen=True)
+class CardRef:
+    """Where the current card sits in the review session.
+
+    UIs format their own heading from this; the engine never builds titles.
+    """
+
+    index: int  # 1-based position of the card in the due list
+    total: int  # number of due cards in the session
+    note_path: str  # repo-relative source note path (leading "/")
 
 
 @dataclass(kw_only=True)

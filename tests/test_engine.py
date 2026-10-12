@@ -27,10 +27,10 @@ class _FakeUI:
     def intro(self, total: int, note_paths: list[str]) -> None:
         pass
 
-    def question_step(self, title: str, card: object) -> tuple[object, int]:
+    def question_step(self, step: object, card: object) -> tuple[object, int]:
         return None, 0
 
-    def answer_step(self, title: str, card: object, view: object) -> None:
+    def answer_step(self, step: object, card: object, view: object) -> None:
         pass
 
     def rating_step(self, default_rating: object) -> object:

@@ -9,17 +9,31 @@ from tests.setup_test_helpers import FakeConsole
 
 
 def _render(
-    state: str = "question", title: str = "[1/1] note.md", text: str = "question", active: tuple[int, int] = (1, 1)
+    state: str = "question",
+    text: str = "question",
+    active: tuple[int, int] = (1, 1),
+    note: str = "/repo/note.md",
+    duration_s: float | None = None,
 ) -> dict:
-    return {
+    message = {
         "type": "render",
         "state": state,
-        "title": title,
-        "note": "/repo/note.md",
-        "progress": {"current": 1, "total": 1},
+        "card": {"index": 1, "total": 1, "note": note},
         "active": {"start": active[0], "end": active[1]},
         "segments": [{"start": active[0], "end": active[1], "text": text}],
     }
+    if duration_s is not None:
+        message["duration_s"] = duration_s
+    return message
+
+
+def _choices() -> list[dict]:
+    return [
+        {"name": "Again", "key": "n"},
+        {"name": "Hard", "key": "e"},
+        {"name": "Good", "key": "i"},
+        {"name": "Easy", "key": "o"},
+    ]
 
 
 def _make_client(messages: list[dict]) -> tuple[TuiClient, FakeConsole, io.StringIO]:
@@ -40,13 +54,13 @@ def _printed_strings(console: FakeConsole) -> list[str]:
 
 class TuiClientTest(unittest.TestCase):
     def test_intro_sends_start_on_enter(self) -> None:
-        client, _console, writer = _make_client([{"type": "intro", "total": 2, "notes": ["n"]}])
+        client, _console, writer = _make_client([{"type": "intro", "due": 2, "notes": ["n"]}])
 
         with patch("tui.os.system", return_value=0), patch("tui.read_single_key", return_value="\n"):
             code = client.run()
 
         self.assertEqual(0, code)
-        self.assertEqual([{"name": "start"}], _events(writer))
+        self.assertEqual([{"type": "start"}], _events(writer))
 
     def test_question_reveal_then_next(self) -> None:
         client, _console, writer = _make_client([_render(), _render(text="revealed"), _render(state="answer")])
@@ -54,7 +68,7 @@ class TuiClientTest(unittest.TestCase):
         with patch("tui.os.system", return_value=0), patch("tui.read_single_key", side_effect=["a", "\n"]):
             client.run()
 
-        self.assertEqual([{"name": "reveal", "label": "a"}, {"name": "next"}], _events(writer))
+        self.assertEqual([{"type": "reveal", "label": "a"}, {"type": "next"}], _events(writer))
 
     def test_question_space_pauses_and_marks_title(self) -> None:
         client, console, writer = _make_client([_render(), _render()])
@@ -62,35 +76,27 @@ class TuiClientTest(unittest.TestCase):
         with patch("tui.os.system", return_value=0), patch("tui.read_single_key", side_effect=[" ", "\n"]):
             client.run()
 
-        self.assertEqual([{"name": "pause"}, {"name": "next"}], _events(writer))
+        self.assertEqual([{"type": "pause"}, {"type": "next"}], _events(writer))
         self.assertIn("[1/1] note.md (PAUSED)", _printed_strings(console))
 
     def test_rating_default_accepts_enter(self) -> None:
-        message = {
-            "type": "rating",
-            "suggested": "Good",
-            "buttons": {"Again": "n", "Hard": "e", "Good": "i", "Easy": "o"},
-        }
+        message = {"type": "rating", "suggested": "Good", "choices": _choices()}
         client, console, writer = _make_client([message])
 
         with patch("tui.read_single_key", return_value="\n"):
             client.run()
 
-        self.assertEqual([{"name": "rate", "rating": "Good"}], _events(writer))
+        self.assertEqual([{"type": "rate", "rating": "Good"}], _events(writer))
         self.assertIn(("Set rating: Good", {}), console.printed)
 
     def test_rating_keeps_enter_invalid_without_suggestion(self) -> None:
-        message = {
-            "type": "rating",
-            "suggested": None,
-            "buttons": {"Again": "n", "Hard": "e", "Good": "i", "Easy": "o"},
-        }
+        message = {"type": "rating", "suggested": None, "choices": _choices()}
         client, console, writer = _make_client([message])
 
         with patch("tui.read_single_key", side_effect=["\n", "i"]):
             client.run()
 
-        self.assertEqual([{"name": "rate", "rating": "Good"}], _events(writer))
+        self.assertEqual([{"type": "rate", "rating": "Good"}], _events(writer))
         self.assertIn(("Invalid rating", {}), console.printed)
 
     def test_eof_returns_zero(self) -> None:

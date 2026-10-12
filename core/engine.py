@@ -6,7 +6,7 @@ from typing import Protocol, runtime_checkable
 from fsrs import Rating, Scheduler
 
 from core import util
-from core.card import Card, ViewBlock
+from core.card import Card, CardRef, ViewBlock
 from core.factory import CardFactory
 from core.index.index import Index
 from core.parsers import ParserRegistry
@@ -24,9 +24,9 @@ class ReviewUIProtocol(Protocol):
 
     def intro(self, total: int, note_paths: list[str]) -> None: ...
 
-    def question_step(self, title: str, card: Card) -> tuple[ViewBlock, int]: ...
+    def question_step(self, card_ref: CardRef, card: Card) -> tuple[ViewBlock, int]: ...
 
-    def answer_step(self, title: str, card: Card, view: ViewBlock) -> None: ...
+    def answer_step(self, card_ref: CardRef, card: Card, view: ViewBlock, duration_s: float) -> None: ...
 
     def rating_step(self, default_rating: Rating | None) -> Rating: ...
 
@@ -56,24 +56,22 @@ class ReviewEngine:
             return 0
 
         total = len(cards)
-        note_paths = sorted({os.path.splitext(card.index_entry.note_path.lstrip("/"))[0] for card in cards})
+        note_paths = sorted({card.index_entry.note_path for card in cards})
         self.ui.intro(total, note_paths)
 
         for idx, card in enumerate(cards, start=1):
-            note_name = os.path.basename(card.index_entry.note_abs_path)
-            question_title = f"\n[{idx}/{total}] {note_name}"
+            card_ref = CardRef(index=idx, total=total, note_path=card.index_entry.note_path)
 
             # Step 1. Question
             question_started_ns = time.monotonic_ns()
-            _view, pause_ns = self.ui.question_step(question_title, card)
+            _view, pause_ns = self.ui.question_step(card_ref, card)
             duration_ms = max(0, (time.monotonic_ns() - question_started_ns - pause_ns) // 1_000_000)
             review_duration_s = duration_ms / 1000
-            answer_title = f"\n[{idx}/{total}] {note_name} — answer ({review_duration_s:.1f}s)"
 
             # Step 2. Answer view
             suggested_rating = card.suggested_rating()
             answer_view = card.answer_view()
-            self.ui.answer_step(answer_title, card, answer_view)
+            self.ui.answer_step(card_ref, card, answer_view, review_duration_s)
 
             # Step 3. Rating
             self.ui.print_message("")
