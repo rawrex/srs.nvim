@@ -11,7 +11,8 @@ from fsrs import Rating
 
 from core.card import ViewBlock
 from core.config import ReviewConfig
-from core.rpc import JsonLineTransport, RpcReviewUI, run
+from core.protocol import JsonLineTransport
+from core.rpc import TransportUI, run
 from tests.setup_test_helpers import runtime_context, temporary_session_repo
 
 
@@ -30,10 +31,10 @@ class _FakeCard:
         return ViewBlock(start_line=1, text="revealed") if label == "a" else None
 
 
-def _make_ui(events: list[dict[str, object]]) -> tuple[RpcReviewUI, io.StringIO]:
+def _make_ui(events: list[dict[str, object]]) -> tuple[TransportUI, io.StringIO]:
     reader = io.StringIO("".join(json.dumps(event) + "\n" for event in events))
     writer = io.StringIO()
-    ui = RpcReviewUI(config=ReviewConfig(show_context=False), transport=JsonLineTransport(reader, writer))
+    ui = TransportUI(config=ReviewConfig(show_context=False), transport=JsonLineTransport(reader, writer))
     return ui, writer
 
 
@@ -41,7 +42,7 @@ def _sent(writer: io.StringIO) -> list[dict[str, object]]:
     return [json.loads(line) for line in writer.getvalue().splitlines()]
 
 
-class RpcReviewUiTest(unittest.TestCase):
+class TransportUiTest(unittest.TestCase):
     def test_intro_waits_for_start(self) -> None:
         ui, writer = _make_ui([{"name": "ignored"}, {"name": "start"}])
 
@@ -84,6 +85,15 @@ class RpcReviewUiTest(unittest.TestCase):
 
         renders = [message for message in _sent(writer) if message["type"] == "render"]
         self.assertIsNone(renders[0]["progress"])
+
+    def test_render_includes_title_and_active(self) -> None:
+        ui, writer = _make_ui([{"name": "next"}])
+
+        ui.question_step("[1/2] note.md", _FakeCard())
+
+        render = [message for message in _sent(writer) if message["type"] == "render"][0]
+        self.assertEqual("[1/2] note.md", render["title"])
+        self.assertEqual({"start": 1, "end": 1}, render["active"])
 
     def test_rating_step_maps_rating_name(self) -> None:
         ui, writer = _make_ui([{"name": "rate", "rating": "Hard"}])
@@ -141,7 +151,7 @@ class RpcRunTest(unittest.TestCase):
 
         self.assertEqual(7, code)
         engine_cls.assert_called_once()
-        self.assertIsInstance(engine_cls.call_args.kwargs["ui"], RpcReviewUI)
+        self.assertIsInstance(engine_cls.call_args.kwargs["ui"], TransportUI)
         engine.run.assert_called_once_with()
 
     def test_run_reviews_real_repo_and_persists_review_log(self) -> None:

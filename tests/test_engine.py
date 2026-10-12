@@ -1,3 +1,4 @@
+import io
 import json
 import os
 import unittest
@@ -10,8 +11,9 @@ from fsrs import Scheduler
 from core.config import ReviewConfig
 from core.engine import ReviewEngine, ReviewUIProtocol
 from core.parsers import build_parser_registry
-from core.ui import ReviewUI
-from tests.setup_test_helpers import FakeConsole, runtime_context, temporary_session_repo
+from core.protocol import JsonLineTransport
+from core.rpc import TransportUI
+from tests.setup_test_helpers import runtime_context, temporary_session_repo
 
 
 class _DummyUI:
@@ -225,8 +227,9 @@ class ReviewEngineTest(unittest.TestCase):
 
 
 class ReviewUiContractTest(unittest.TestCase):
-    def test_rich_ui_satisfies_review_ui_protocol(self) -> None:
-        ui = ReviewUI(config=ReviewConfig(), console=FakeConsole())  # type: ignore[arg-type]
+    def test_transport_ui_satisfies_review_ui_protocol(self) -> None:
+        transport = JsonLineTransport(io.StringIO(), io.StringIO())
+        ui = TransportUI(config=ReviewConfig(), transport=transport)
 
         self.assertIsInstance(ui, ReviewUIProtocol)
 

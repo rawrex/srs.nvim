@@ -1,15 +1,35 @@
+import io
+import json
 import unittest
 from unittest.mock import patch
 
 from fsrs import Rating
-from rich.markdown import Markdown
 
 from core.card import REVEAL_ALL_LABEL, RevealMode, SchedulerCard
 from core.config import ReviewConfig
 from core.index.model import IndexEntry, Metadata
-from core.ui import ReviewUI
+from core.protocol import JsonLineTransport
+from core.rpc import TransportUI
 from packs.cloze import ClozeCard, ClozeParser, mask_hidden_text, parse_note_clozes
-from tests.setup_test_helpers import FakeConsole
+from tests.setup_test_helpers import runtime_context
+from tui import compose_view_text
+
+
+def _question_render_texts(card: ClozeCard, events: list[dict[str, object]], show_context: bool = True) -> list[str]:
+    reader = io.StringIO("".join(json.dumps(event) + "\n" for event in events))
+    writer = io.StringIO()
+    ui = TransportUI(config=ReviewConfig(show_context=show_context), transport=JsonLineTransport(reader, writer))
+    with patch("core.util._RUNTIME_CONTEXT", runtime_context("/repo"), create=True):
+        ui.question_step("title", card)
+
+    texts: list[str] = []
+    for line in writer.getvalue().splitlines():
+        message = json.loads(line)
+        if message["type"] != "render":
+            continue
+        active = (message["active"]["start"], message["active"]["end"])
+        texts.append(compose_view_text(message["segments"], active, show_context))
+    return texts
 
 
 class ClozePackTest(unittest.TestCase):
@@ -55,7 +75,6 @@ class ClozePackTest(unittest.TestCase):
 
     def test_prompt_cloze_reveal_supports_uppercase_label(self) -> None:
         note = " ".join(f"~{{c{i}}}" for i in range(27))
-        console = FakeConsole()
         card = ClozeCard(
             source_text=note,
             index_entry=self._entry(),
@@ -66,23 +85,19 @@ class ClozePackTest(unittest.TestCase):
             cloze_close="}",
             mask_char="▇",
         )
-        ui = ReviewUI(config=ReviewConfig(), console=console)  # type: ignore[arg-type]
 
-        with patch("core.ui.os.system", return_value=0), patch("core.ui.read_single_key", side_effect=["A", "\n"]):
-            ui.question_step("title", card)
+        texts = _question_render_texts(card, [{"name": "reveal", "label": "A"}, {"name": "next"}])
 
-        frames = [item.markup for item, _kwargs in console.printed if isinstance(item, Markdown)]
-        self.assertGreaterEqual(len(frames), 2)
-        self.assertIn("[A]", frames[0])
-        self.assertIn("`c26`", frames[1])
-        self.assertNotIn("[A]", frames[1])
+        self.assertGreaterEqual(len(texts), 2)
+        self.assertIn("[A]", texts[0])
+        self.assertIn("`c26`", texts[1])
+        self.assertNotIn("[A]", texts[1])
 
     def test_prompt_cloze_reveal_renders_masked_context_without_labels(self) -> None:
         note_context_blocks = {
             (1, 1): "# One\nFirst ~{hidden} block.\n",
             (4, 4): "# Two\nSecond ▇▇▇▇▇▇▇▇▇▇▇▇▇ block.\n",
         }
-        console = FakeConsole()
         card = ClozeCard(
             source_text=note_context_blocks[(1, 1)],
             index_entry=self._entry(start_line=1, end_line=1),
@@ -93,17 +108,9 @@ class ClozePackTest(unittest.TestCase):
             cloze_close="}",
             mask_char="▇",
         )
-        ui = ReviewUI(
-            config=ReviewConfig(),
-            console=console,  # type: ignore[arg-type]
-        )
 
-        with patch("core.ui.os.system", return_value=0), patch("core.ui.read_single_key", side_effect=["\n"]):
-            ui.question_step("title", card)
+        rendered = "".join(_question_render_texts(card, [{"name": "next"}]))
 
-        calls = [item.markup for item, _kwargs in console.printed if isinstance(item, Markdown)]
-        self.assertGreaterEqual(len(calls), 1)
-        rendered = "".join(calls)
         self.assertIn("[a]", rendered)
         self.assertIn("Second", rendered)
         self.assertNotIn("context cloze", rendered)
@@ -114,7 +121,6 @@ class ClozePackTest(unittest.TestCase):
             (1, 1): "# One\nFirst ~{hidden} block.\n",
             (4, 4): "# Two\nSecond ~{context cloze} block.\n",
         }
-        console = FakeConsole()
         card = ClozeCard(
             source_text=note_context_blocks[(1, 1)],
             index_entry=self._entry(start_line=1, end_line=1),
@@ -125,17 +131,9 @@ class ClozePackTest(unittest.TestCase):
             cloze_close="}",
             mask_char="▇",
         )
-        ui = ReviewUI(
-            config=ReviewConfig(show_context=False),
-            console=console,  # type: ignore[arg-type]
-        )
 
-        with patch("core.ui.os.system", return_value=0), patch("core.ui.read_single_key", side_effect=["\n"]):
-            ui.question_step("title", card)
+        rendered = "".join(_question_render_texts(card, [{"name": "next"}], show_context=False))
 
-        calls = [item.markup for item, _kwargs in console.printed if isinstance(item, Markdown)]
-        self.assertGreaterEqual(len(calls), 1)
-        rendered = "".join(calls)
         self.assertIn("[a]", rendered)
         self.assertNotIn("Second", rendered)
 

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # ruff: noqa: E402
-import json
 import os
 import re
 import sys
@@ -19,27 +18,10 @@ from core.card import Card, ViewBlock
 from core.config import ReviewConfig, load_review_config
 from core.engine import ReviewEngine
 from core.parsers import build_parser_registry
+from core.protocol import JsonLineTransport
 
 
-class JsonLineTransport:
-    """Newline-delimited JSON over a pair of text streams (stdout/stdin)."""
-
-    def __init__(self, reader: IO[str], writer: IO[str]) -> None:
-        self._reader = reader
-        self._writer = writer
-
-    def send(self, message: dict[str, Any]) -> None:
-        self._writer.write(json.dumps(message, ensure_ascii=False) + "\n")
-        self._writer.flush()
-
-    def receive(self) -> dict[str, Any] | None:
-        for line in self._reader:
-            if line.strip():
-                return json.loads(line)
-        return None
-
-
-class RpcReviewUI:
+class TransportUI:
     """ReviewUIProtocol implementation that renders/awaits events over a transport."""
 
     def __init__(self, config: ReviewConfig, transport: JsonLineTransport) -> None:
@@ -117,8 +99,10 @@ class RpcReviewUI:
             {
                 "type": "render",
                 "state": state,
+                "title": title,
                 "note": card.index_entry.note_abs_path,
                 "progress": {"current": int(progress.group(1)), "total": int(progress.group(2))} if progress else None,
+                "active": {"start": start, "end": end},
                 "segments": segments,
             }
         )
@@ -139,7 +123,7 @@ def run(reader: IO[str], writer: IO[str]) -> int:
 
     config = load_review_config()
     engine = ReviewEngine(
-        ui=RpcReviewUI(config=config, transport=transport),
+        ui=TransportUI(config=config, transport=transport),
         parser_registry=build_parser_registry(config),
         scheduler=config.build_scheduler(),
     )

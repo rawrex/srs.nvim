@@ -20,62 +20,60 @@ def _changed_report() -> OptimizationReport:
 class OptimizeCliTest(unittest.TestCase):
     def test_main_returns_1_outside_git_repo(self) -> None:
         runtime = Mock(repo_root_path="")
-        console = Mock()
 
         with (
             patch("core.optimize.util.init_runtime_context"),
             patch("core.optimize.util._RUNTIME_CONTEXT", runtime, create=True),
-            patch("core.optimize.Console", return_value=console),
+            patch("builtins.print") as print_mock,
         ):
             code = optimize.main([])
 
         self.assertEqual(1, code)
-        console.print.assert_called_once_with("Not inside a git repository.", markup=False)
+        print_mock.assert_called_once_with("Not inside a git repository.")
 
     def test_main_returns_1_when_index_is_missing(self) -> None:
         runtime = runtime_context("/repo")
-        console = Mock()
 
         with (
             patch("core.optimize.util.init_runtime_context", return_value=runtime),
             patch("core.optimize.util._RUNTIME_CONTEXT", runtime, create=True),
-            patch("core.optimize.Console", return_value=console),
+            patch("builtins.print") as print_mock,
         ):
             code = optimize.main([])
 
         self.assertEqual(1, code)
-        console.print.assert_called_once_with("Missing index", markup=False)
+        print_mock.assert_called_once_with("Missing index")
 
     def _run_with_report(self, report: OptimizationReport, argv: list[str] | None = None):
-        console = Mock()
         index = Mock()
         index.load_entries.return_value = [Mock()]
         entries = index.load_entries.return_value
+        print_mock = Mock()
 
         with temporary_session_repo(with_index=True) as repo_root:
             runtime = runtime_context(repo_root)
             with (
                 patch("core.optimize.util.init_runtime_context", return_value=runtime),
                 patch("core.optimize.util._RUNTIME_CONTEXT", runtime, create=True),
-                patch("core.optimize.Console", return_value=console),
                 patch("core.optimize.load_review_config", return_value=ReviewConfig()),
                 patch("core.optimize.build_parser_registry", return_value=Mock()),
                 patch("core.optimize.Index", return_value=index),
                 patch("core.optimize.run_optimization", return_value=report) as run,
+                patch("builtins.print", print_mock),
             ):
                 code = optimize.main(argv or [])
 
-        return code, console, run, entries
+        return code, print_mock, run, entries
 
     def test_main_reports_when_there_are_no_review_logs(self) -> None:
         report = OptimizationReport(
             card_count=0, review_log_count=0, parameters=(), changed=False, skipped_reason=SKIPPED_NO_LOGS
         )
 
-        code, console, _run, _entries = self._run_with_report(report)
+        code, print_mock, _run, _entries = self._run_with_report(report)
 
         self.assertEqual(0, code)
-        console.print.assert_called_once_with("No review logs found. Nothing to optimize.", markup=False)
+        print_mock.assert_called_once_with("No review logs found. Nothing to optimize.")
 
     def test_main_reports_insufficient_data_without_writing(self) -> None:
         report = OptimizationReport(
@@ -86,21 +84,20 @@ class OptimizeCliTest(unittest.TestCase):
             skipped_reason=SKIPPED_INSUFFICIENT_DATA,
         )
 
-        code, console, _run, _entries = self._run_with_report(report)
+        code, print_mock, _run, _entries = self._run_with_report(report)
 
         self.assertEqual(0, code)
-        self.assertIn("Not enough review history", console.print.call_args_list[0].args[0])
+        self.assertIn("Not enough review history", print_mock.call_args_list[0].args[0])
 
     def test_main_runs_optimization_with_flags(self) -> None:
         report = _changed_report()
 
-        code, _console, run, entries = self._run_with_report(report, argv=["--verbose", "--dry-run"])
+        code, _print_mock, run, entries = self._run_with_report(report, argv=["--verbose", "--dry-run"])
 
         self.assertEqual(0, code)
         run.assert_called_once_with(entries, verbose=True, dry_run=True)
 
     def test_main_handles_missing_optimizer_dependencies(self) -> None:
-        console = Mock()
         index = Mock()
         index.load_entries.return_value = []
 
@@ -109,13 +106,13 @@ class OptimizeCliTest(unittest.TestCase):
             with (
                 patch("core.optimize.util.init_runtime_context", return_value=runtime),
                 patch("core.optimize.util._RUNTIME_CONTEXT", runtime, create=True),
-                patch("core.optimize.Console", return_value=console),
                 patch("core.optimize.load_review_config", return_value=ReviewConfig()),
                 patch("core.optimize.build_parser_registry", return_value=Mock()),
                 patch("core.optimize.Index", return_value=index),
                 patch("core.optimize.run_optimization", side_effect=ImportError),
+                patch("builtins.print") as print_mock,
             ):
                 code = optimize.main([])
 
         self.assertEqual(1, code)
-        self.assertIn("fsrs[optimizer]", console.print.call_args_list[0].args[0])
+        self.assertIn("fsrs[optimizer]", print_mock.call_args_list[0].args[0])
