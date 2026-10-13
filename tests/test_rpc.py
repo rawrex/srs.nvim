@@ -52,7 +52,16 @@ class TransportUiTest(unittest.TestCase):
 
         ui.intro(2, ["note"])
 
-        self.assertEqual([{"type": "intro", "due": 2, "notes": ["note"]}], _sent(writer))
+        self.assertEqual([{"type": "intro", "due": 2, "notes": ["note"], "media": None}], _sent(writer))
+
+    def test_intro_carries_media_dir(self) -> None:
+        reader = io.StringIO(json.dumps({"type": "start"}) + "\n")
+        writer = io.StringIO()
+        ui = TransportUI(config=ReviewConfig(media="/repo/media"), transport=JsonLineTransport(reader, writer))
+
+        ui.intro(0, [])
+
+        self.assertEqual("/repo/media", _sent(writer)[0]["media"])
 
     def test_question_step_reveals_and_finishes_on_next(self) -> None:
         ui, writer = _make_ui([{"type": "reveal", "label": "a"}, {"type": "next"}])

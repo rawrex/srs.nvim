@@ -12,10 +12,12 @@ the client's job.
 Server -> client messages
 -------------------------
 ``intro``
-    ``{"type": "intro", "due": int, "notes": [str, ...]}``
+    ``{"type": "intro", "due": int, "notes": [str, ...], "media": str | None}``
     ``due`` is the number of due cards; ``notes`` is the sorted set of unique
     source note paths (repo-relative, leading ``/``) those cards come from.
-    More than one card may share a note.
+    More than one card may share a note. ``media`` is the absolute path of the
+    directory holding note images (from config), or ``null`` when unset; clients
+    that render images use it to resolve ``![[...]]`` references.
 ``render``
     ``{"type": "render", "state": "question" | "answer",
        "card": {"index": int, "total": int, "note": str},

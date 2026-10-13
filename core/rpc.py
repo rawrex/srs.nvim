@@ -32,7 +32,7 @@ class TransportUI:
         self.transport.send({"type": "notice", "level": "info", "text": message})
 
     def intro(self, total: int, note_paths: list[str]) -> None:
-        self.transport.send({"type": "intro", "due": total, "notes": note_paths})
+        self.transport.send({"type": "intro", "due": total, "notes": note_paths, "media": self.config.media})
         while self._await_event().get("type") != "start":
             continue
 
