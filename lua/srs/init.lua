@@ -11,6 +11,7 @@ local state = {
 	mode = "idle", -- "intro" | "question" | "rating" | "idle"
 	buttons = {},
 	suggested = nil,
+	card = nil,
 }
 
 function M.setup(opts)
@@ -67,11 +68,12 @@ local function set_note_name(card)
 	end
 end
 
-local function set_statusline(current, total, note, paused)
+local function set_statusline(current, total, note, paused, suggested)
 	if state.win and vim.api.nvim_win_is_valid(state.win) then
 		local label = (note and note ~= "") and ((note:gsub("^/", "")) .. " ") or ""
 		local suffix = paused and " (PAUSED)" or ""
-		vim.wo[state.win].statusline = string.format("[%d/%d] %s%s", current or 0, total or 0, label, suffix)
+		local hint = (suggested and suggested ~= "") and ("| " .. suggested .. "?") or ""
+		vim.wo[state.win].statusline = string.format("[%d/%d] %s%s%s", current or 0, total or 0, label, suffix, hint)
 	end
 end
 
@@ -116,6 +118,7 @@ local function handle_message(message)
 	elseif kind == "render" then
 		state.mode = message.state
 		if message.card then
+			state.card = message.card
 			set_statusline(message.card.index or 0, message.card.total or 0, message.card.note, message.paused)
 		end
 		render_note(message)
@@ -126,6 +129,9 @@ local function handle_message(message)
 			state.buttons[choice.name] = choice.key
 		end
 		state.suggested = type(message.suggested) == "string" and message.suggested or nil
+		if state.card then
+			set_statusline(state.card.index or 0, state.card.total or 0, state.card.note, nil, state.suggested)
+		end
 	elseif kind == "notice" then
 		if message.text ~= "" then
 			vim.notify("srs: " .. message.text, message.level == "error" and vim.log.levels.WARN or vim.log.levels.INFO)
