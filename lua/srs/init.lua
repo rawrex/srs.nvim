@@ -12,6 +12,7 @@ local state = {
 	buttons = {},
 	suggested = nil,
 	card = nil,
+	duration_s = nil,
 }
 
 function M.setup(opts)
@@ -68,12 +69,14 @@ local function set_note_name(card)
 	end
 end
 
-local function set_statusline(current, total, note, paused, suggested)
+local function set_statusline(current, total, note, paused, suggested, duration_s)
 	if state.win and vim.api.nvim_win_is_valid(state.win) then
 		local label = (note and note ~= "") and ((note:gsub("^/", "")) .. " ") or ""
 		local suffix = paused and " (PAUSED)" or ""
-		local hint = (suggested and suggested ~= "") and ("| " .. suggested .. "?") or ""
-		vim.wo[state.win].statusline = string.format("[%d/%d] %s%s%s", current or 0, total or 0, label, suffix, hint)
+		local hint = (suggested and suggested ~= "") and (" | " .. suggested .. "?") or ""
+		local timer = duration_s and string.format("| %.1fs", duration_s) or ""
+		vim.wo[state.win].statusline =
+			string.format("[%d/%d] %s%s%s%s", current or 0, total or 0, label, suffix, timer, hint)
 	end
 end
 
@@ -119,7 +122,17 @@ local function handle_message(message)
 		state.mode = message.state
 		if message.card then
 			state.card = message.card
-			set_statusline(message.card.index or 0, message.card.total or 0, message.card.note, message.paused)
+		end
+		state.duration_s = message.duration_s
+		if state.card then
+			set_statusline(
+				state.card.index or 0,
+				state.card.total or 0,
+				state.card.note,
+				message.paused,
+				nil,
+				state.duration_s
+			)
 		end
 		render_note(message)
 	elseif kind == "rating" then
@@ -130,7 +143,14 @@ local function handle_message(message)
 		end
 		state.suggested = type(message.suggested) == "string" and message.suggested or nil
 		if state.card then
-			set_statusline(state.card.index or 0, state.card.total or 0, state.card.note, nil, state.suggested)
+			set_statusline(
+				state.card.index or 0,
+				state.card.total or 0,
+				state.card.note,
+				nil,
+				state.suggested,
+				state.duration_s
+			)
 		end
 	elseif kind == "notice" then
 		if message.text ~= "" then
