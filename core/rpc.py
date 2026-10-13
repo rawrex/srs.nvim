@@ -36,7 +36,7 @@ class TransportUI:
         while self._await_event().get("type") != "start":
             continue
 
-    def question_step(self, card_ref: CardRef, card: Card) -> tuple[ViewBlock, int]:
+    def question_step(self, card_ref: CardRef, card: Card) -> tuple[ViewBlock, int] | None:
         view: ViewBlock = card.question_view()
         paused: bool = False
         pause_total_ns: int = 0
@@ -52,6 +52,8 @@ class TransportUI:
                 else:  # pause
                     pause_start_ns = time.monotonic_ns()
                     paused = True
+            elif event_type == "skip":
+                return None
             elif event_type == "next":
                 if paused:
                     pause_total_ns += time.monotonic_ns() - pause_start_ns

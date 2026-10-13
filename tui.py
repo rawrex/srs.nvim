@@ -359,6 +359,8 @@ class TuiClient:
         if key == " ":
             self.paused = not self.paused
             self.transport.send({"type": "pause"})
+        elif key == "\x1b":
+            self.transport.send({"type": "skip"})
         elif key in {"\r", "\n"}:
             self.transport.send({"type": "next"})
         else:

@@ -70,6 +70,14 @@ class TuiClientTest(unittest.TestCase):
 
         self.assertEqual([{"type": "reveal", "label": "a"}, {"type": "next"}], _events(writer))
 
+    def test_question_escape_skips(self) -> None:
+        client, _console, writer = _make_client([_render()])
+
+        with patch("tui.os.system", return_value=0), patch("tui.read_single_key", return_value="\x1b"):
+            client.run()
+
+        self.assertEqual([{"type": "skip"}], _events(writer))
+
     def test_question_space_pauses_and_marks_title(self) -> None:
         client, console, writer = _make_client([_render(), _render()])
 

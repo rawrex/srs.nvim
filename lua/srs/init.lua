@@ -150,7 +150,13 @@ local function setup_keymaps()
 		end
 	end, { buffer = state.buf, desc = "SRS next" })
 
-	vim.keymap.set("n", "<Esc>", M.close, { buffer = state.buf, desc = "SRS quit" })
+	vim.keymap.set("n", "<Esc>", function()
+		if state.mode == "question" then
+			send({ type = "skip" })
+		end
+	end, { buffer = state.buf, desc = "SRS skip" })
+
+	vim.keymap.set("n", "<C-c>", M.close, { buffer = state.buf, desc = "SRS quit" })
 
 	for key in REVEAL_KEYS:gmatch(".") do
 		vim.keymap.set("n", key, function()

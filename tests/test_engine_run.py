@@ -110,6 +110,33 @@ class ReviewEngineRunTest(unittest.TestCase):
         self.assertEqual(2, scheduler.review_card.call_count)
         ui.intro.assert_called_once_with(2, ["/one.md", "/two.md"])
 
+    def test_run_skips_card_without_persisting(self) -> None:
+        with temporary_session_repo(with_index=True) as repo_root:
+            config = ReviewConfig()
+            ui = Mock()
+            ui.question_step.return_value = None
+
+            with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
+                session = ReviewEngine(
+                    ui=ui, parser_registry=build_parser_registry(config), scheduler=config.build_scheduler()
+                )
+
+                scheduler = Mock()
+                session.scheduler = scheduler
+                card_1 = _DummyCard("one.md", object(), "1")
+
+                with (
+                    patch.object(session, "load_due_cards", return_value=[card_1]),
+                    patch("core.engine.time.monotonic_ns", return_value=0),
+                ):
+                    code = session.run()
+
+        self.assertEqual(0, code)
+        scheduler.review_card.assert_not_called()
+        card_1.index_entry.write_metadata.assert_not_called()
+        self.assertEqual([], card_1.metadata.review_logs)
+        ui.print_message.assert_any_call("Skipped")
+
     def test_run_raises_interrupt_during_rating(self) -> None:
         with temporary_session_repo(with_index=True) as repo_root:
             config = ReviewConfig()

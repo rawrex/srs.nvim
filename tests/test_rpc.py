@@ -75,6 +75,13 @@ class TransportUiTest(unittest.TestCase):
         self.assertEqual([{"start": 1, "end": 1, "text": "question"}], renders[0]["segments"])
         self.assertEqual([{"start": 1, "end": 1, "text": "revealed"}], renders[1]["segments"])
 
+    def test_question_step_returns_none_on_skip(self) -> None:
+        ui, writer = _make_ui([{"type": "skip"}])
+
+        self.assertIsNone(ui.question_step(_card_ref(), _FakeCard()))
+        renders = [message for message in _sent(writer) if message["type"] == "render"]
+        self.assertEqual(1, len(renders))
+
     def test_question_step_tracks_pause_time(self) -> None:
         ui, _writer = _make_ui([{"type": "pause"}, {"type": "next"}])
 

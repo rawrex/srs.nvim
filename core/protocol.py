@@ -39,6 +39,7 @@ Client -> server events
 ``start``   ``{"type": "start"}``
 ``pause``   ``{"type": "pause"}``
 ``next``    ``{"type": "next"}``
+``skip``    ``{"type": "skip"}``
 ``reveal``  ``{"type": "reveal", "label": str}``
 ``rate``    ``{"type": "rate", "rating": str | None}``
 ``quit``    ``{"type": "quit"}``
@@ -64,6 +65,7 @@ NOTICE = "notice"
 EVENT_START = "start"
 EVENT_PAUSE = "pause"
 EVENT_NEXT = "next"
+EVENT_SKIP = "skip"
 EVENT_REVEAL = "reveal"
 EVENT_RATE = "rate"
 EVENT_QUIT = "quit"

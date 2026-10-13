@@ -24,7 +24,7 @@ class ReviewUIProtocol(Protocol):
 
     def intro(self, total: int, note_paths: list[str]) -> None: ...
 
-    def question_step(self, card_ref: CardRef, card: Card) -> tuple[ViewBlock, int]: ...
+    def question_step(self, card_ref: CardRef, card: Card) -> tuple[ViewBlock, int] | None: ...
 
     def answer_step(self, card_ref: CardRef, card: Card, view: ViewBlock, duration_s: float) -> None: ...
 
@@ -64,7 +64,11 @@ class ReviewEngine:
 
             # Step 1. Question
             question_started_ns = time.monotonic_ns()
-            _view, pause_ns = self.ui.question_step(card_ref, card)
+            question = self.ui.question_step(card_ref, card)
+            if question is None:  # skipped: leave the card's schedule untouched
+                self.ui.print_message("Skipped")
+                continue
+            _view, pause_ns = question
             duration_ms = max(0, (time.monotonic_ns() - question_started_ns - pause_ns) // 1_000_000)
             review_duration_s = duration_ms / 1000
 
