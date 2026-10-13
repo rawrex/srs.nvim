@@ -76,15 +76,23 @@ end
 
 local function render_note(message)
 	set_note_name(message.card)
-	local parts = {}
+	local active = message.active
+	local first, text = nil, ""
 	for _, segment in ipairs(message.segments or {}) do
-		table.insert(parts, segment.text)
+		local chunk = segment.text or ""
+		if active and segment.start == active.start and segment["end"] == active["end"] then
+			first = select(2, text:gsub("\n", "")) + 1
+		end
+		text = text .. chunk
 	end
-	local lines = vim.split(table.concat(parts), "\n", { plain = true })
+	local lines = vim.split(text, "\n", { plain = true })
 	if lines[#lines] == "" then
 		table.remove(lines)
 	end
 	set_lines(lines)
+	if first then
+		vim.api.nvim_win_set_cursor(state.win, { math.min(first, #lines), 0 })
+	end
 end
 
 -- Events --------------------------------------------------------------------
