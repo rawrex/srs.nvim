@@ -90,6 +90,16 @@ class TransportUiTest(unittest.TestCase):
 
         self.assertEqual(200, pause_ns)
 
+    def test_question_render_reports_paused_state(self) -> None:
+        ui, writer = _make_ui([{"type": "pause"}, {"type": "next"}])
+
+        with patch("core.rpc.time.monotonic_ns", return_value=100):
+            ui.question_step(_card_ref(), _FakeCard())
+
+        renders = [message for message in _sent(writer) if message["type"] == "render"]
+        self.assertFalse(renders[0]["paused"])
+        self.assertTrue(renders[1]["paused"])
+
     def test_render_includes_structured_card_ref(self) -> None:
         ui, writer = _make_ui([{"type": "next"}])
 
@@ -116,6 +126,7 @@ class TransportUiTest(unittest.TestCase):
         render = [message for message in _sent(writer) if message["type"] == "render"][0]
         self.assertEqual("answer", render["state"])
         self.assertEqual(1.2, render["duration_s"])
+        self.assertNotIn("paused", render)
 
     def test_rating_step_maps_rating_name(self) -> None:
         ui, writer = _make_ui([{"type": "rate", "rating": "Hard"}])

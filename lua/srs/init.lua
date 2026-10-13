@@ -67,10 +67,11 @@ local function set_note_name(card)
 	end
 end
 
-local function set_statusline(current, total, note)
+local function set_statusline(current, total, note, paused)
 	if state.win and vim.api.nvim_win_is_valid(state.win) then
 		local label = (note and note ~= "") and ((note:gsub("^/", "")) .. " ") or ""
-		vim.wo[state.win].statusline = string.format("[%d/%d] %s", current or 0, total or 0, label)
+		local suffix = paused and " (PAUSED)" or ""
+		vim.wo[state.win].statusline = string.format("[%d/%d] %s%s", current or 0, total or 0, label, suffix)
 	end
 end
 
@@ -115,7 +116,7 @@ local function handle_message(message)
 	elseif kind == "render" then
 		state.mode = message.state
 		if message.card then
-			set_statusline(message.card.index or 0, message.card.total or 0, message.card.note)
+			set_statusline(message.card.index or 0, message.card.total or 0, message.card.note, message.paused)
 		end
 		render_note(message)
 	elseif kind == "rating" then
@@ -157,6 +158,12 @@ local function setup_keymaps()
 			send({ type = "rate" })
 		end
 	end, { buffer = state.buf, desc = "SRS next" })
+
+	vim.keymap.set("n", "<Space>", function()
+		if state.mode == "question" then
+			send({ type = "pause" })
+		end
+	end, { buffer = state.buf, desc = "SRS pause" })
 
 	vim.keymap.set("n", "<Esc>", function()
 		if state.mode == "question" then

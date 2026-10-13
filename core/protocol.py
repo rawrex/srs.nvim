@@ -26,6 +26,8 @@ Server -> client messages
        "duration_s": float}``
     ``card.index``/``card.total`` are the card's 1-based position and the
     session's due-card count; ``card.note`` is the repo-relative source path.
+    ``paused`` (question step only) reports whether the timer is currently
+    paused, so stateless clients can reflect it without tracking it themselves.
     ``duration_s`` (answer step only) is the elapsed question time in seconds.
 ``rating``
     ``{"type": "rating", "suggested": str | None,

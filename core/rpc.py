@@ -42,7 +42,7 @@ class TransportUI:
         pause_total_ns: int = 0
         pause_start_ns: int = 0
         while True:
-            self._send_render("question", card_ref, card, view)
+            self._send_render("question", card_ref, card, view, paused=paused)
             event: dict[str, Any] = self._await_event()
             event_type = event.get("type")
             if event_type == "pause":
@@ -94,7 +94,13 @@ class TransportUI:
                 self.transport.send({"type": "notice", "level": "error", "text": "Invalid rating"})
 
     def _send_render(
-        self, state: str, card_ref: CardRef, card: Card, view: ViewBlock, duration_s: float | None = None
+        self,
+        state: str,
+        card_ref: CardRef,
+        card: Card,
+        view: ViewBlock,
+        duration_s: float | None = None,
+        paused: bool | None = None,
     ) -> None:
         start, end = card.index_entry.start_line, card.index_entry.end_line
         segments = [
@@ -110,6 +116,8 @@ class TransportUI:
         }
         if duration_s is not None:
             message["duration_s"] = duration_s
+        if paused is not None:
+            message["paused"] = paused
         self.transport.send(message)
 
     def _await_event(self) -> dict[str, Any]:
