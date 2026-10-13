@@ -9,7 +9,6 @@ from core.optimization import (
     SKIPPED_INSUFFICIENT_DATA,
     SKIPPED_NO_LOGS,
     collect_review_logs,
-    is_default_parameters,
     optimize_review_logs,
     run_optimization,
 )
@@ -59,14 +58,6 @@ class OptimizeReviewLogsTest(unittest.TestCase):
         factory.assert_called_once_with(["log"])
         fake_optimizer.compute_optimal_parameters.assert_called_once_with(verbose=True)
         self.assertEqual([0.1, 0.2], result)
-
-
-class IsDefaultParametersTest(unittest.TestCase):
-    def test_true_for_defaults(self) -> None:
-        self.assertTrue(is_default_parameters(list(Scheduler().parameters)))
-
-    def test_false_for_changed_parameters(self) -> None:
-        self.assertFalse(is_default_parameters(_changed_parameters()))
 
 
 class RunOptimizationTest(unittest.TestCase):
