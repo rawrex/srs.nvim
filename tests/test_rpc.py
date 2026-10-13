@@ -30,6 +30,9 @@ class _FakeCard:
     def reveal_for_label(self, label: str) -> ViewBlock | None:
         return ViewBlock(start_line=1, text="revealed") if label == "a" else None
 
+    def reveal_labels(self) -> list[str]:
+        return ["a"]
+
 
 def _card_ref(index: int = 1, total: int = 1, note: str = "/note.md") -> CardRef:
     return CardRef(index=index, total=total, note_path=note)
@@ -108,6 +111,14 @@ class TransportUiTest(unittest.TestCase):
         renders = [message for message in _sent(writer) if message["type"] == "render"]
         self.assertEqual({"index": 2, "total": 5, "note": "/note.md"}, renders[0]["card"])
         self.assertNotIn("duration_s", renders[0])
+
+    def test_question_render_reports_reveal_keys(self) -> None:
+        ui, writer = _make_ui([{"type": "next"}])
+
+        ui.question_step(_card_ref(), _FakeCard())
+
+        render = [message for message in _sent(writer) if message["type"] == "render"][0]
+        self.assertEqual(["a"], render["reveal_keys"])
 
     def test_render_includes_active_and_note(self) -> None:
         ui, writer = _make_ui([{"type": "next"}])

@@ -61,3 +61,11 @@ class Card(ABC):
 
     def suggested_rating(self) -> Rating | None:
         return None
+
+    def reveal_labels(self) -> list[str]:
+        """Keys that reveal part of the card during the question step.
+
+        The backend owns the label alphabet; clients bind exactly these keys
+        and report the pressed one as the ``label`` of a ``reveal`` event.
+        """
+        return []

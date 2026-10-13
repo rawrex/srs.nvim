@@ -93,6 +93,25 @@ class ClozePackTest(unittest.TestCase):
         self.assertIn("`c26`", texts[1])
         self.assertNotIn("[A]", texts[1])
 
+    def test_reveal_labels_follow_cloze_alphabet(self) -> None:
+        note = " ".join(f"~{{c{i}}}" for i in range(27))
+        card = ClozeCard(
+            source_text=note,
+            index_entry=self._entry(),
+            metadata=Metadata(scheduler_card=SchedulerCard(), review_logs=[]),
+            context={},
+            reveal_mode=RevealMode.WHOLE,
+            cloze_open="~{",
+            cloze_close="}",
+            mask_char="▇",
+        )
+
+        labels = card.reveal_labels()
+
+        self.assertEqual(27, len(labels))
+        self.assertEqual("a", labels[0])
+        self.assertEqual("A", labels[26])
+
     def test_prompt_cloze_reveal_renders_masked_context_without_labels(self) -> None:
         note_context_blocks = {
             (1, 1): "# One\nFirst ~{hidden} block.\n",

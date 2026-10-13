@@ -100,6 +100,9 @@ class ClozeCard(Card):
         self.whole_revealed = [False] * len(self.clozes)
         self.incremental_states = [build_incremental_reveal_state(hidden) for hidden in self.clozes]
 
+    def reveal_labels(self) -> List[str]:
+        return self.labels
+
     def reveal_for_label(self, label: str) -> ViewBlock | None:
         if label == REVEAL_ALL_LABEL:
             return self.answer_view()

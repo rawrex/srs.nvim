@@ -27,6 +27,9 @@ class QuoteBlockClozeCard(ClozeCard, QuoteBlockCard):
         self.label_to_index = {label: idx for idx, label in enumerate(self.labels)}
         self.callout_kind = detect_callout_kind(self.source_text)
 
+    def reveal_labels(self) -> list[str]:
+        return [self.block_open_label, *self.labels]
+
     def reveal_for_label(self, label: str) -> ViewBlock | None:
         if label == self.block_open_label:
             if self.block_opened:

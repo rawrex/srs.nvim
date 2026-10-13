@@ -1,8 +1,6 @@
 local state = require("srs.state")
 local render = require("srs.render")
 
-local REVEAL_KEYS = "abcdefghijklmnopqrstuvwxyz0123456789"
-
 local M = {}
 
 local function send(event)
@@ -26,6 +24,21 @@ local function handle_key(key)
 	end
 end
 
+local bound = {}
+
+local function bind_keys(keys)
+	for key in pairs(bound) do
+		pcall(vim.keymap.del, "n", key, { buffer = state.buf })
+	end
+	bound = {}
+	for _, key in ipairs(keys or {}) do
+		vim.keymap.set("n", key, function()
+			handle_key(key)
+		end, { buffer = state.buf })
+		bound[key] = true
+	end
+end
+
 local function handle_message(message)
 	if not vim.api.nvim_buf_is_valid(state.buf) then
 		return
@@ -41,14 +54,20 @@ local function handle_message(message)
 		state.mode = message.state
 		state.card = message.card or state.card
 		state.duration_s = message.duration_s
+		if message.state == "question" then
+			bind_keys(message.reveal_keys)
+		end
 		render.note(message)
 		render.statusline(message.paused)
 	elseif kind == "rating" then
 		state.mode = "rating"
 		state.buttons = {}
+		local keys = {}
 		for _, choice in ipairs(message.choices or {}) do
 			state.buttons[choice.key] = choice.name
+			keys[#keys + 1] = choice.key
 		end
+		bind_keys(keys)
 		state.suggested = type(message.suggested) == "string" and message.suggested or nil
 		render.statusline()
 	elseif kind == "notice" then
@@ -82,11 +101,6 @@ function M.setup_keymaps(quit)
 	vim.keymap.set("n", "<Space>", space, { buffer = state.buf, desc = "SRS pause" })
 	vim.keymap.set("n", "<Esc>", escape, { buffer = state.buf, desc = "SRS skip" })
 	vim.keymap.set("n", "<C-c>", quit, { buffer = state.buf, desc = "SRS quit" })
-	for key in REVEAL_KEYS:gmatch(".") do
-		vim.keymap.set("n", key, function()
-			handle_key(key)
-		end, { buffer = state.buf })
-	end
 end
 
 function M.start(repo_root, python, rpc_path)

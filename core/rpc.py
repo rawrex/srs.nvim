@@ -38,11 +38,12 @@ class TransportUI:
 
     def question_step(self, card_ref: CardRef, card: Card) -> tuple[ViewBlock, int] | None:
         view: ViewBlock = card.question_view()
+        reveal_keys: list[str] = card.reveal_labels()
         paused: bool = False
         pause_total_ns: int = 0
         pause_start_ns: int = 0
         while True:
-            self._send_render("question", card_ref, card, view, paused=paused)
+            self._send_render("question", card_ref, card, view, paused=paused, reveal_keys=reveal_keys)
             event: dict[str, Any] = self._await_event()
             event_type = event.get("type")
             if event_type == "pause":
@@ -101,6 +102,7 @@ class TransportUI:
         view: ViewBlock,
         duration_s: float | None = None,
         paused: bool | None = None,
+        reveal_keys: list[str] | None = None,
     ) -> None:
         start, end = card.index_entry.start_line, card.index_entry.end_line
         segments = [
@@ -118,6 +120,8 @@ class TransportUI:
             message["duration_s"] = duration_s
         if paused is not None:
             message["paused"] = paused
+        if reveal_keys is not None:
+            message["reveal_keys"] = reveal_keys
         self.transport.send(message)
 
     def _await_event(self) -> dict[str, Any]:

@@ -29,6 +29,8 @@ Server -> client messages
     ``paused`` (question step only) reports whether the timer is currently
     paused, so stateless clients can reflect it without tracking it themselves.
     ``duration_s`` (answer step only) is the elapsed question time in seconds.
+    ``reveal_keys`` (question step only) is the list of keys the client should
+    bind for reveal; the backend owns the alphabet, so clients must not guess it.
 ``rating``
     ``{"type": "rating", "suggested": str | None,
        "choices": [{"name": str, "key": str}, ...]}``

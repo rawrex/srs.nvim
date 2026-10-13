@@ -61,6 +61,12 @@ class QuoteBlockClozePackTest(unittest.TestCase):
         assert reveal_all is not None
         self.assertIn(">let x = `1`", reveal_all.text)
 
+    def test_reveal_labels_include_block_open_label(self) -> None:
+        block_text = ">[!code]- Example\n>let x = ~{1};\n"
+        card = self._card(block_text)
+
+        self.assertEqual(["a", "b"], card.reveal_labels())
+
     def test_suggested_rating_for_quote_block_cloze_uses_only_clozes(self) -> None:
         block_text = ">[!code]- Example\n>let x = ~{ab}; and y = ~{cd};\n"
         card = self._card(block_text)
