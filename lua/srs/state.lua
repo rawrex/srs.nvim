@@ -10,6 +10,7 @@ local state = {
 	card = nil,
 	duration_s = nil,
 	due = nil,
+	media = nil,
 }
 
 function state.reset()
@@ -19,6 +20,7 @@ function state.reset()
 	state.card = nil
 	state.duration_s = nil
 	state.due = nil
+	state.media = nil
 end
 
 function state.restore()

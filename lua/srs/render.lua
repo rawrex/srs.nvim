@@ -2,7 +2,22 @@ local state = require("srs.state")
 
 local M = {}
 
+local function expand_images(line)
+	local media = state.media
+	if type(media) ~= "string" or media == "" then
+		return line
+	end
+	return (line:gsub("!%[%[([^%]]+)%]%]", function(reference)
+		local filename = vim.fn.fnamemodify((reference:gsub("|.*$", "")), ":t")
+		if filename == "" then
+			return reference
+		end
+		return "![](<" .. media .. "/" .. filename .. ">)"
+	end))
+end
+
 local function set_lines(lines)
+	lines = vim.tbl_map(expand_images, lines)
 	vim.bo[state.buf].modifiable = true
 	vim.api.nvim_buf_set_lines(state.buf, 0, -1, false, lines)
 	vim.bo[state.buf].modifiable = false

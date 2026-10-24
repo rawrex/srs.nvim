@@ -48,6 +48,7 @@ local function handle_message(message)
 		state.mode = "intro"
 		state.due = message.due or 0
 		state.card = nil
+		state.media = type(message.media) == "string" and message.media or nil
 		render.screen("", table.concat(message.notes or {}, "\n"))
 		render.statusline()
 	elseif kind == "render" then
