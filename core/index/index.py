@@ -51,7 +51,8 @@ class Index:
         return index_entry
 
     def remove_note(self, note_path: str) -> list[IndexEntry]:
-        if entries := self.entries_for_note(note_path):
+        entries = self.entries_for_note(note_path)
+        if not entries:
             return []
         rest = [line for line in self._readlines() if not self._matches_note(line, note_path)]
         self._write(rest)
