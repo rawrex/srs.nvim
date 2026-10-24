@@ -14,7 +14,7 @@ from tests.setup_test_helpers import runtime_context
 class StorageTest(unittest.TestCase):
     @staticmethod
     def _entry() -> IndexEntry:
-        return IndexEntry(card_id=1, note_path="/note.md", parser_id="cloze", start_line=1, end_line=1)
+        return IndexEntry(card_id=1, note_path="/note.md", card_type="cloze", start_line=1, end_line=1)
 
     def test_read_metadata_ignores_non_dict_review_logs(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -53,7 +53,7 @@ class StorageTest(unittest.TestCase):
             scheduler = Scheduler()
             updated_card, review_log = scheduler.review_card(SchedulerCard(), Rating.Easy, review_duration=100)
             metadata = Metadata(scheduler_card=updated_card, review_logs=[review_log])
-            entry = IndexEntry(card_id=2, note_path="/note.md", parser_id="cloze", start_line=1, end_line=1)
+            entry = IndexEntry(card_id=2, note_path="/note.md", card_type="cloze", start_line=1, end_line=1)
             card_path = os.path.join(temp_dir, "2.json")
 
             with patch("core.util._RUNTIME_CONTEXT", runtime_context(temp_dir, srs_path=temp_dir), create=True):

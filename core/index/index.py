@@ -4,86 +4,21 @@ import re
 
 from core import util
 from core.card import SchedulerCard
-from core.index.model import DiffChangeSet, IndexEntry, IndexUpdateResult, Metadata
-from core.parsers import ParserRegistry
-from core.util import GIT_RELATED_FILENAMES
+from core.index.model import DiffChangeSet, IndexEntry, Metadata
 
 
 class Index:
-    def __init__(self, parser_registry: ParserRegistry) -> None:
+    """Plain-text mapping between cards, their notes, and their location within the notes
+
+    The index is the source of truth for which cards exist.
+    the review engine only reads entries and metadata.
+    """
+
+    def __init__(self) -> None:
         self.path = util._RUNTIME_CONTEXT.index_path
-        self.parser_registry = parser_registry
         self.entry_re = re.compile(r"^'(\d+)','([^']*)','([^']*)','(\d+)','(\d+)'\s*$")
 
-    def apply_diff(self, diff_text: str) -> bool:
-        changes = DiffChangeSet.from_diff_text(diff_text)
-        if not changes.has_changes():
-            return False
-
-        result = self._update_index_lines(self._readlines(), changes)
-        if not result.changed:
-            return False
-
-        self._write(result.lines)
-        touched_paths = set(result.touched_paths)
-        touched_paths.add(self.index_file_path())
-
-        self._stage_paths(util._RUNTIME_CONTEXT.repo_root_path, touched_paths)
-        return True
-
-    def sync_tracked_paths(self, tracked_paths: set[str], repo_root: str) -> bool:
-        lines = self._readlines()
-        updated: list[str] = []
-        changed = False
-        touched_paths: set[str] = set()
-
-        for line in lines:
-            entry = self._parse(line)
-            if entry is None:
-                updated.append(line)
-                continue
-            if not self._is_note_path(entry.note_path) or entry.note_path in tracked_paths:
-                updated.append(line)
-                continue
-            changed = True
-            if os.path.exists(entry.card_path):
-                touched_paths.add(self.card_path(entry.card_id))
-                os.remove(entry.card_path)
-
-        grouped_entries = self._enries_by_path(updated)
-        for tracked_path in sorted(tracked_paths):
-            if not self._is_note_path(tracked_path) or tracked_path in grouped_entries:
-                continue
-            before_count = len(updated)
-            touched_paths.update(self._add_new(tracked_path, updated))
-            if len(updated) != before_count:
-                changed = True
-                grouped_entries[tracked_path] = [IndexEntry(0, '', '', 0, 0)]
-
-        if changed:
-            self._write(updated)
-            touched_paths.add(self.index_file_path())
-
-        if changed and repo_root:
-            self._stage_paths(repo_root, touched_paths)
-        return changed
-
-    def add_missing_tracked_paths(self, tracked_paths: set[str]) -> int:
-        lines = self._readlines()
-        original_count = len(lines)
-        existing_paths = set(self._enries_by_path(lines))
-
-        for tracked_path in sorted(tracked_paths):
-            if not self._is_note_path(tracked_path):
-                continue
-            if tracked_path in existing_paths:
-                continue
-            self._add_new(tracked_path, lines)
-            existing_paths.add(tracked_path)
-
-        if len(lines) != original_count:
-            self._write(lines)
-        return len(lines) - original_count
+    # Queries -----------------------------------------------------------------
 
     def load_entries(self) -> list[IndexEntry]:
         entries: list[IndexEntry] = []
@@ -92,64 +27,97 @@ class Index:
                 entries.append(entry)
         return entries
 
-    def _update_index_lines(self, lines: list[str], changes: DiffChangeSet) -> IndexUpdateResult:
-        updated, deleted_or_renamed, touched_paths = self._apply_deletes_and_renames(
-            lines, changes.renames, changes.deletes
+    def entries_for_note(self, note_path: str) -> list[IndexEntry]:
+        return [entry for entry in self.load_entries() if entry.note_path == note_path]
+
+    def has_entries(self, note_path: str) -> bool:
+        return any(entry.note_path == note_path for entry in self.load_entries())
+
+    # Writes ------------------------------------------------------------------
+
+    def add_card(self, note_path: str, card_type: str, start_line: int, end_line: int) -> IndexEntry:
+        scheduler_card = SchedulerCard()
+        index_entry = IndexEntry(
+            card_id=scheduler_card.card_id,
+            note_path=note_path,
+            card_type=card_type,
+            start_line=start_line,
+            end_line=end_line,
         )
-        updated, added_new, added_paths = self._apply_adds(updated, changes.adds)
-        touched_paths.update(added_paths)
-        changed = deleted_or_renamed or added_new
-        return IndexUpdateResult(lines=updated, changed=changed, touched_paths=touched_paths)
+        index_entry.write_metadata(Metadata(scheduler_card=scheduler_card, review_logs=[]))
+        lines = self._readlines()
+        lines.append(self._format_entry(index_entry))
+        self._write(lines)
+        return index_entry
 
-    def _apply_deletes_and_renames(
-        self, lines: list[str], renames: dict[str, str], deletes: set[str]
-    ) -> tuple[list[str], bool, set[str]]:
-        updated: list[str] = []
-        changed = False
-        touched_paths: set[str] = set()
+    def remove_note(self, note_path: str) -> list[IndexEntry]:
+        if entries := self.entries_for_note(note_path):
+            return []
+        rest = [line for line in self._readlines() if not self._matches_note(line, note_path)]
+        self._write(rest)
+        for entry in entries:
+            if os.path.exists(entry.card_path):
+                os.remove(entry.card_path)
+        return entries
 
-        for line in lines:
+    def rename_note(self, old_path: str, new_path: str) -> list[IndexEntry]:
+        renamed: list[IndexEntry] = []
+        lines: list[str] = []
+        for line in self._readlines():
             entry = self._parse(line)
-            if entry is None:
-                updated.append(line)
+            if entry is None or entry.note_path != old_path:
+                lines.append(line)
                 continue
-            if entry.note_path in deletes:
-                changed = True
-                if os.path.exists(entry.card_path):
-                    touched_paths.add(self.card_path(entry.card_id))
-                    os.remove(entry.card_path)
-                continue
-            if entry.note_path in renames:
-                changed = True
-                updated.append(
-                    self._format_entry(
-                        IndexEntry(
-                            card_id=entry.card_id,
-                            note_path=renames[entry.note_path],
-                            parser_id=entry.parser_id,
-                            start_line=entry.start_line,
-                            end_line=entry.end_line,
-                        )
-                    )
-                )
-                continue
-            updated.append(line)
+            entry = IndexEntry(
+                card_id=entry.card_id,
+                note_path=new_path,
+                card_type=entry.card_type,
+                start_line=entry.start_line,
+                end_line=entry.end_line,
+            )
+            renamed.append(entry)
+            lines.append(self._format_entry(entry))
+        if renamed:
+            self._write(lines)
+        return renamed
 
-        return updated, changed, touched_paths
+    def apply_diff(self, diff_text: str) -> bool:
+        """Apply note deletions and renames from a git diff.
 
-    def _apply_adds(self, lines: list[str], adds: set[str]) -> tuple[list[str], bool, set[str]]:
-        changed = False
+        Card *creation* is intentionally absent: parsing is an explicit add-on,
+        never part of the hook/commit flow.
+        """
+        changes = DiffChangeSet.from_diff_text(diff_text)
         touched_paths: set[str] = set()
-        existing_paths = set(self._enries_by_path(lines))
+        changed = False
+        for note_path in sorted(changes.deletes):
+            removed = self.remove_note(note_path)
+            if removed:
+                changed = True
+                touched_paths.update(self.card_path(entry.card_id) for entry in removed)
+        for old_path, new_path in sorted(changes.renames.items()):
+            if self.rename_note(old_path, new_path):
+                changed = True
+        if changed:
+            touched_paths.add(self.index_file_path())
+            self._stage_paths(self.repo_root(), touched_paths)
+        return changed
 
-        for new_path in sorted(adds):
-            if not self._is_note_path(new_path) or new_path in existing_paths:
-                continue
-            changed = True
-            touched_paths.update(self._add_new(new_path, lines))
-            existing_paths.add(new_path)
+    # Helpers -----------------------------------------------------------------
 
-        return lines, changed, touched_paths
+    def index_file_path(self) -> str:
+        rel_path = os.path.relpath(self.path, self.repo_root())
+        return util.normalize_path(rel_path)
+
+    def card_path(self, card_id: int) -> str:
+        return f"/.srs/{card_id}.json"
+
+    def repo_root(self) -> str:
+        return os.path.dirname(os.path.dirname(self.path))
+
+    def _matches_note(self, raw_line: str, note_path: str) -> bool:
+        entry = self._parse(raw_line)
+        return entry is not None and entry.note_path == note_path
 
     def _stage_paths(self, repo_root: str, indexed_paths: set[str]) -> None:
         rel_paths = sorted(path.lstrip("/") for path in indexed_paths)
@@ -166,89 +134,16 @@ class Index:
             handle.writelines(lines)
         os.replace(tmp_path, self.path)
 
-    def _add_new(self, new_path: str, updated: list[str]) -> set[str]:
-        touched_card_paths: set[str] = set()
-        for parser_id, start_line, end_line in self.collect_parsed_blocks(new_path):
-            scheduler_card = SchedulerCard()
-            metadata = Metadata(scheduler_card=scheduler_card, review_logs=[])
-            card_id = scheduler_card.card_id
-            index_entry = IndexEntry(
-                card_id=card_id, note_path=new_path, parser_id=parser_id, start_line=start_line, end_line=end_line
-            )
-            index_entry.write_metadata(metadata)
-            updated.append(self._format_entry(index_entry))
-            touched_card_paths.add(self.card_path(index_entry.card_id))
-        return touched_card_paths
-
-    def _is_note_path(self, indexed_path: str) -> bool:
-        if not indexed_path:
-            return False
-        name = indexed_path.rsplit("/", 1)[-1]
-        if name in GIT_RELATED_FILENAMES:
-            return False
-        return not (
-            indexed_path.startswith("/.srs/")
-            or indexed_path == "/.srs"
-            or indexed_path.startswith("/.git/")
-            or indexed_path == "/.git"
-        )
-
-    def index_file_path(self) -> str:
-        rel_path = os.path.relpath(self.path, self.repo_root())
-        return util.normalize_path(rel_path)
-
-    def collect_parsed_blocks(self, indexed_path: str) -> list[tuple[str, int, int]]:
-        note_text = self.read_note_text(indexed_path)
-        if note_text is None:
-            return []
-
-        selected: list[tuple[str, int, int]] = []
-        claimed_ranges: list[tuple[int, int]] = []
-        for parser in self.parser_registry.ordered():
-            cards = parser.interpret_text(note_text)
-            for line_start, line_end in cards:
-                if not any(
-                    line_start <= claimed_end and line_end >= claimed_start
-                    for claimed_start, claimed_end in claimed_ranges
-                ):
-                    selected.append((parser.parser_id, line_start, line_end))
-                    claimed_ranges.append((line_start, line_end))
-
-        return sorted(selected, key=lambda entry: (entry[1], entry[2], entry[0]))
-
-    def card_path(self, card_id: int) -> str:
-        return f"/.srs/{card_id}.json"
-
-    def repo_root(self) -> str:
-        return os.path.dirname(os.path.dirname(self.path))
-
-    def read_note_text(self, indexed_path: str) -> str | None:
-        note_path = os.path.join(self.repo_root(), indexed_path.lstrip("/"))
-        if os.path.exists(note_path):
-            with open(note_path, "r", encoding="utf-8") as handle:
-                try:
-                    return handle.read()
-                except UnicodeDecodeError:
-                    return None
-        return None
-
-    def _enries_by_path(self, lines: list[str]) -> dict[str, list[IndexEntry]]:
-        grouped: dict[str, list[IndexEntry]] = {}
-        for line in lines:
-            if entry := self._parse(line):
-                grouped.setdefault(entry.note_path, []).append(entry)
-        return grouped
-
     def _parse(self, raw_line: str) -> IndexEntry | None:
         if match := self.entry_re.match(raw_line.rstrip("\n")):
             return IndexEntry(
                 card_id=int(match.group(1)),
                 note_path=match.group(2),
-                parser_id=match.group(3),
+                card_type=match.group(3),
                 start_line=int(match.group(4)),
                 end_line=int(match.group(5)),
             )
         return None
 
     def _format_entry(self, entry: IndexEntry) -> str:
-        return f"'{entry.card_id}','{entry.note_path}','{entry.parser_id}','{entry.start_line}','{entry.end_line}'\n"
+        return f"'{entry.card_id}','{entry.note_path}','{entry.card_type}','{entry.start_line}','{entry.end_line}'\n"

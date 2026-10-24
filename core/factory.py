@@ -9,7 +9,7 @@ class CardFactory:
         self.context_cache: dict[str, dict[tuple[int, int], str]] = {}
 
     def make_card(self, index_entry: IndexEntry, all: list[IndexEntry] | None = None) -> Card:
-        parser = self.parser_registry.get(index_entry.parser_id)
+        parser = self.parser_registry.get(index_entry.card_type)
 
         with open(index_entry.note_abs_path, "r", encoding="utf-8") as handle:
             note_text = handle.read()

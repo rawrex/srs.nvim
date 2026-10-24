@@ -3,7 +3,6 @@ import sys
 
 from core import util
 from core.index.index import Index
-from core.index.tracking import find_repeat_tracked_paths, tracked_paths_from_repo_paths
 
 
 class Handler:
@@ -26,14 +25,6 @@ class Handler:
             diff_text = ""
 
         index.apply_diff(diff_text)
-
-        code, out, _ = util.run_git(["ls-files"], cwd=self.root_path)
-        if code != 0:
-            tracked_paths = set(find_repeat_tracked_paths())
-        else:
-            repo_paths = [line.strip() for line in out.splitlines() if line.strip()]
-            tracked_paths = tracked_paths_from_repo_paths(repo_paths)
-        index.sync_tracked_paths(tracked_paths, repo_root=self.root_path)
 
     def handle_post_checkout(self, index: Index, args: list[str]) -> None:
         if len(args) < 2:
@@ -58,4 +49,3 @@ class Handler:
             diff_text = ""
 
         index.apply_diff(diff_text)
-        index.sync_tracked_paths(set(find_repeat_tracked_paths()), repo_root="")

@@ -10,10 +10,8 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from core import util
-from core.config import load_review_config
 from core.index.index import Index
 from core.optimization import SKIPPED_INSUFFICIENT_DATA, SKIPPED_NO_LOGS, OptimizationReport, run_optimization
-from core.parsers import build_parser_registry
 
 OPTIMIZER_INSTALL_HINT = 'Optimizer dependencies are missing. Install them with: pip install "fsrs[optimizer]"'
 INSUFFICIENT_DATA_MESSAGE = (
@@ -59,8 +57,7 @@ def main(argv: list[str] | None = None) -> int:
         print("Missing index")
         return 1
 
-    config = load_review_config()
-    index = Index(parser_registry=build_parser_registry(config))
+    index = Index()
     entries = index.load_entries()
 
     try:

@@ -35,7 +35,7 @@ def _question_render_texts(card: ClozeCard, events: list[dict[str, object]], sho
 class ClozePackTest(unittest.TestCase):
     def _entry(self, start_line: int = 1, end_line: int = 1) -> IndexEntry:
         return IndexEntry(
-            card_id=1, note_path="/tmp/note.md", parser_id="cloze", start_line=start_line, end_line=end_line
+            card_id=1, note_path="/tmp/note.md", card_type="cloze", start_line=start_line, end_line=end_line
         )
 
     def test_question_and_reveal_all_views(self) -> None:

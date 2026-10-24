@@ -37,7 +37,7 @@ class ReviewEngine:
     def __init__(self, ui: ReviewUIProtocol, parser_registry: ParserRegistry, scheduler: Scheduler) -> None:
         self.ui = ui
         self.scheduler = scheduler
-        self.index = Index(parser_registry=parser_registry)
+        self.index = Index()
         self.factory = CardFactory(parser_registry=parser_registry)
 
     def load_due_cards(self, time_point: datetime) -> list[Card]:

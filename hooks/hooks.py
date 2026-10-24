@@ -9,9 +9,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from core import util
-from core.config import load_review_config
 from core.index.index import Index
-from core.parsers import build_parser_registry
 from hooks.handler import Handler
 
 
@@ -29,9 +27,7 @@ def main() -> int:
     if not os.path.exists(index_path):
         return 0
 
-    config = load_review_config()
-    parser_registry = build_parser_registry(config)
-    index = Index(parser_registry=parser_registry)
+    index = Index()
     handler = Handler()
 
     if event in {"pre-commit", "pre-merge-commit"}:

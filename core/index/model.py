@@ -26,13 +26,6 @@ class DiffChangeSet:
         return bool(self.renames or self.deletes or self.adds)
 
 
-@dataclass(frozen=True)
-class IndexUpdateResult:
-    lines: list[str]
-    changed: bool
-    touched_paths: set[str]
-
-
 @dataclass
 class Metadata:
     scheduler_card: SchedulerCard
@@ -42,14 +35,14 @@ class Metadata:
 class IndexEntry:
     card_id: int
     note_path: str
-    parser_id: str
+    card_type: str
     start_line: int
     end_line: int
 
-    def __init__(self, card_id: int, note_path: str, parser_id: str, start_line: int, end_line: int) -> None:
+    def __init__(self, card_id: int, note_path: str, card_type: str, start_line: int, end_line: int) -> None:
         self.card_id = card_id
         self.note_path = note_path
-        self.parser_id = parser_id
+        self.card_type = card_type
         self.start_line = start_line
         self.end_line = end_line
 

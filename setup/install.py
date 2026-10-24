@@ -14,11 +14,6 @@ util = import_module("core.util")
 
 HOOKS = ["pre-commit", "pre-merge-commit", "post-checkout", "post-rewrite"]
 
-build_parser_registry = import_module("core.parsers").build_parser_registry
-load_review_config = import_module("core.config").load_review_config
-Index = import_module("core.index.index").Index
-find_repeat_tracked_paths = import_module("core.index.tracking").find_repeat_tracked_paths
-
 
 def write_hook(hook_path: str, script_path: str, hook_name: str) -> None:
     python_executable = shlex.quote(sys.executable)
@@ -46,14 +41,6 @@ def ensure_srs_index(repo_root: str) -> bool:
     return True
 
 
-def initialize_index_from_repeat_markers() -> int:
-    config = load_review_config()
-    parser_registry = build_parser_registry(config)
-    index = Index(parser_registry=parser_registry)
-    tracked_paths = set(find_repeat_tracked_paths())
-    return index.add_missing_tracked_paths(tracked_paths)
-
-
 def main() -> int:
     util.init_runtime_context(os.getcwd())
     repo_root = util._RUNTIME_CONTEXT.repo_root_path
@@ -70,15 +57,12 @@ def main() -> int:
         print("Could not initialize .srs/index.txt")
         return 1
 
-    initialized_count = initialize_index_from_repeat_markers()
-
     for hook in HOOKS:
         hook_path = os.path.join(hooks_dir, hook)
         write_hook(hook_path, hooks_path, hook)
 
     print("Installed hooks:", ", ".join(HOOKS))
     print("Ensured index:", os.path.join(util.SRS_DIR_NAME, util.INDEX_FILENAME))
-    print(f"Initialized cards from {util.REPEAT_MARKER_FILENAME} markers:", initialized_count)
     return 0
 
 

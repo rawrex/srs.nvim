@@ -3,44 +3,21 @@ import tempfile
 import unittest
 
 from core import util
-from core.api import Parser
 from core.index.index import Index
-from core.parsers import ParserRegistry
 from tests.setup_test_helpers import runtime_context
 
 
-class _StaticParser(Parser):
-    parser_id = ""
-    priority = 0
-
-    def __init__(self, parser_id: str, priority: int, rows: list[tuple[int, int]]):
-        self.parser_id = parser_id
-        self.priority = priority
-        self._rows = rows
-
-    def interpret_text(self, note_text: str):
-        return list(self._rows)
-
-    def build_card(self, source_text, index_entry, metadata):
-        raise NotImplementedError
-
-
-class SrsIndexHelperTest(unittest.TestCase):
-    def _index(self, index_path: str) -> Index:
-        return self._index_with_registry(index_path, ParserRegistry(parsers={}))
-
-    @staticmethod
-    def _index_with_registry(index_path: str, parser_registry: ParserRegistry) -> Index:
-        repo_root = os.path.dirname(os.path.dirname(index_path))
-        util._RUNTIME_CONTEXT = runtime_context(repo_root)
-        return Index(parser_registry=parser_registry)
-
+class SrsIndexStoreTest(unittest.TestCase):
     def _create_index_path(self, repo_root: str) -> str:
         index_path = os.path.join(repo_root, ".srs", "index.txt")
         os.makedirs(os.path.dirname(index_path), exist_ok=True)
         with open(index_path, "w", encoding="utf-8"):
             pass
         return index_path
+
+    def _index(self, repo_root: str) -> Index:
+        util._RUNTIME_CONTEXT = runtime_context(repo_root)
+        return Index()
 
     def test_load_entries_parses_valid_rows_and_skips_invalid_rows(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
@@ -49,108 +26,111 @@ class SrsIndexHelperTest(unittest.TestCase):
                 handle.write("'1','/note.md','cloze','2','3'\n")
                 handle.write("bad-row\n")
 
-            index = self._index(index_path)
+            index = self._index(repo_root)
             rows = index.load_entries()
 
         self.assertEqual(1, len(rows))
         row = rows[0]
         self.assertEqual(1, row.card_id)
         self.assertEqual("/note.md", row.note_path)
-        self.assertEqual("cloze", row.parser_id)
+        self.assertEqual("cloze", row.card_type)
         self.assertEqual(2, row.start_line)
         self.assertEqual(3, row.end_line)
 
-    def test_collect_parsed_blocks_uses_priority_and_skips_overlaps(self) -> None:
-        with tempfile.TemporaryDirectory() as repo_root:
-            index_path = self._create_index_path(repo_root)
-
-            note_path = os.path.join(repo_root, "note.md")
-            with open(note_path, "w", encoding="utf-8") as handle:
-                handle.write("one\ntwo\nthree\n")
-
-            high = _StaticParser(parser_id="high", priority=10, rows=[(1, 2)])
-            low = _StaticParser(parser_id="low", priority=0, rows=[(2, 2), (3, 3)])
-            parser_registry = ParserRegistry(parsers={})
-            parser_registry.register(high)
-            parser_registry.register(low)
-            index = self._index_with_registry(index_path, parser_registry)
-            rows = index.collect_parsed_blocks("/note.md")
-
-        self.assertEqual([("high", 1, 2), ("low", 3, 3)], rows)
-
-    def test_read_note_text_returns_none_for_missing_and_bad_utf8(self) -> None:
-        with tempfile.TemporaryDirectory() as repo_root:
-            index_path = self._create_index_path(repo_root)
-            index = self._index(index_path)
-
-            self.assertIsNone(index.read_note_text("/missing.md"))
-
-            bad_path = os.path.join(repo_root, "bad.md")
-            with open(bad_path, "wb") as handle:
-                handle.write(b"\xff\xfe")
-
-            self.assertIsNone(index.read_note_text("/bad.md"))
-
-    def test_collect_parsed_blocks_skips_bad_utf8_note(self) -> None:
-        with tempfile.TemporaryDirectory() as repo_root:
-            index_path = self._create_index_path(repo_root)
-            index = self._index(index_path)
-
-            bad_path = os.path.join(repo_root, "bad.md")
-            with open(bad_path, "wb") as handle:
-                handle.write(b"\xff\xfe")
-
-            self.assertEqual([], index.collect_parsed_blocks("/bad.md"))
-
     def test_repo_root_resolves_from_index_path(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
-            index_path = self._create_index_path(repo_root)
-            index = self._index(index_path)
+            self._create_index_path(repo_root)
+            index = self._index(repo_root)
 
             self.assertEqual(repo_root, index.repo_root())
 
     def test_index_file_path_is_repo_relative_and_normalized(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
-            index_path = self._create_index_path(repo_root)
-
-            index = self._index(index_path)
+            self._create_index_path(repo_root)
+            index = self._index(repo_root)
 
             self.assertEqual("/.srs/index.txt", index.index_file_path())
 
-    def test_add_missing_and_sync_removes_untracked_card_file(self) -> None:
+    def test_add_card_writes_row_and_metadata_file(self) -> None:
+        with tempfile.TemporaryDirectory() as repo_root:
+            self._create_index_path(repo_root)
+            index = self._index(repo_root)
+
+            entry = index.add_card("/note.md", "cloze", 2, 4)
+
+            rows = index.load_entries()
+            self.assertEqual(1, len(rows))
+            self.assertEqual(entry.card_id, rows[0].card_id)
+            self.assertEqual("/note.md", rows[0].note_path)
+            self.assertEqual("cloze", rows[0].card_type)
+            self.assertEqual(2, rows[0].start_line)
+            self.assertEqual(4, rows[0].end_line)
+            self.assertTrue(os.path.exists(os.path.join(repo_root, ".srs", f"{entry.card_id}.json")))
+
+    def test_entries_for_note_and_has_entries(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
             index_path = self._create_index_path(repo_root)
-            srs_dir = os.path.dirname(index_path)
+            with open(index_path, "w", encoding="utf-8") as handle:
+                handle.write("'1','/note.md','cloze','1','1'\n")
+                handle.write("'2','/other.md','cloze','1','1'\n")
+                handle.write("'3','/note.md','quote_block','5','7'\n")
 
-            note_path = os.path.join(repo_root, "note.md")
-            with open(note_path, "w", encoding="utf-8") as handle:
-                handle.write("one\ntwo\nthree\nfour\n")
+            index = self._index(repo_root)
 
-            parser_registry = ParserRegistry(parsers={})
-            parser_registry.register(_StaticParser(parser_id="cloze", priority=0, rows=[(2, 4)]))
+            self.assertTrue(index.has_entries("/note.md"))
+            self.assertFalse(index.has_entries("/missing.md"))
+            self.assertEqual([1, 3], [entry.card_id for entry in index.entries_for_note("/note.md")])
+            self.assertEqual([2], [entry.card_id for entry in index.entries_for_note("/other.md")])
 
-            index = self._index_with_registry(index_path, parser_registry)
+    def test_remove_note_removes_rows_and_metadata_files(self) -> None:
+        with tempfile.TemporaryDirectory() as repo_root:
+            index = self._index(repo_root)
+            self._create_index_path(repo_root)
+            note_entry = index.add_card("/note.md", "cloze", 1, 1)
+            other_entry = index.add_card("/other.md", "cloze", 1, 1)
 
-            added = index.add_missing_tracked_paths({"/note.md"})
-            self.assertEqual(1, added)
+            removed = index.remove_note("/note.md")
 
-            entries = index.load_entries()
-            self.assertEqual(1, len(entries))
-            row = entries[0]
-            note_id = row.card_id
+            self.assertEqual([note_entry.card_id], [entry.card_id for entry in removed])
+            self.assertEqual([other_entry.card_id], [entry.card_id for entry in index.load_entries()])
+            self.assertFalse(os.path.exists(os.path.join(repo_root, ".srs", f"{note_entry.card_id}.json")))
+            self.assertTrue(os.path.exists(os.path.join(repo_root, ".srs", f"{other_entry.card_id}.json")))
 
-            card_path = index.card_path(note_id)
+    def test_rename_note_rewrites_note_path(self) -> None:
+        with tempfile.TemporaryDirectory() as repo_root:
+            index_path = self._create_index_path(repo_root)
+            with open(index_path, "w", encoding="utf-8") as handle:
+                handle.write("'1','/old.md','cloze','1','1'\n")
+                handle.write("'2','/untouched.md','cloze','1','1'\n")
 
-            self.assertEqual("/note.md", row.note_path)
-            self.assertEqual("cloze", row.parser_id)
-            self.assertEqual(2, row.start_line)
-            self.assertEqual(4, row.end_line)
-            self.assertEqual(index.card_path(note_id), card_path)
-            self.assertTrue(os.path.exists(os.path.join(srs_dir, f"{note_id}.json")))
+            index = self._index(repo_root)
+            renamed = index.rename_note("/old.md", "/new.md")
 
-            changed = index.sync_tracked_paths(set(), repo_root="")
+            self.assertEqual([1], [entry.card_id for entry in renamed])
+            self.assertEqual(["/new.md", "/untouched.md"], [entry.note_path for entry in index.load_entries()])
+
+    def test_apply_diff_removes_deleted_notes_and_renames_others(self) -> None:
+        with tempfile.TemporaryDirectory() as repo_root:
+            index = self._index(repo_root)
+            self._create_index_path(repo_root)
+            del_entry = index.add_card("/del.md", "cloze", 1, 1)
+            rename_entry = index.add_card("/old.md", "cloze", 1, 1)
+
+            changed = index.apply_diff("D\tdel.md\nR100\told.md\tnew.md\n")
+
             self.assertTrue(changed)
-            self.assertEqual([], index.load_entries())
-            self.assertFalse(os.path.exists(os.path.join(srs_dir, f"{note_id}.json")))
+            self.assertFalse(os.path.exists(os.path.join(repo_root, ".srs", f"{del_entry.card_id}.json")))
+            self.assertTrue(os.path.exists(os.path.join(repo_root, ".srs", f"{rename_entry.card_id}.json")))
+            self.assertEqual(["/new.md"], [entry.note_path for entry in index.load_entries()])
 
-            self.assertFalse(index.sync_tracked_paths(set(), repo_root=""))
+    def test_apply_diff_ignores_added_notes(self) -> None:
+        with tempfile.TemporaryDirectory() as repo_root:
+            self._create_index_path(repo_root)
+            index = self._index(repo_root)
+
+            self.assertFalse(index.apply_diff("A\tnew.md\n"))
+            self.assertEqual([], index.load_entries())
+
+
+if __name__ == "__main__":
+    unittest.main()

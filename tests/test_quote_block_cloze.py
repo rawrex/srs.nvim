@@ -10,7 +10,7 @@ from packs.quote_block_cloze import QuoteBlockClozeCard, QuoteBlockClozeParser
 class QuoteBlockClozePackTest(unittest.TestCase):
     def _entry(self, start_line: int = 3, end_line: int = 4) -> IndexEntry:
         return IndexEntry(
-            card_id=1, note_path="/tmp/note.md", parser_id="quote_block_cloze", start_line=start_line, end_line=end_line
+            card_id=1, note_path="/tmp/note.md", card_type="quote_block_cloze", start_line=start_line, end_line=end_line
         )
 
     def _parser(self) -> QuoteBlockClozeParser:

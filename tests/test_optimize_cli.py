@@ -55,8 +55,6 @@ class OptimizeCliTest(unittest.TestCase):
             with (
                 patch("core.optimize.util.init_runtime_context", return_value=runtime),
                 patch("core.optimize.util._RUNTIME_CONTEXT", runtime, create=True),
-                patch("core.optimize.load_review_config", return_value=ReviewConfig()),
-                patch("core.optimize.build_parser_registry", return_value=Mock()),
                 patch("core.optimize.Index", return_value=index),
                 patch("core.optimize.run_optimization", return_value=report) as run,
                 patch("builtins.print", print_mock),
@@ -106,8 +104,6 @@ class OptimizeCliTest(unittest.TestCase):
             with (
                 patch("core.optimize.util.init_runtime_context", return_value=runtime),
                 patch("core.optimize.util._RUNTIME_CONTEXT", runtime, create=True),
-                patch("core.optimize.load_review_config", return_value=ReviewConfig()),
-                patch("core.optimize.build_parser_registry", return_value=Mock()),
                 patch("core.optimize.Index", return_value=index),
                 patch("core.optimize.run_optimization", side_effect=ImportError),
                 patch("builtins.print") as print_mock,
