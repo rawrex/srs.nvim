@@ -4,18 +4,18 @@ from core.parsers import ParserRegistry
 
 
 class CardFactory:
-    def __init__(self, parser_registry: ParserRegistry) -> None:
-        self.parser_registry = parser_registry
+    def __init__(self, registry: ParserRegistry) -> None:
+        self.registry = registry
         self.context_cache: dict[str, dict[tuple[int, int], str]] = {}
 
     def make_card(self, index_entry: IndexEntry, all: list[IndexEntry] | None = None) -> Card:
-        parser = self.parser_registry.get(index_entry.card_type)
+        builder = self.registry.get(index_entry.card_type)
 
         with open(index_entry.note_abs_path, "r", encoding="utf-8") as handle:
             note_text = handle.read()
             lines = note_text.splitlines(keepends=True)
             block = "".join(lines[index_entry.start_line - 1 : index_entry.end_line])
-            card = parser.build_card(source_text=block, index_entry=index_entry, metadata=index_entry.read_metadata())
+            card = builder.build_card(source_text=block, index_entry=index_entry, metadata=index_entry.read_metadata())
             if all:
                 card.context = self.make_context(card=card, all=all, note_text=note_text)
             return card

@@ -8,9 +8,9 @@ from unittest.mock import patch
 from fsrs import Card as SchedulerCard
 from fsrs import Scheduler
 
+from core.card_types import build_card_type_registry
 from core.config import ReviewConfig
 from core.engine import ReviewEngine, ReviewUIProtocol
-from core.parsers import build_parser_registry
 from core.protocol import JsonLineTransport
 from core.rpc import TransportUI
 from tests.setup_test_helpers import runtime_context, temporary_session_repo
@@ -73,7 +73,7 @@ class ReviewEngineTest(unittest.TestCase):
         with patch("core.util._RUNTIME_CONTEXT", runtime_context("/repo"), create=True):
             session = ReviewEngine(
                 ui=_DummyUI(),  # type: ignore[arg-type]
-                parser_registry=build_parser_registry(config),
+                card_registry=build_card_type_registry(config),
                 scheduler=config.build_scheduler(),
             )
 
@@ -100,7 +100,7 @@ class ReviewEngineTest(unittest.TestCase):
             with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
                 session = ReviewEngine(
                     ui=_DummyUI(),  # type: ignore[arg-type]
-                    parser_registry=build_parser_registry(ReviewConfig()),
+                    card_registry=build_card_type_registry(ReviewConfig()),
                     scheduler=ReviewConfig().build_scheduler(),
                 )
 
@@ -132,7 +132,7 @@ class ReviewEngineTest(unittest.TestCase):
             with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
                 session = ReviewEngine(
                     ui=_DummyUI(),  # type: ignore[arg-type]
-                    parser_registry=build_parser_registry(ReviewConfig()),
+                    card_registry=build_card_type_registry(ReviewConfig()),
                     scheduler=ReviewConfig().build_scheduler(),
                 )
                 cards = session.load_due_cards(time_point=datetime(2024, 1, 2, tzinfo=timezone.utc))
@@ -162,7 +162,7 @@ class ReviewEngineTest(unittest.TestCase):
             with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
                 session = ReviewEngine(
                     ui=_DummyUI(),  # type: ignore[arg-type]
-                    parser_registry=build_parser_registry(ReviewConfig()),
+                    card_registry=build_card_type_registry(ReviewConfig()),
                     scheduler=ReviewConfig().build_scheduler(),
                 )
                 cards = session.load_due_cards(time_point=datetime(2024, 1, 2, tzinfo=timezone.utc))
@@ -196,7 +196,7 @@ class ReviewEngineTest(unittest.TestCase):
             with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
                 session = ReviewEngine(
                     ui=_DummyUI(),  # type: ignore[arg-type]
-                    parser_registry=build_parser_registry(ReviewConfig()),
+                    card_registry=build_card_type_registry(ReviewConfig()),
                     scheduler=ReviewConfig().build_scheduler(),
                 )
                 with self.assertRaises(TypeError):
@@ -219,7 +219,7 @@ class ReviewEngineTest(unittest.TestCase):
             with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
                 session = ReviewEngine(
                     ui=_DummyUI(),  # type: ignore[arg-type]
-                    parser_registry=build_parser_registry(ReviewConfig()),
+                    card_registry=build_card_type_registry(ReviewConfig()),
                     scheduler=ReviewConfig().build_scheduler(),
                 )
                 with self.assertRaises(TypeError):
@@ -240,7 +240,7 @@ class ReviewUiContractTest(unittest.TestCase):
         config = ReviewConfig()
         with patch("core.util._RUNTIME_CONTEXT", runtime_context("/repo"), create=True):
             engine = ReviewEngine(
-                ui=_FakeUI(), parser_registry=build_parser_registry(config), scheduler=config.build_scheduler()
+                ui=_FakeUI(), card_registry=build_card_type_registry(config), scheduler=config.build_scheduler()
             )
 
         self.assertIsInstance(engine.ui, ReviewUIProtocol)

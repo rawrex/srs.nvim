@@ -3,8 +3,8 @@ from unittest.mock import Mock, patch
 
 from fsrs import Rating
 
+from core.card_types import build_card_type_registry
 from core.config import ReviewConfig
-from core.parsers import build_parser_registry
 from core.engine import ReviewEngine
 from tests.setup_test_helpers import runtime_context, temporary_session_repo
 
@@ -46,7 +46,7 @@ class ReviewEngineRunTest(unittest.TestCase):
             config = ReviewConfig()
             with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
                 session = ReviewEngine(
-                    ui=ui, parser_registry=build_parser_registry(config), scheduler=config.build_scheduler()
+                    ui=ui, card_registry=build_card_type_registry(config), scheduler=config.build_scheduler()
                 )
                 code = session.run()
 
@@ -59,7 +59,7 @@ class ReviewEngineRunTest(unittest.TestCase):
             config = ReviewConfig()
             with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
                 session = ReviewEngine(
-                    ui=ui, parser_registry=build_parser_registry(config), scheduler=config.build_scheduler()
+                    ui=ui, card_registry=build_card_type_registry(config), scheduler=config.build_scheduler()
                 )
 
                 with patch.object(session, "load_due_cards", return_value=[]):
@@ -77,7 +77,7 @@ class ReviewEngineRunTest(unittest.TestCase):
 
             with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
                 session = ReviewEngine(
-                    ui=ui, parser_registry=build_parser_registry(config), scheduler=config.build_scheduler()
+                    ui=ui, card_registry=build_card_type_registry(config), scheduler=config.build_scheduler()
                 )
 
                 scheduler = Mock()
@@ -118,7 +118,7 @@ class ReviewEngineRunTest(unittest.TestCase):
 
             with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
                 session = ReviewEngine(
-                    ui=ui, parser_registry=build_parser_registry(config), scheduler=config.build_scheduler()
+                    ui=ui, card_registry=build_card_type_registry(config), scheduler=config.build_scheduler()
                 )
 
                 scheduler = Mock()
@@ -146,7 +146,7 @@ class ReviewEngineRunTest(unittest.TestCase):
 
             with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
                 session = ReviewEngine(
-                    ui=ui, parser_registry=build_parser_registry(config), scheduler=config.build_scheduler()
+                    ui=ui, card_registry=build_card_type_registry(config), scheduler=config.build_scheduler()
                 )
 
                 scheduler = Mock()

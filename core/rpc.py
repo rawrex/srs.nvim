@@ -14,9 +14,9 @@ from fsrs import Rating
 
 from core import util
 from core.card import Card, CardRef, ViewBlock
+from core.card_types import build_card_type_registry
 from core.config import ReviewConfig, load_review_config
 from core.engine import ReviewEngine
-from core.parsers import build_parser_registry
 from core.protocol import JsonLineTransport
 
 
@@ -141,7 +141,7 @@ def run(reader: IO[str], writer: IO[str]) -> int:
     config = load_review_config()
     engine = ReviewEngine(
         ui=TransportUI(config=config, transport=transport),
-        parser_registry=build_parser_registry(config),
+        card_registry=build_card_type_registry(config),
         scheduler=config.build_scheduler(),
     )
     return engine.run()

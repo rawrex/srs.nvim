@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from core.index.tracking import find_repeat_tracked_paths
+from autoparse.tracking import find_repeat_tracked_paths
 from tests.setup_test_helpers import runtime_context
 
 

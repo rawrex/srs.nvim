@@ -197,7 +197,7 @@ class RpcRunTest(unittest.TestCase):
             patch("core.rpc.util.init_runtime_context"),
             patch("core.rpc.util._RUNTIME_CONTEXT", runtime_context("/repo"), create=True),
             patch("core.rpc.load_review_config", return_value=config),
-            patch("core.rpc.build_parser_registry", return_value=Mock()),
+            patch("core.rpc.build_card_type_registry", return_value=Mock()),
             patch("core.rpc.ReviewEngine", return_value=engine) as engine_cls,
         ):
             code = run(io.StringIO(), writer)

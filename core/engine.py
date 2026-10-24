@@ -34,11 +34,11 @@ class ReviewUIProtocol(Protocol):
 class ReviewEngine:
     """UI-agnostic review flow: load due cards, present steps, persist results."""
 
-    def __init__(self, ui: ReviewUIProtocol, parser_registry: ParserRegistry, scheduler: Scheduler) -> None:
+    def __init__(self, ui: ReviewUIProtocol, card_registry: ParserRegistry, scheduler: Scheduler) -> None:
         self.ui = ui
         self.scheduler = scheduler
         self.index = Index()
-        self.factory = CardFactory(parser_registry=parser_registry)
+        self.factory = CardFactory(registry=card_registry)
 
     def load_due_cards(self, time_point: datetime) -> list[Card]:
         all = self.index.load_entries()
