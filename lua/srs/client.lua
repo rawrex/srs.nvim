@@ -3,6 +3,11 @@ local render = require("srs.render")
 
 local M = {}
 
+local quit_fn = nil
+
+-- Fixed rating keys; the client owns them, the backend only receives the name.
+local RATINGS = { n = "Again", e = "Hard", i = "Good", o = "Easy" }
+
 local function send(event)
 	if state.proc then
 		state.proc:write(vim.json.encode(event) .. "\n")
@@ -13,64 +18,77 @@ function M.send(type, extra)
 	send(vim.tbl_extend("force", { type = type }, extra or {}))
 end
 
-local function handle_key(key)
-	if state.mode == "rating" then
-		local rating = state.buttons[key]
-		if rating then
-			M.send("rate", { rating = rating })
-		end
-	elseif state.mode == "question" then
-		M.send("reveal", { label = key })
+local function bind(buf, lhs, fn)
+	if not buf or not vim.api.nvim_buf_is_valid(buf) then
+		return
 	end
+	vim.keymap.set("n", lhs, fn, { buffer = buf })
+	state.keymaps[buf] = state.keymaps[buf] or {}
+	state.keymaps[buf][lhs] = true
 end
 
-local bound = {}
-
-local function bind_keys(keys)
-	for key in pairs(bound) do
-		pcall(vim.keymap.del, "n", key, { buffer = state.buf })
+local function answered()
+	if state.mode ~= "question" then
+		return
 	end
-	bound = {}
-	for _, key in ipairs(keys or {}) do
-		vim.keymap.set("n", key, function()
-			handle_key(key)
-		end, { buffer = state.buf })
-		bound[key] = true
+	render.reveal(state.card)
+	state.mode = "rating"
+	M.send("answered")
+	render.statusline(false)
+end
+
+local function pause()
+	if state.mode ~= "question" then
+		return
+	end
+	state.paused = not state.paused
+	M.send("pause")
+	render.statusline(state.paused)
+end
+
+local function skip()
+	if state.mode ~= "question" then
+		return
+	end
+	M.send("skip")
+end
+
+local function bind_card_keys()
+	local buf = state.buf
+	bind(buf, "<CR>", answered)
+	bind(buf, "<Space>", pause)
+	bind(buf, "<Esc>", skip)
+	for key, name in pairs(RATINGS) do
+		local rating_name = name
+		bind(buf, key, function()
+			if state.mode == "rating" then
+				state.mode = "idle"
+				M.send("rate", { rating = rating_name })
+			end
+		end)
+	end
+	if quit_fn then
+		bind(buf, "<C-c>", quit_fn)
 	end
 end
 
 local function handle_message(message)
-	if not vim.api.nvim_buf_is_valid(state.buf) then
-		return
-	end
 	local kind = message.type
 	if kind == "intro" then
-		state.mode = "intro"
 		state.due = message.due or 0
-		state.card = nil
-		state.media = type(message.media) == "string" and message.media or nil
-		render.screen("", table.concat(message.notes or {}, "\n"))
-		render.statusline()
-	elseif kind == "render" then
-		state.mode = message.state
-		state.card = message.card or state.card
-		state.duration_s = message.duration_s
-		if message.state == "question" then
-			bind_keys(message.reveal_keys)
+		if message.cloze then
+			state.cloze_open = message.cloze.open or state.cloze_open
+			state.cloze_close = message.cloze.close or state.cloze_close
 		end
-		render.note(message)
-		render.statusline(message.paused)
-	elseif kind == "rating" then
-		state.mode = "rating"
-		state.buttons = {}
-		local keys = {}
-		for _, choice in ipairs(message.choices or {}) do
-			state.buttons[choice.key] = choice.name
-			keys[#keys + 1] = choice.key
-		end
-		bind_keys(keys)
-		state.suggested = type(message.suggested) == "string" and message.suggested or nil
-		render.statusline()
+		vim.notify(string.format("srs: %d due card(s)", state.due), vim.log.levels.INFO)
+		M.send("start")
+	elseif kind == "card" then
+		state.mode = "question"
+		state.card = message.card
+		state.paused = false
+		render.open(message.card)
+		bind_card_keys()
+		render.statusline(false)
 	elseif kind == "notice" then
 		if message.text ~= "" then
 			vim.notify("srs: " .. message.text, message.level == "error" and vim.log.levels.WARN or vim.log.levels.INFO)
@@ -79,29 +97,7 @@ local function handle_message(message)
 end
 
 function M.setup_keymaps(quit)
-	local function enter()
-		if state.mode == "intro" then
-			M.send("start")
-		elseif state.mode == "question" then
-			M.send("next")
-		elseif state.mode == "rating" then
-			M.send("rate")
-		end
-	end
-	local function space()
-		if state.mode == "question" then
-			M.send("pause")
-		end
-	end
-	local function escape()
-		if state.mode == "question" then
-			M.send("skip")
-		end
-	end
-	vim.keymap.set("n", "<CR>", enter, { buffer = state.buf, desc = "SRS next" })
-	vim.keymap.set("n", "<Space>", space, { buffer = state.buf, desc = "SRS pause" })
-	vim.keymap.set("n", "<Esc>", escape, { buffer = state.buf, desc = "SRS skip" })
-	vim.keymap.set("n", "<C-c>", quit, { buffer = state.buf, desc = "SRS quit" })
+	quit_fn = quit
 end
 
 function M.start(repo_root, python, rpc_path)

@@ -6,87 +6,80 @@ from typing import Protocol, runtime_checkable
 from fsrs import Rating, Scheduler
 
 from core import util
-from core.card import Card, CardRef, ViewBlock
-from core.factory import CardFactory
+from core.card import CardRef
 from core.index.index import Index
-from core.parsers import ParserRegistry
+from core.index.model import IndexEntry
 
 
 @runtime_checkable
 class ReviewUIProtocol(Protocol):
-    """UI boundary for the review engine.
-
-    The engine owns the review flow and timing; a UI is responsible only for
-    presenting the current step and returning the user's input.
-    """
+    """UI boundary for the review engine."""
 
     def print_message(self, message: str) -> None: ...
 
     def intro(self, total: int, note_paths: list[str]) -> None: ...
 
-    def question_step(self, card_ref: CardRef, card: Card) -> tuple[ViewBlock, int] | None: ...
+    def card_step(self, card_ref: CardRef) -> int | None:
+        """Present the card until the user answers; return paused nanoseconds.
 
-    def answer_step(self, card_ref: CardRef, card: Card, view: ViewBlock, duration_s: float) -> None: ...
+        ``None`` means the card was skipped.
+        """
+        ...
 
-    def rating_step(self, default_rating: Rating | None) -> Rating: ...
+    def rating_step(self) -> Rating: ...
 
 
 class ReviewEngine:
-    """UI-agnostic review flow: load due cards, present steps, persist results."""
+    """UI-agnostic review flow: select due entries, time them, persist reviews."""
 
-    def __init__(self, ui: ReviewUIProtocol, card_registry: ParserRegistry, scheduler: Scheduler) -> None:
+    def __init__(self, ui: ReviewUIProtocol, scheduler: Scheduler) -> None:
         self.ui = ui
         self.scheduler = scheduler
         self.index = Index()
-        self.factory = CardFactory(registry=card_registry)
 
-    def load_due_cards(self, time_point: datetime) -> list[Card]:
-        all = self.index.load_entries()
-        due = [entry for entry in all if entry.read_metadata().scheduler_card.due <= time_point]
-        return [self.factory.make_card(entry, all=all) for entry in due]
+    def load_due_entries(self, time_point: datetime) -> list[IndexEntry]:
+        return [entry for entry in self.index.load_entries() if entry.read_metadata().scheduler_card.due <= time_point]
 
     def run(self) -> int:
         if not os.path.exists(util._RUNTIME_CONTEXT.index_path):
             self.ui.print_message("Missing index")
             return 1
 
-        cards = self.load_due_cards(time_point=datetime.now(timezone.utc))
-        if not cards:
+        entries = self.load_due_entries(time_point=datetime.now(timezone.utc))
+        if not entries:
             self.ui.print_message("🎉 No due cards 🎉")
             return 0
 
-        total = len(cards)
-        note_paths = sorted({card.index_entry.note_path for card in cards})
+        total = len(entries)
+        note_paths = sorted({entry.note_path for entry in entries})
         self.ui.intro(total, note_paths)
 
-        for idx, card in enumerate(cards, start=1):
-            card_ref = CardRef(index=idx, total=total, note_path=card.index_entry.note_path)
+        for idx, entry in enumerate(entries, start=1):
+            card_ref = CardRef(
+                index=idx,
+                total=total,
+                card_id=entry.card_id,
+                note_path=entry.note_path,
+                card_type=entry.card_type,
+                start_line=entry.start_line,
+                end_line=entry.end_line,
+            )
 
-            # Step 1. Question
-            question_started_ns = time.monotonic_ns()
-            question = self.ui.question_step(card_ref, card)
-            if question is None:  # skipped: leave the card's schedule untouched
+            started_ns = time.monotonic_ns()
+            pause_ns = self.ui.card_step(card_ref)
+            if pause_ns is None:  # Skipped
                 self.ui.print_message("Skipped")
                 continue
-            _view, pause_ns = question
-            duration_ms = max(0, (time.monotonic_ns() - question_started_ns - pause_ns) // 1_000_000)
-            review_duration_s = duration_ms / 1000
+            duration_ms = max(0, (time.monotonic_ns() - started_ns - pause_ns) // 1_000_000)
 
-            # Step 2. Answer view
-            suggested_rating = card.suggested_rating()
-            answer_view = card.answer_view()
-            self.ui.answer_step(card_ref, card, answer_view, review_duration_s)
-
-            # Step 3. Rating
-            self.ui.print_message("")
-            rating = self.ui.rating_step(suggested_rating)
+            rating = self.ui.rating_step()
+            metadata = entry.read_metadata()
             updated_card, review_log = self.scheduler.review_card(
-                card.metadata.scheduler_card, rating, review_duration=int(duration_ms)
+                metadata.scheduler_card, rating, review_duration=int(duration_ms)
             )
-            card.metadata.scheduler_card = updated_card
-            card.metadata.review_logs.append(review_log)
-
-            card.index_entry.write_metadata(card.metadata)
+            metadata.scheduler_card = updated_card
+            metadata.review_logs.append(review_log)
+            entry.write_metadata(metadata)
             self.ui.print_message("Saved")
 
         return 0

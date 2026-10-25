@@ -1,17 +1,5 @@
 {
-    "media": "_",
-    "review": {
-        "rating_buttons": {
-            "Again": "n",
-            "Easy": "o",
-            "Good": "i",
-            "Hard": "e"
-        },
-        "show_context": true
-    },
     "cloze": {
-        "mask_char": "_",
-        "reveal_mode": "incremental",
         "syntax": {
             "close": "}",
             "open": "~{"

@@ -3,63 +3,15 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar
 
 from core.api import Parser
-from core.card import REVEAL_ALL_LABEL, Card, ViewBlock
 from core.config import ReviewConfig
-from core.index.model import IndexEntry, Metadata
-from packs.cloze import LABEL_CHARS, ClozeCard, ClozeParser
-from packs.quote_block import QuoteBlockCard, QuoteBlockParser, detect_callout_kind
+from packs.cloze import ClozeParser
+from packs.quote_block import QuoteBlockParser
 
 if TYPE_CHECKING:
     from core.parsers import ParserRegistry
 
 
 QUOTE_BLOCK_CLOZE_PARSER_ID = "quote_block_cloze"
-
-
-@dataclass
-class QuoteBlockClozeCard(ClozeCard, QuoteBlockCard):
-    block_open_label: str = LABEL_CHARS[0]
-    block_opened: bool = False
-
-    def __post_init__(self) -> None:
-        super().__post_init__()
-        self.labels = [LABEL_CHARS[idx + 1] for idx in range(len(self.clozes))]
-        self.label_to_index = {label: idx for idx, label in enumerate(self.labels)}
-        self.callout_kind = detect_callout_kind(self.source_text)
-
-    def reveal_labels(self) -> list[str]:
-        return [self.block_open_label, *self.labels]
-
-    def reveal_for_label(self, label: str) -> ViewBlock | None:
-        if label == self.block_open_label:
-            if self.block_opened:
-                return None
-            self.block_opened = True
-            return self.question_view()
-
-        if label == REVEAL_ALL_LABEL:
-            return self.answer_view()
-
-        return super().reveal_for_label(label)
-
-    def question_view(self) -> ViewBlock:
-        if self.block_opened:
-            return super().question_view()
-        return self._build_view(current_block=self._collapsed_question_block())
-
-    def answer_view(self) -> ViewBlock:
-        self.block_opened = True
-        return super().answer_view()
-
-    def context_view(self) -> ViewBlock:
-        return self._build_view(current_block=self._masked_context_block(self.first_line()))
-
-    def _collapsed_question_block(self) -> str:
-        lines = self._question_block().splitlines(keepends=True)
-        return lines[0] if lines else self._question_block()
-
-    def _build_view(self, current_block: str) -> ViewBlock:
-        return ClozeCard._build_view(self, current_block)
 
 
 @dataclass(frozen=True)
@@ -94,25 +46,6 @@ class QuoteBlockClozeParser(ClozeParser, QuoteBlockParser, Parser):
 
         return cards
 
-    def build_card(self, source_text: str, index_entry: IndexEntry, metadata: Metadata) -> Card:
-        return QuoteBlockClozeCard(
-            source_text=source_text,
-            index_entry=index_entry,
-            metadata=metadata,
-            context={},
-            reveal_mode=self.reveal_mode,
-            cloze_open=self.cloze_open,
-            cloze_close=self.cloze_close,
-            mask_char=self.mask_char,
-        )
-
 
 def register_pack(registry: "ParserRegistry", config: ReviewConfig) -> None:
-    registry.register(
-        QuoteBlockClozeParser(
-            reveal_mode=config.cloze.reveal_mode,
-            cloze_open=config.cloze.cloze_open,
-            cloze_close=config.cloze.cloze_close,
-            mask_char=config.cloze.mask_char,
-        )
-    )
+    registry.register(QuoteBlockClozeParser(cloze_open=config.cloze.cloze_open, cloze_close=config.cloze.cloze_close))

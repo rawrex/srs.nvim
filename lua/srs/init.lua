@@ -39,12 +39,9 @@ function M.review()
 	end
 
 	state.reset()
+	state.repo_root = repo_root
 	state.prev_buf = vim.api.nvim_get_current_buf()
 	state.win = vim.api.nvim_get_current_win()
-	state.buf = vim.api.nvim_create_buf(false, true)
-	vim.bo[state.buf].filetype = "markdown"
-	vim.bo[state.buf].bufhidden = "wipe"
-	vim.api.nvim_win_set_buf(state.win, state.buf)
 	state.quitting = false
 	client.setup_keymaps(M.close)
 	client.start(repo_root, python(), plugin_root() .. "/core/rpc.py")

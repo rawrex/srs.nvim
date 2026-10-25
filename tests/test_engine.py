@@ -8,7 +8,6 @@ from unittest.mock import patch
 from fsrs import Card as SchedulerCard
 from fsrs import Scheduler
 
-from core.card_types import build_card_type_registry
 from core.config import ReviewConfig
 from core.engine import ReviewEngine, ReviewUIProtocol
 from core.protocol import JsonLineTransport
@@ -27,14 +26,20 @@ class _FakeUI:
     def intro(self, total: int, note_paths: list[str]) -> None:
         pass
 
-    def question_step(self, step: object, card: object) -> tuple[object, int]:
-        return None, 0
+    def card_step(self, card_ref: object) -> int | None:
+        return 0
 
-    def answer_step(self, step: object, card: object, view: object) -> None:
-        pass
-
-    def rating_step(self, default_rating: object) -> object:
+    def rating_step(self) -> object:
         return None
+
+
+def _write_entry(repo_root: str, card_id: int, due: datetime) -> None:
+    with open(os.path.join(repo_root, ".srs", "index.txt"), "a", encoding="utf-8") as handle:
+        handle.write(f"'{card_id}','/note.md','cloze','1','1'\n")
+    scheduler_card = SchedulerCard()
+    scheduler_card.due = due
+    with open(os.path.join(repo_root, ".srs", f"{card_id}.json"), "w", encoding="utf-8") as handle:
+        json.dump(json.loads(scheduler_card.to_json()), handle)
 
 
 class ReviewEngineTest(unittest.TestCase):
@@ -71,11 +76,7 @@ class ReviewEngineTest(unittest.TestCase):
         )
 
         with patch("core.util._RUNTIME_CONTEXT", runtime_context("/repo"), create=True):
-            session = ReviewEngine(
-                ui=_DummyUI(),  # type: ignore[arg-type]
-                card_registry=build_card_type_registry(config),
-                scheduler=config.build_scheduler(),
-            )
+            session = ReviewEngine(ui=_DummyUI(), scheduler=config.build_scheduler())  # type: ignore[arg-type]
 
         self.assertEqual(0.5, session.scheduler.parameters[0])
         self.assertEqual(0.88, session.scheduler.desired_retention)
@@ -83,147 +84,34 @@ class ReviewEngineTest(unittest.TestCase):
         self.assertEqual(123, session.scheduler.maximum_interval)
         self.assertFalse(session.scheduler.enable_fuzzing)
 
-    def test_load_due_cards_keeps_unclaimed_lines_as_context(self) -> None:
+    def test_load_due_entries_filters_non_due_cards(self) -> None:
         with temporary_session_repo(with_index=True) as repo_root:
-            note_path = os.path.join(repo_root, "note.md")
-            with open(note_path, "w", encoding="utf-8") as handle:
-                handle.write("Prelude line\nTerm ~{hidden}\nTail line\n")
-
-            with open(os.path.join(repo_root, ".srs", "index.txt"), "w", encoding="utf-8") as handle:
-                handle.write("'1','/note.md','cloze','2','2'\n")
-
-            scheduler_card = SchedulerCard()
-            scheduler_card.due = datetime(2024, 1, 1, tzinfo=timezone.utc)
-            with open(os.path.join(repo_root, ".srs", "1.json"), "w", encoding="utf-8") as handle:
-                json.dump(json.loads(scheduler_card.to_json()), handle)
+            _write_entry(repo_root, 1, datetime(2024, 1, 1, tzinfo=timezone.utc))
+            _write_entry(repo_root, 2, datetime(2099, 1, 1, tzinfo=timezone.utc))
 
             with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
-                session = ReviewEngine(
-                    ui=_DummyUI(),  # type: ignore[arg-type]
-                    card_registry=build_card_type_registry(ReviewConfig()),
-                    scheduler=ReviewConfig().build_scheduler(),
-                )
+                session = ReviewEngine(ui=_DummyUI(), scheduler=ReviewConfig().build_scheduler())  # type: ignore[arg-type]
+                entries = session.load_due_entries(time_point=datetime(2024, 1, 2, tzinfo=timezone.utc))
 
-                cards = session.load_due_cards(time_point=datetime(2024, 1, 2, tzinfo=timezone.utc))
+        self.assertEqual([1], [entry.card_id for entry in entries])
 
-            self.assertEqual(1, len(cards))
-            blocks = cards[0].context
-            self.assertIn((1, 1), blocks)
-            self.assertIn((2, 2), blocks)
-            self.assertIn((3, 3), blocks)
-            self.assertEqual("Prelude line\n", blocks[(1, 1)])
-            self.assertNotIn("[a]", blocks[(2, 2)])
-            self.assertIn("▇▇▇▇▇▇", blocks[(2, 2)])
-            self.assertEqual("Tail line\n", blocks[(3, 3)])
-
-    def test_make_card_preserves_source_text_line_endings(self) -> None:
+    def test_load_due_entries_raises_for_naive_time_point(self) -> None:
         with temporary_session_repo(with_index=True) as repo_root:
-            with open(os.path.join(repo_root, "note.md"), "w", encoding="utf-8") as handle:
-                handle.write("Prelude line\nTerm ~{hidden}\nTail line\n")
-
-            with open(os.path.join(repo_root, ".srs", "index.txt"), "w", encoding="utf-8") as handle:
-                handle.write("'1','/note.md','cloze','2','2'\n")
-
-            scheduler_card = SchedulerCard()
-            scheduler_card.due = datetime(2024, 1, 1, tzinfo=timezone.utc)
-            with open(os.path.join(repo_root, ".srs", "1.json"), "w", encoding="utf-8") as handle:
-                json.dump(json.loads(scheduler_card.to_json()), handle)
+            _write_entry(repo_root, 1, datetime(2024, 1, 1, tzinfo=timezone.utc))
 
             with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
-                session = ReviewEngine(
-                    ui=_DummyUI(),  # type: ignore[arg-type]
-                    card_registry=build_card_type_registry(ReviewConfig()),
-                    scheduler=ReviewConfig().build_scheduler(),
-                )
-                cards = session.load_due_cards(time_point=datetime(2024, 1, 2, tzinfo=timezone.utc))
-
-            self.assertEqual("Term ~{hidden}\n", cards[0].source_text)
-
-    def test_load_due_cards_filters_non_due_cards_and_keeps_them_in_context(self) -> None:
-        with temporary_session_repo(with_index=True) as repo_root:
-            note_path = os.path.join(repo_root, "note.md")
-            with open(note_path, "w", encoding="utf-8") as handle:
-                handle.write("Prelude line\nDue ~{now}\nFuture ~{later}\nTail line\n")
-
-            with open(os.path.join(repo_root, ".srs", "index.txt"), "w", encoding="utf-8") as handle:
-                handle.write("'1','/note.md','cloze','2','2'\n")
-                handle.write("'2','/note.md','cloze','3','3'\n")
-
-            due_card = SchedulerCard()
-            due_card.due = datetime(2024, 1, 1, tzinfo=timezone.utc)
-            future_card = SchedulerCard()
-            future_card.due = datetime(2099, 1, 1, tzinfo=timezone.utc)
-
-            with open(os.path.join(repo_root, ".srs", "1.json"), "w", encoding="utf-8") as handle:
-                json.dump(json.loads(due_card.to_json()), handle)
-            with open(os.path.join(repo_root, ".srs", "2.json"), "w", encoding="utf-8") as handle:
-                json.dump(json.loads(future_card.to_json()), handle)
-
-            with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
-                session = ReviewEngine(
-                    ui=_DummyUI(),  # type: ignore[arg-type]
-                    card_registry=build_card_type_registry(ReviewConfig()),
-                    scheduler=ReviewConfig().build_scheduler(),
-                )
-                cards = session.load_due_cards(time_point=datetime(2024, 1, 2, tzinfo=timezone.utc))
-
-            self.assertEqual(1, len(cards))
-            blocks = cards[0].context
-            self.assertIn((1, 1), blocks)
-            self.assertIn((2, 2), blocks)
-            self.assertIn((3, 3), blocks)
-            self.assertIn((4, 4), blocks)
-            self.assertEqual("Prelude line\n", blocks[(1, 1)])
-            self.assertIn("Future", blocks[(3, 3)])
-            self.assertNotIn("[a]", blocks[(3, 3)])
-            self.assertIn("▇▇▇", blocks[(3, 3)])
-            self.assertEqual("Tail line\n", blocks[(4, 4)])
-
-    def test_load_due_cards_raises_for_naive_time_point(self) -> None:
-        with temporary_session_repo(with_index=True) as repo_root:
-            note_path = os.path.join(repo_root, "note.md")
-            with open(note_path, "w", encoding="utf-8") as handle:
-                handle.write("Term ~{hidden}\n")
-
-            with open(os.path.join(repo_root, ".srs", "index.txt"), "w", encoding="utf-8") as handle:
-                handle.write("'1','/note.md','cloze','1','1'\n")
-
-            scheduler_card = SchedulerCard()
-            scheduler_card.due = datetime(2024, 1, 1, tzinfo=timezone.utc)
-            with open(os.path.join(repo_root, ".srs", "1.json"), "w", encoding="utf-8") as handle:
-                json.dump(json.loads(scheduler_card.to_json()), handle)
-
-            with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
-                session = ReviewEngine(
-                    ui=_DummyUI(),  # type: ignore[arg-type]
-                    card_registry=build_card_type_registry(ReviewConfig()),
-                    scheduler=ReviewConfig().build_scheduler(),
-                )
+                session = ReviewEngine(ui=_DummyUI(), scheduler=ReviewConfig().build_scheduler())  # type: ignore[arg-type]
                 with self.assertRaises(TypeError):
-                    session.load_due_cards(time_point=datetime(2024, 1, 2))
+                    session.load_due_entries(time_point=datetime(2024, 1, 2))
 
-    def test_load_due_cards_raises_for_naive_due_datetimes(self) -> None:
+    def test_load_due_entries_raises_for_naive_due_datetimes(self) -> None:
         with temporary_session_repo(with_index=True) as repo_root:
-            note_path = os.path.join(repo_root, "note.md")
-            with open(note_path, "w", encoding="utf-8") as handle:
-                handle.write("Term ~{hidden}\n")
-
-            with open(os.path.join(repo_root, ".srs", "index.txt"), "w", encoding="utf-8") as handle:
-                handle.write("'1','/note.md','cloze','1','1'\n")
-
-            scheduler_card = SchedulerCard()
-            scheduler_card.due = datetime(2024, 1, 1)
-            with open(os.path.join(repo_root, ".srs", "1.json"), "w", encoding="utf-8") as handle:
-                json.dump(json.loads(scheduler_card.to_json()), handle)
+            _write_entry(repo_root, 1, datetime(2024, 1, 1))
 
             with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
-                session = ReviewEngine(
-                    ui=_DummyUI(),  # type: ignore[arg-type]
-                    card_registry=build_card_type_registry(ReviewConfig()),
-                    scheduler=ReviewConfig().build_scheduler(),
-                )
+                session = ReviewEngine(ui=_DummyUI(), scheduler=ReviewConfig().build_scheduler())  # type: ignore[arg-type]
                 with self.assertRaises(TypeError):
-                    session.load_due_cards(time_point=datetime(2024, 1, 2, tzinfo=timezone.utc))
+                    session.load_due_entries(time_point=datetime(2024, 1, 2, tzinfo=timezone.utc))
 
 
 class ReviewUiContractTest(unittest.TestCase):
@@ -239,8 +127,6 @@ class ReviewUiContractTest(unittest.TestCase):
     def test_engine_accepts_protocol_ui(self) -> None:
         config = ReviewConfig()
         with patch("core.util._RUNTIME_CONTEXT", runtime_context("/repo"), create=True):
-            engine = ReviewEngine(
-                ui=_FakeUI(), card_registry=build_card_type_registry(config), scheduler=config.build_scheduler()
-            )
+            engine = ReviewEngine(ui=_FakeUI(), scheduler=config.build_scheduler())  # type: ignore[arg-type]
 
         self.assertIsInstance(engine.ui, ReviewUIProtocol)

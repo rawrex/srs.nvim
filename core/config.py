@@ -3,30 +3,21 @@ import os
 from dataclasses import dataclass, field
 from datetime import timedelta
 
-from fsrs import Rating, Scheduler
+from fsrs import Scheduler
 
 from core import util
-from core.card import RevealMode
-
-DEFAULT_RATING_BUTTONS: dict[Rating, str] = {Rating.Again: "n", Rating.Hard: "e", Rating.Good: "i", Rating.Easy: "o"}
-
 
 DEFAULT_SCHEDULER = Scheduler()
 
 
 @dataclass(frozen=True)
 class ClozeConfig:
-    reveal_mode: RevealMode = RevealMode.INCREMENTAL
     cloze_open: str = "~{"
     cloze_close: str = "}"
-    mask_char: str = "▇"
 
 
 @dataclass(frozen=True)
 class ReviewConfig:
-    rating_buttons: dict[Rating, str] = field(default_factory=lambda: DEFAULT_RATING_BUTTONS.copy())
-    show_context: bool = True
-    media: str | None = None
     cloze: ClozeConfig = field(default_factory=ClozeConfig)
     scheduler_parameters: tuple[float, ...] = DEFAULT_SCHEDULER.parameters
     scheduler_desired_retention: float = DEFAULT_SCHEDULER.desired_retention
@@ -53,15 +44,11 @@ def load_review_config() -> ReviewConfig:
     if raw is None:
         return defaults
 
-    review_raw = _dict_or_empty(raw.get("review"))
     cloze_raw = _dict_or_empty(raw.get("cloze"))
     scheduler_value = raw.get("scheduler")
     scheduler_raw = _dict_or_empty(scheduler_value)
 
-    rating_buttons = _parse_rating_buttons(review_raw.get("rating_buttons"))
-    show_context = _parse_review_flags(review_raw, defaults)
     cloze_config = _parse_cloze_config(cloze_raw, defaults.cloze)
-    media = _parse_media_directory(raw.get("media"), defaults.media)
 
     scheduler_parameters = defaults.scheduler_parameters
     scheduler_desired_retention = defaults.scheduler_desired_retention
@@ -84,9 +71,6 @@ def load_review_config() -> ReviewConfig:
         ) = parsed_scheduler
 
     return ReviewConfig(
-        rating_buttons=rating_buttons,
-        show_context=show_context,
-        media=media,
         cloze=cloze_config,
         scheduler_parameters=scheduler_parameters,
         scheduler_desired_retention=scheduler_desired_retention,
@@ -134,22 +118,7 @@ def _dict_or_empty(value: object) -> dict[str, object]:
     return {}
 
 
-def _parse_review_flags(review_raw: dict[str, object], defaults: ReviewConfig) -> bool:
-    show_context = defaults.show_context
-    show_context_raw = review_raw.get("show_context")
-    if isinstance(show_context_raw, bool):
-        show_context = show_context_raw
-
-    return show_context
-
-
 def _parse_cloze_config(cloze_raw: dict[str, object], defaults: ClozeConfig) -> ClozeConfig:
-    reveal_raw = cloze_raw.get("reveal_mode")
-    try:
-        reveal_mode = RevealMode(reveal_raw)
-    except (TypeError, ValueError):
-        reveal_mode = defaults.reveal_mode
-
     cloze_open = defaults.cloze_open
     cloze_close = defaults.cloze_close
     syntax_raw = cloze_raw.get("syntax")
@@ -161,39 +130,7 @@ def _parse_cloze_config(cloze_raw: dict[str, object], defaults: ClozeConfig) -> 
         if isinstance(maybe_close, str) and maybe_close:
             cloze_close = maybe_close
 
-    mask_char = defaults.mask_char
-    mask_char_raw = cloze_raw.get("mask_char")
-    if isinstance(mask_char_raw, str) and len(mask_char_raw) == 1:
-        mask_char = mask_char_raw
-
-    return ClozeConfig(reveal_mode=reveal_mode, cloze_open=cloze_open, cloze_close=cloze_close, mask_char=mask_char)
-
-
-def _parse_media_directory(raw_value: object, default: str | None) -> str | None:
-    if not isinstance(raw_value, str):
-        return default
-    candidate = raw_value.strip()
-    if not candidate:
-        return default
-    if os.path.isabs(candidate):
-        return os.path.normpath(candidate)
-    return os.path.normpath(os.path.join(util._RUNTIME_CONTEXT.repo_root_path, candidate))
-
-
-def _parse_rating_buttons(raw: object) -> dict[Rating, str]:
-    if not isinstance(raw, dict):
-        return DEFAULT_RATING_BUTTONS.copy()
-
-    parsed: dict[Rating, str] = {}
-    for rating in (Rating.Again, Rating.Hard, Rating.Good, Rating.Easy):
-        value = raw.get(rating.name)
-        if not isinstance(value, str) or len(value) != 1:
-            return DEFAULT_RATING_BUTTONS.copy()
-        parsed[rating] = value
-
-    if len(set(parsed.values())) != 4:
-        return DEFAULT_RATING_BUTTONS.copy()
-    return parsed
+    return ClozeConfig(cloze_open=cloze_open, cloze_close=cloze_close)
 
 
 def _parse_scheduler_config(

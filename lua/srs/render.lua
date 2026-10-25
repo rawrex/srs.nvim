@@ -2,87 +2,145 @@ local state = require("srs.state")
 
 local M = {}
 
-local function expand_images(line)
-	local media = state.media
-	if type(media) ~= "string" or media == "" then
-		return line
-	end
-	return (line:gsub("!%[%[([^%]]+)%]%]", function(reference)
-		local filename = vim.fn.fnamemodify((reference:gsub("|.*$", "")), ":t")
-		if filename == "" then
-			return reference
+local function escape_pattern(text)
+	return (text:gsub("([%^%$%(%)%%%.%[%]%*%+%-%?])", "%%%1"))
+end
+
+local function clear_current()
+	if state.buf and vim.api.nvim_buf_is_valid(state.buf) then
+		vim.api.nvim_buf_clear_namespace(state.buf, state.ns, 0, -1)
+		if state.win and vim.api.nvim_win_is_valid(state.win) then
+			pcall(vim.api.nvim_win_call, state.win, function()
+				vim.cmd("silent! normal! zE")
+			end)
 		end
-		return "![](<" .. media .. "/" .. filename .. ">)"
-	end))
-end
-
-local function set_lines(lines)
-	lines = vim.tbl_map(expand_images, lines)
-	vim.bo[state.buf].modifiable = true
-	vim.api.nvim_buf_set_lines(state.buf, 0, -1, false, lines)
-	vim.bo[state.buf].modifiable = false
-	vim.api.nvim_win_set_cursor(state.win, { 1, 0 })
-end
-
-function M.screen(title, body)
-	local lines = {}
-	if title ~= "" then
-		vim.list_extend(lines, vim.split(title, "\n", { plain = true }))
 	end
-	if body ~= "" then
-		vim.list_extend(lines, vim.split(body, "\n", { plain = true }))
-	end
-	set_lines(lines)
 end
 
-local function set_note_name(card)
-	if not card or not card.note or card.note == "" then
+local function save_window(win)
+	if state.saved_win then
 		return
 	end
-	if not pcall(vim.api.nvim_buf_set_name, state.buf, card.note) then
-		pcall(vim.api.nvim_buf_set_name, state.buf, vim.fn.fnamemodify(card.note, ":t") .. " [srs]")
+	state.saved_win = {
+		conceallevel = vim.wo[win].conceallevel,
+		concealcursor = vim.wo[win].concealcursor,
+		foldmethod = vim.wo[win].foldmethod,
+		foldenable = vim.wo[win].foldenable,
+		foldlevel = vim.wo[win].foldlevel,
+		statusline = vim.wo[win].statusline,
+	}
+end
+
+local function conceal_clozes(buf, lines)
+	local pattern = escape_pattern(state.cloze_open) .. ".-" .. escape_pattern(state.cloze_close)
+	for row, line in ipairs(lines) do
+		local init = 1
+		while true do
+			local start_col, end_col = line:find(pattern, init)
+			if not start_col then
+				break
+			end
+			vim.api.nvim_buf_set_extmark(buf, state.ns, row - 1, start_col - 1, {
+				end_col = end_col,
+				conceal = "",
+			})
+			init = end_col + 1
+		end
+	end
+end
+
+local function fold_blocks(win, lines)
+	local first, last = nil, nil
+	local function flush()
+		if first and last and last > first then
+			vim.api.nvim_win_call(win, function()
+				vim.cmd(string.format("silent! %d,%dfold", first, last))
+			end)
+		end
+		first, last = nil, nil
+	end
+	for i, line in ipairs(lines) do
+		if line:match("^%s*>") then
+			if not first then
+				first = i
+			end
+			last = i
+		else
+			flush()
+		end
+	end
+	flush()
+end
+
+function M.open(card)
+	local win = state.win
+	if not win or not vim.api.nvim_win_is_valid(win) or not card or not card.note then
+		return
+	end
+
+	local abs = (state.repo_root or "") .. card.note
+	local buf = vim.fn.bufadd(abs)
+	vim.fn.bufload(buf)
+
+	if state.buf ~= buf then
+		clear_current()
+		state.buf = buf
+		state.touched[buf] = true
+	end
+	save_window(win)
+	vim.api.nvim_win_set_buf(win, buf)
+
+	vim.wo[win].conceallevel = 2
+	vim.wo[win].concealcursor = "nvic"
+	vim.wo[win].foldmethod = "manual"
+	vim.wo[win].foldenable = true
+
+	clear_current()
+	local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+	conceal_clozes(buf, lines)
+	fold_blocks(win, lines)
+	vim.wo[win].foldlevel = 0
+
+	local line = math.min(card.start_line or 1, #lines)
+	if line >= 1 then
+		vim.api.nvim_win_set_cursor(win, { line, 0 })
+	end
+end
+
+function M.reveal(card)
+	local buf, win = state.buf, state.win
+	if not card or not buf or not vim.api.nvim_buf_is_valid(buf) then
+		return
+	end
+	local last = math.min(card.end_line or 1, vim.api.nvim_buf_line_count(buf))
+	vim.api.nvim_buf_clear_namespace(buf, state.ns, (card.start_line or 1) - 1, last)
+	if win and vim.api.nvim_win_is_valid(win) then
+		vim.api.nvim_win_call(win, function()
+			vim.cmd(string.format("silent! %d,%dfoldopen!", card.start_line or 1, last))
+		end)
 	end
 end
 
 function M.statusline(paused)
-	if not state.win or not vim.api.nvim_win_is_valid(state.win) then
+	local win = state.win
+	if not win or not vim.api.nvim_win_is_valid(win) then
 		return
 	end
-	local card, intro = state.card, state.mode == "intro"
-	local raw = intro and "SRS session" or (card and card.note)
-	local note = (raw and raw ~= "") and (raw:gsub("^/", "") .. " ") or ""
+	local card = state.card
+	local name = ""
+	if card and card.note and card.note ~= "" then
+		name = card.note:gsub("^/", "") .. " "
+	end
 	local suffix = paused and " (PAUSED)" or ""
-	local hint = (state.suggested and state.suggested ~= "") and (" | " .. state.suggested .. "?") or ""
-	local timer = state.duration_s and string.format("| %.1fs", state.duration_s) or ""
-	vim.wo[state.win].statusline = string.format(
-		"[%d/%d] %s%s%s%s",
-		intro and 0 or (card and card.index or 0),
-		intro and (state.due or 0) or (card and card.total or 0),
-		note,
+	local hint = state.mode == "rating" and " | n/e/i/o" or ""
+	vim.wo[win].statusline = string.format(
+		"[%d/%d] %s%s%s",
+		card and card.index or 0,
+		card and card.total or 0,
+		name,
 		suffix,
-		timer,
 		hint
 	)
-end
-
-function M.note(message)
-	set_note_name(message.card)
-	local active, first, text = message.active, nil, ""
-	for _, segment in ipairs(message.segments or {}) do
-		local chunk = segment.text or ""
-		if active and segment.start == active.start and segment["end"] == active["end"] then
-			first = select(2, text:gsub("\n", "")) + 1
-		end
-		text = text .. chunk
-	end
-	local lines = vim.split(text, "\n", { plain = true })
-	if lines[#lines] == "" then
-		table.remove(lines)
-	end
-	set_lines(lines)
-	if first then
-		vim.api.nvim_win_set_cursor(state.win, { math.min(first, #lines), 0 })
-	end
 end
 
 return M

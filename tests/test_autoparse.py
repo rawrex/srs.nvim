@@ -5,8 +5,6 @@ from unittest.mock import patch
 
 from autoparse.scanner import build_scanner_registry
 from core.api import Parser
-from core.card import RevealMode
-from core.card_types import build_card_type_registry
 from core.config import ReviewConfig
 from core.index.index import Index
 from core.parsers import ParserRegistry
@@ -27,12 +25,9 @@ class _Parser(Parser):
     def interpret_text(self, note_text: str) -> list[tuple[int, int]]:
         return list(self._rows)
 
-    def build_card(self, source_text, index_entry, metadata):
-        raise NotImplementedError
-
 
 def _cloze_parser() -> ClozeParser:
-    return ClozeParser(reveal_mode=RevealMode.WHOLE, cloze_open="~{", cloze_close="}", mask_char="▇")
+    return ClozeParser(cloze_open="~{", cloze_close="}")
 
 
 class ParserRegistryTest(unittest.TestCase):
@@ -55,15 +50,6 @@ class ParserRegistryTest(unittest.TestCase):
             with patch("autoparse.scanner._pack_modules_dir", return_value=Path(temp_dir)):
                 with self.assertRaises(RuntimeError):
                     build_scanner_registry(ReviewConfig())
-
-
-class BuildCardTypeRegistryTest(unittest.TestCase):
-    def test_build_card_type_registry_loads_builtin_packs(self) -> None:
-        registry = build_card_type_registry(ReviewConfig())
-
-        self.assertIn("cloze", registry.parsers)
-        self.assertIn("quote_block", registry.parsers)
-        self.assertIn("quote_block_cloze", registry.parsers)
 
 
 class CollectParsedBlocksTest(unittest.TestCase):

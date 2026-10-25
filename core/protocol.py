@@ -1,59 +1,29 @@
-"""Newline-delimited JSON transport shared by every SRS UI client.
+"""Newline-delimited JSON transport between the backend and the nvim client.
 
-The backend (:mod:`core.rpc`) drives :class:`core.engine.ReviewEngine` and talks
-to a UI client over a pair of text streams. Clients are interchangeable as long
-as they speak this protocol: the nvim plugin in ``lua/`` and the terminal UI in
-``tui/`` are the current ones.
-
-Every message carries a ``type`` discriminator in both directions. The server
-only sends orchestration data; formatting (headings, prompts, buffer names) is
-the client's job.
+The backend only sends pointers: which note, which span, which card type. The
+client opens the real note and derives the presentation from its contents.
 
 Server -> client messages
 -------------------------
 ``intro``
-    ``{"type": "intro", "due": int, "notes": [str, ...], "media": str | None}``
-    ``due`` is the number of due cards; ``notes`` is the sorted set of unique
-    source note paths (repo-relative, leading ``/``) those cards come from.
-    More than one card may share a note. ``media`` is the absolute path of the
-    directory holding note images (from config), or ``null`` when unset; clients
-    that render images use it to resolve ``![[...]]`` references.
-``render``
-    ``{"type": "render", "state": "question" | "answer",
-       "card": {"index": int, "total": int, "note": str},
-       "active": {"start": int, "end": int},
-       "segments": [{"start": int, "end": int, "text": str}, ...],
-       "duration_s": float}``
-    ``card.index``/``card.total`` are the card's 1-based position and the
-    session's due-card count; ``card.note`` is the repo-relative source path.
-    ``paused`` (question step only) reports whether the timer is currently
-    paused, so stateless clients can reflect it without tracking it themselves.
-    ``duration_s`` (answer step only) is the elapsed question time in seconds.
-    ``reveal_keys`` (question step only) is the list of keys the client should
-    bind for reveal; the backend owns the alphabet, so clients must not guess it.
-``rating``
-    ``{"type": "rating", "suggested": str | None,
-       "choices": [{"name": str, "key": str}, ...]}``
-    ``choices`` is ordered (Again, Hard, Good, Easy).
+    ``{"type": "intro", "due": int, "notes": [str, ...],
+       "cloze": {"open": str, "close": str}}``
+``card``
+    ``{"type": "card", "card": {"index": int, "total": int, "id": int,
+       "note": str, "start_line": int, "end_line": int, "type": str}}``
+    ``note`` is the repo-relative path (leading ``/``); ``start_line`` and
+    ``end_line`` are 1-based and inclusive.
 ``notice``
     ``{"type": "notice", "level": "info" | "error", "text": str}``
 
 Client -> server events
 -----------------------
-``start``   ``{"type": "start"}``
-``pause``   ``{"type": "pause"}``
-``next``    ``{"type": "next"}``
-``skip``    ``{"type": "skip"}``
-``reveal``  ``{"type": "reveal", "label": str}``
-``rate``    ``{"type": "rate", "rating": str | None}``
-``quit``    ``{"type": "quit"}``
-
-``segments`` carry the note text as-is (one entry per context block, sorted by
-line range). The blocks are *not* decorated: a client decides how to render
-callouts and the active marker. ``active`` points at the segment that is the
-live card view (client may mark it). Card-level affordances (such as the fixed
-key that opens a collapsed block) are handled by the card itself, so clients do
-not need a separate field for them.
+``start``     ``{"type": "start"}``
+``answered``  ``{"type": "answered"}``  # user revealed; stop the timer
+``pause``     ``{"type": "pause"}``
+``skip``      ``{"type": "skip"}``
+``rate``      ``{"type": "rate", "rating": str}``
+``quit``      ``{"type": "quit"}``
 """
 
 import json
@@ -61,16 +31,14 @@ from typing import IO, Any
 
 # Server -> client message types.
 INTRO = "intro"
-RENDER = "render"
-RATING = "rating"
+CARD = "card"
 NOTICE = "notice"
 
 # Client -> server event types.
 EVENT_START = "start"
+EVENT_ANSWERED = "answered"
 EVENT_PAUSE = "pause"
-EVENT_NEXT = "next"
 EVENT_SKIP = "skip"
-EVENT_REVEAL = "reveal"
 EVENT_RATE = "rate"
 EVENT_QUIT = "quit"
 

@@ -4,11 +4,9 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from fsrs import Rating
 from fsrs import Scheduler
 
-from core.card import RevealMode
-from core.config import DEFAULT_RATING_BUTTONS, load_review_config, write_scheduler_parameters
+from core.config import load_review_config, write_scheduler_parameters
 from tests.setup_test_helpers import runtime_context
 
 
@@ -28,12 +26,8 @@ class ReviewConfigTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as repo_root:
             config = self._load_config(repo_root)
 
-        self.assertEqual(RevealMode.INCREMENTAL, config.cloze.reveal_mode)
-        self.assertEqual(DEFAULT_RATING_BUTTONS, config.rating_buttons)
         self.assertEqual("~{", config.cloze.cloze_open)
         self.assertEqual("}", config.cloze.cloze_close)
-        self.assertTrue(config.show_context)
-        self.assertIsNone(config.media)
         self.assertEqual(Scheduler().to_dict(), config.build_scheduler().to_dict())
 
     def test_load_review_config_reads_custom_values(self) -> None:
@@ -42,12 +36,7 @@ class ReviewConfigTest(unittest.TestCase):
             with open(path, "w", encoding="utf-8") as handle:
                 json.dump(
                     {
-                        "media": "assets/images",
-                        "review": {
-                            "rating_buttons": {"Again": "a", "Hard": "h", "Good": "g", "Easy": "y"},
-                            "show_context": False,
-                        },
-                        "cloze": {"reveal_mode": "whole", "syntax": {"open": "{{", "close": "}}"}, "mask_char": "*"},
+                        "cloze": {"syntax": {"open": "{{", "close": "}}"}},
                         "scheduler": {
                             "parameters": [
                                 0.5,
@@ -84,16 +73,8 @@ class ReviewConfigTest(unittest.TestCase):
 
             config = self._load_config(repo_root)
 
-        self.assertEqual(RevealMode.WHOLE, config.cloze.reveal_mode)
-        self.assertEqual("a", config.rating_buttons[Rating.Again])
-        self.assertEqual("h", config.rating_buttons[Rating.Hard])
-        self.assertEqual("g", config.rating_buttons[Rating.Good])
-        self.assertEqual("y", config.rating_buttons[Rating.Easy])
         self.assertEqual("{{", config.cloze.cloze_open)
         self.assertEqual("}}", config.cloze.cloze_close)
-        self.assertEqual("*", config.cloze.mask_char)
-        self.assertFalse(config.show_context)
-        self.assertEqual(os.path.join(repo_root, "assets", "images"), config.media)
         scheduler = config.build_scheduler()
         self.assertEqual(0.5, scheduler.parameters[0])
         self.assertEqual(0.88, scheduler.desired_retention)
@@ -106,11 +87,10 @@ class ReviewConfigTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as repo_root:
             path = self._config_path(repo_root)
             with open(path, "w", encoding="utf-8") as handle:
-                json.dump({"review": {}, "cloze": {"reveal_mode": "whole"}}, handle)
+                json.dump({"review": {}}, handle)
 
             config = self._load_config(repo_root)
 
-        self.assertEqual(RevealMode.WHOLE, config.cloze.reveal_mode)
         self.assertEqual(Scheduler().to_dict(), config.build_scheduler().to_dict())
 
     def test_load_review_config_falls_back_to_defaults_on_invalid_json(self) -> None:
@@ -121,40 +101,18 @@ class ReviewConfigTest(unittest.TestCase):
 
             config = self._load_config(repo_root)
 
-        self.assertEqual(RevealMode.INCREMENTAL, config.cloze.reveal_mode)
-        self.assertEqual(DEFAULT_RATING_BUTTONS, config.rating_buttons)
-
-    def test_load_review_config_rejects_invalid_rating_button_map(self) -> None:
-        with tempfile.TemporaryDirectory() as repo_root:
-            path = self._config_path(repo_root)
-            with open(path, "w", encoding="utf-8") as handle:
-                json.dump({"review": {"rating_buttons": {"Again": "a", "Hard": "a", "Good": "g", "Easy": "e"}}}, handle)
-
-            config = self._load_config(repo_root)
-
-        self.assertEqual(DEFAULT_RATING_BUTTONS, config.rating_buttons)
+        self.assertEqual("~{", config.cloze.cloze_open)
 
     def test_load_review_config_uses_defaults_for_invalid_partial_fields(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
             path = self._config_path(repo_root)
             with open(path, "w", encoding="utf-8") as handle:
-                json.dump(
-                    {
-                        "media": 1,
-                        "review": {"show_context": "yes"},
-                        "cloze": {"reveal_mode": "bad-value", "syntax": {"open": "", "close": 1}, "mask_char": "xx"},
-                    },
-                    handle,
-                )
+                json.dump({"cloze": {"syntax": {"open": "", "close": 1}}}, handle)
 
             config = self._load_config(repo_root)
 
-        self.assertEqual(RevealMode.INCREMENTAL, config.cloze.reveal_mode)
         self.assertEqual("~{", config.cloze.cloze_open)
         self.assertEqual("}", config.cloze.cloze_close)
-        self.assertEqual("▇", config.cloze.mask_char)
-        self.assertTrue(config.show_context)
-        self.assertIsNone(config.media)
 
     def test_load_review_config_uses_default_scheduler_when_scheduler_values_invalid(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
@@ -182,7 +140,10 @@ class ReviewConfigTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as repo_root:
             path = self._config_path(repo_root)
             with open(path, "w", encoding="utf-8") as handle:
-                json.dump({"review": {"show_context": False}, "scheduler": {"desired_retention": 0.9}}, handle)
+                json.dump(
+                    {"cloze": {"syntax": {"open": "[[", "close": "]]"}}, "scheduler": {"desired_retention": 0.9}},
+                    handle,
+                )
 
             with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
                 write_scheduler_parameters((0.1, 0.2, 0.3))
@@ -192,7 +153,7 @@ class ReviewConfigTest(unittest.TestCase):
 
         self.assertEqual([0.1, 0.2, 0.3], stored["scheduler"]["parameters"])
         self.assertEqual(0.9, stored["scheduler"]["desired_retention"])
-        self.assertEqual({"show_context": False}, stored["review"])
+        self.assertEqual({"syntax": {"open": "[[", "close": "]]"}}, stored["cloze"])
 
     def test_write_scheduler_parameters_creates_config_when_missing(self) -> None:
         parameters = list(Scheduler().parameters)

@@ -13,116 +13,79 @@ if str(PROJECT_ROOT) not in sys.path:
 from fsrs import Rating
 
 from core import util
-from core.card import Card, CardRef, ViewBlock
-from core.card_types import build_card_type_registry
+from core.card import CardRef
 from core.config import ReviewConfig, load_review_config
 from core.engine import ReviewEngine
 from core.protocol import JsonLineTransport
 
 
 class TransportUI:
-    """ReviewUIProtocol implementation that renders/awaits events over a transport."""
+    """ReviewUIProtocol implementation that talks JSON over a transport."""
 
     def __init__(self, config: ReviewConfig, transport: JsonLineTransport) -> None:
         self.config = config
         self.transport = transport
-        self.rating_buttons = config.rating_buttons
 
     def print_message(self, message: str) -> None:
         self.transport.send({"type": "notice", "level": "info", "text": message})
 
     def intro(self, total: int, note_paths: list[str]) -> None:
-        self.transport.send({"type": "intro", "due": total, "notes": note_paths, "media": self.config.media})
+        self.transport.send(
+            {
+                "type": "intro",
+                "due": total,
+                "notes": note_paths,
+                "cloze": {"open": self.config.cloze.cloze_open, "close": self.config.cloze.cloze_close},
+            }
+        )
         while self._await_event().get("type") != "start":
             continue
 
-    def question_step(self, card_ref: CardRef, card: Card) -> tuple[ViewBlock, int] | None:
-        view: ViewBlock = card.question_view()
-        reveal_keys: list[str] = card.reveal_labels()
-        paused: bool = False
-        pause_total_ns: int = 0
-        pause_start_ns: int = 0
+    def card_step(self, card_ref: CardRef) -> int | None:
+        self.transport.send(
+            {
+                "type": "card",
+                "card": {
+                    "index": card_ref.index,
+                    "total": card_ref.total,
+                    "id": card_ref.card_id,
+                    "note": card_ref.note_path,
+                    "start_line": card_ref.start_line,
+                    "end_line": card_ref.end_line,
+                    "type": card_ref.card_type,
+                },
+            }
+        )
+
+        paused = False
+        pause_total_ns = 0
+        pause_start_ns = 0
         while True:
-            self._send_render("question", card_ref, card, view, paused=paused, reveal_keys=reveal_keys)
-            event: dict[str, Any] = self._await_event()
-            event_type = event.get("type")
+            event_type = self._await_event().get("type")
             if event_type == "pause":
-                if paused:  # resume
+                if paused:
                     pause_total_ns += time.monotonic_ns() - pause_start_ns
                     paused = False
-                else:  # pause
+                else:
                     pause_start_ns = time.monotonic_ns()
                     paused = True
             elif event_type == "skip":
                 return None
-            elif event_type == "next":
+            elif event_type == "answered":
                 if paused:
                     pause_total_ns += time.monotonic_ns() - pause_start_ns
-                return view, pause_total_ns
-            elif event_type == "reveal":
-                revealed = card.reveal_for_label(event.get("label", ""))
-                if revealed is not None:
-                    view = revealed
+                return pause_total_ns
 
-    def answer_step(self, card_ref: CardRef, card: Card, view: ViewBlock, duration_s: float) -> None:
-        self._send_render("answer", card_ref, card, view, duration_s)
-
-    def rating_step(self, default_rating: Rating | None) -> Rating:
-        self.transport.send(
-            {
-                "type": "rating",
-                "suggested": default_rating.name if default_rating is not None else None,
-                "choices": [
-                    {"name": rating.name, "key": self.rating_buttons[rating]}
-                    for rating in Rating
-                    if rating in self.rating_buttons
-                ],
-            }
-        )
+    def rating_step(self) -> Rating:
         while True:
             event = self._await_event()
             if event.get("type") != "rate":
                 continue
             rating_name = event.get("rating")
-            if rating_name is None:
-                if default_rating is not None:
-                    return default_rating
-                self.transport.send({"type": "notice", "level": "error", "text": "Invalid rating"})
-                continue
             try:
                 return Rating[rating_name]
-            except KeyError:
+            except (KeyError, TypeError):
                 self.transport.send({"type": "notice", "level": "error", "text": "Invalid rating"})
-
-    def _send_render(
-        self,
-        state: str,
-        card_ref: CardRef,
-        card: Card,
-        view: ViewBlock,
-        duration_s: float | None = None,
-        paused: bool | None = None,
-        reveal_keys: list[str] | None = None,
-    ) -> None:
-        start, end = card.index_entry.start_line, card.index_entry.end_line
-        segments = [
-            {"start": r0, "end": r1, "text": view.text if (r0, r1) == (start, end) else text}
-            for (r0, r1), text in sorted(card.context.items())
-        ] or [{"start": start, "end": end, "text": view.text}]
-        message: dict[str, Any] = {
-            "type": "render",
-            "state": state,
-            "card": {"index": card_ref.index, "total": card_ref.total, "note": card_ref.note_path},
-            "active": {"start": start, "end": end},
-            "segments": segments,
-        }
-        if duration_s is not None:
-            message["duration_s"] = duration_s
-        if paused is not None:
-            message["paused"] = paused
-        if reveal_keys is not None:
-            message["reveal_keys"] = reveal_keys
-        self.transport.send(message)
 
     def _await_event(self) -> dict[str, Any]:
         event = self.transport.receive()
@@ -139,11 +102,7 @@ def run(reader: IO[str], writer: IO[str]) -> int:
         return 1
 
     config = load_review_config()
-    engine = ReviewEngine(
-        ui=TransportUI(config=config, transport=transport),
-        card_registry=build_card_type_registry(config),
-        scheduler=config.build_scheduler(),
-    )
+    engine = ReviewEngine(ui=TransportUI(config=config, transport=transport), scheduler=config.build_scheduler())
     return engine.run()
 
 

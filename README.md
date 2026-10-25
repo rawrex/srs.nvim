@@ -1,12 +1,13 @@
 ### SRS in nvim
 - Scheduling is done with [FSRS](https://github.com/open-spaced-repetition/py-fsrs).
-- Currently work in progress, implemented as a Python backend, with TUI and nvim clients.
+- Currently work in progress, implemented as a Python backend with an nvim client.
 - Aiming to be non-invasive. Working on making the system to be pluggable into a given knowledge base, without diffs on its current content or future content.
 - Working on providing high degsee of customization, including: options config, pluggable parsers (so to say, card factories).
 
 ### Architecture
-- `core/` holds the UI-agnostic backend: `core/engine.py` owns the review flow, `core/rpc.py` exposes it over the newline-delimited JSON protocol in `core/protocol.py`.
-- UI clients are peers. Currently we have the nvim plugin (`lua/`) and the terminal UI (`tui.py`). Both spawn `core/rpc.py` and speak the same transport, so a new UI only needs to implement the protocol.
+- `core/` holds the UI-agnostic backend: the index (`core/index/`), the review engine (`core/engine.py`) and the FSRS scheduler. It never reads note contents.
+- The backend sends only pointers over the newline-delimited JSON protocol in `core/protocol.py`: note path, line span and card type. The nvim client (`lua/`) opens the real note and derives presentation from its contents.
+- `scan.py` is an optional add-on for importing an existing vault: it scans notes, assigns card types and writes index entries. It is not part of the review flow.
 
 ### nvim plugin (in progress...)
 - Requires Neovim 0.10+.
