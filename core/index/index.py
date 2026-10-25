@@ -128,10 +128,7 @@ class Index:
             return handle.readlines()
 
     def _write(self, lines: list[str]) -> None:
-        tmp_path = self.path + ".tmp"
-        with open(tmp_path, "w", encoding="utf-8") as handle:
-            handle.writelines(lines)
-        os.replace(tmp_path, self.path)
+        util.write_text_atomic(self.path, "".join(lines))
 
     def _parse(self, raw_line: str) -> IndexEntry | None:
         if match := self.entry_re.match(raw_line.rstrip("\n")):

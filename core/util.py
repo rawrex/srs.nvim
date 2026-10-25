@@ -77,6 +77,13 @@ def normalize_path(path: str) -> str:
     return "/" + path
 
 
+def write_text_atomic(path: str, text: str) -> None:
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as handle:
+        handle.write(text)
+    os.replace(tmp, path)
+
+
 def parse_diff(text: str) -> tuple[dict[str, str], set[str], set[str]]:
     renames: dict[str, str] = {}
     deletes: set[str] = set()

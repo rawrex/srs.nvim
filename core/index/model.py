@@ -63,8 +63,5 @@ class IndexEntry:
     def write_metadata(self, metadata: Metadata) -> None:
         merged = json.loads(metadata.scheduler_card.to_json())
         merged[REVIEW_LOGS_KEY] = [log.to_dict() for log in metadata.review_logs]
-        tmp_path = self.card_path + ".tmp"
-        with open(tmp_path, "w", encoding="utf-8") as handle:
-            json.dump(merged, handle, ensure_ascii=False, indent=4, sort_keys=True)
-            handle.write("\n")
-        os.replace(tmp_path, self.card_path)
+        payload = json.dumps(merged, ensure_ascii=False, indent=4, sort_keys=True)
+        util.write_text_atomic(self.card_path, payload + "\n")

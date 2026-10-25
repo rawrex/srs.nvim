@@ -92,11 +92,8 @@ def write_scheduler_parameters(parameters: tuple[float, ...] | list[float]) -> N
     raw["scheduler"] = scheduler
 
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    tmp_path = path + ".tmp"
-    with open(tmp_path, "w", encoding="utf-8") as handle:
-        json.dump(raw, handle, ensure_ascii=False, indent=4, sort_keys=True)
-        handle.write("\n")
-    os.replace(tmp_path, path)
+    payload = json.dumps(raw, ensure_ascii=False, indent=4, sort_keys=True)
+    util.write_text_atomic(path, payload + "\n")
 
 
 def _load_raw_config(path: str) -> dict[str, object] | None:
