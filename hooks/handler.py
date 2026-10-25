@@ -20,11 +20,7 @@ class Handler:
         args = ["diff", "--cached", "--name-status", "-M", "-C"]
         if not self.is_rev_exists("HEAD"):
             args.append("--root")
-        code, diff_text, _ = util.run_git(args, cwd=self.root_path)
-        if code != 0:
-            diff_text = ""
-
-        index.apply_diff(diff_text)
+        index.apply_diff(self._git_diff(args))
 
     def handle_post_checkout(self, index: Index, args: list[str]) -> None:
         if len(args) < 2:
@@ -44,8 +40,8 @@ class Handler:
             self._apply_ref_diff(index, old_ref, new_ref)
 
     def _apply_ref_diff(self, index: Index, old_ref: str, new_ref: str) -> None:
-        code, diff_text, _ = util.run_git(["diff", "--name-status", "-M", "-C", old_ref, new_ref], cwd=self.root_path)
-        if code != 0:
-            diff_text = ""
+        index.apply_diff(self._git_diff(["diff", "--name-status", "-M", "-C", old_ref, new_ref]))
 
-        index.apply_diff(diff_text)
+    def _git_diff(self, args: list[str]) -> str:
+        code, diff_text, _ = util.run_git(args, cwd=self.root_path)
+        return diff_text if code == 0 else ""
