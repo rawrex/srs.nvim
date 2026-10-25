@@ -2,8 +2,9 @@
 import os
 import re
 
+from fsrs import Card as SchedulerCard
+
 from core import util
-from core.card import SchedulerCard
 from core.index.model import DiffChangeSet, IndexEntry, Metadata
 
 
