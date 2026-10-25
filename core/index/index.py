@@ -99,7 +99,7 @@ class Index:
             removed = self.remove_note(note_path)
             if removed:
                 changed = True
-                touched_paths.update(self.card_path(entry.card_id) for entry in removed)
+                touched_paths.update(self.card_file_path(entry.card_id) for entry in removed)
         for old_path, new_path in sorted(changes.renames.items()):
             if self.rename_note(old_path, new_path):
                 changed = True
@@ -114,7 +114,7 @@ class Index:
         rel_path = os.path.relpath(self.path, self.repo_root())
         return util.normalize_path(rel_path)
 
-    def card_path(self, card_id: int) -> str:
+    def card_file_path(self, card_id: int) -> str:
         return f"/.srs/{card_id}.json"
 
     def repo_root(self) -> str:
