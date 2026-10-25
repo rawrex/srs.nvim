@@ -11,8 +11,6 @@ if str(PROJECT_ROOT) not in sys.path:
 
 util = import_module("core.util")
 
-HOOKS = ["pre-commit", "pre-merge-commit", "post-checkout", "post-rewrite"]
-
 
 def _is_managed_hook_script(hook_path: str) -> bool:
     try:
@@ -26,7 +24,7 @@ def _is_managed_hook_script(hook_path: str) -> bool:
 
 def remove_installed_hooks(hooks_dir: str) -> int:
     removed_count = 0
-    for hook in HOOKS:
+    for hook in util.HOOKS:
         hook_path = os.path.join(hooks_dir, hook)
         if not os.path.isfile(hook_path):
             continue

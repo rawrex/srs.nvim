@@ -12,8 +12,6 @@ if str(PROJECT_ROOT) not in sys.path:
 
 util = import_module("core.util")
 
-HOOKS = ["pre-commit", "pre-merge-commit", "post-checkout", "post-rewrite"]
-
 
 def write_hook(hook_path: str, script_path: str, hook_name: str) -> None:
     python_executable = shlex.quote(sys.executable)
@@ -57,11 +55,11 @@ def main() -> int:
         print("Could not initialize .srs/index.txt")
         return 1
 
-    for hook in HOOKS:
+    for hook in util.HOOKS:
         hook_path = os.path.join(hooks_dir, hook)
         write_hook(hook_path, hooks_path, hook)
 
-    print("Installed hooks:", ", ".join(HOOKS))
+    print("Installed hooks:", ", ".join(util.HOOKS))
     print("Ensured index:", os.path.join(util.SRS_DIR_NAME, util.INDEX_FILENAME))
     return 0
 

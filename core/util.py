@@ -11,6 +11,7 @@ NOREPEAT_MARKER_FILENAME = ".norepeat"
 
 EXCLUDE_FROM_TRACKING = [SRS_DIR_NAME, ".git"]
 GIT_RELATED_FILENAMES = frozenset({".gitignore", ".gitattributes", ".gitmodules", ".gitkeep"})
+HOOKS = ["pre-commit", "pre-merge-commit", "post-checkout", "post-rewrite"]
 
 
 @dataclass(frozen=True)

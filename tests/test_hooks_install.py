@@ -4,7 +4,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from core.index.index import Index
-from setup.install import HOOKS
+from core.util import HOOKS
 from tests.setup_test_helpers import install_system, read_index_rows, run_command, runtime_context, temporary_git_repo
 
 
