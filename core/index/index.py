@@ -49,15 +49,21 @@ class Index:
         return index_entry
 
     def remove_note(self, note_path: str) -> list[IndexEntry]:
-        entries = self.entries_for_note(note_path)
-        if not entries:
+        removed: list[IndexEntry] = []
+        kept: list[str] = []
+        for line in self._readlines():
+            entry = self._parse(line)
+            if entry is not None and entry.note_path == note_path:
+                removed.append(entry)
+            else:
+                kept.append(line)
+        if not removed:
             return []
-        rest = [line for line in self._readlines() if not self._matches_note(line, note_path)]
-        self._write(rest)
-        for entry in entries:
+        self._write(kept)
+        for entry in removed:
             if os.path.exists(entry.card_path):
                 os.remove(entry.card_path)
-        return entries
+        return removed
 
     def rename_note(self, old_path: str, new_path: str) -> list[IndexEntry]:
         renamed: list[IndexEntry] = []
@@ -113,10 +119,6 @@ class Index:
 
     def repo_root(self) -> str:
         return util._RUNTIME_CONTEXT.repo_root_path
-
-    def _matches_note(self, raw_line: str, note_path: str) -> bool:
-        entry = self._parse(raw_line)
-        return entry is not None and entry.note_path == note_path
 
     def _stage_paths(self, repo_root: str, indexed_paths: set[str]) -> None:
         rel_paths = sorted(path.lstrip("/") for path in indexed_paths)
