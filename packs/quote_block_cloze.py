@@ -23,7 +23,7 @@ class QuoteBlockClozeParser(ClozeParser, QuoteBlockParser, Parser):
         cards: list[tuple[int, int]] = []
         current_start: int | None = None
         current_lines: list[str] = []
-        cloze_re = re.compile(re.escape(self.cloze_open) + r".*?" + re.escape(self.cloze_close), re.DOTALL)
+        cloze_re = self._cloze_pattern(re.DOTALL)
 
         for line_number, line in enumerate(note_text.splitlines(keepends=True), start=1):
             if self._is_quote_line(line):

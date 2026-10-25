@@ -19,9 +19,12 @@ class ClozeParser(Parser):
     cloze_open: str
     cloze_close: str
 
+    def _cloze_pattern(self, flags: int = 0) -> re.Pattern[str]:
+        return re.compile(re.escape(self.cloze_open) + r".*?" + re.escape(self.cloze_close), flags)
+
     def interpret_text(self, note_text: str) -> list[tuple[int, int]]:
         cards: list[tuple[int, int]] = []
-        cloze_re = re.compile(re.escape(self.cloze_open) + r".*?" + re.escape(self.cloze_close))
+        cloze_re = self._cloze_pattern()
         for line_number, line in enumerate(note_text.splitlines(keepends=True), start=1):
             if cloze_re.search(line):
                 cards.append((line_number, line_number))
