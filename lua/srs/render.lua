@@ -2,6 +2,8 @@ local state = require("srs.state")
 
 local M = {}
 
+local CLOZE_HL = "SrsCloze"
+
 local function escape_pattern(text)
 	return (text:gsub("([%^%$%(%)%%%.%[%]%*%+%-%?])", "%%%1"))
 end
@@ -43,6 +45,8 @@ local function conceal_clozes(buf, lines)
 			vim.api.nvim_buf_set_extmark(buf, state.ns, row - 1, start_col - 1, {
 				end_col = end_col,
 				conceal = "",
+				virt_text = { { "[ … ]", CLOZE_HL } },
+				virt_text_pos = "inline",
 			})
 			init = end_col + 1
 		end
@@ -73,6 +77,7 @@ local function fold_blocks(win, lines)
 end
 
 function M.open(card)
+	vim.api.nvim_set_hl(0, CLOZE_HL, { link = "Comment", default = true })
 	local win = state.win
 	if not win or not vim.api.nvim_win_is_valid(win) or not card or not card.note then
 		return
