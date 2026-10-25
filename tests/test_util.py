@@ -74,7 +74,7 @@ class UtilTest(unittest.TestCase):
         self.assertEqual("/already", util.normalize_path("/already"))
         self.assertEqual("/rel/path", util.normalize_path("rel/path"))
 
-    def test_parse_diff_parses_supported_status_codes(self) -> None:
+    def test_parse_diff_parses_renames_and_deletes(self) -> None:
         diff_text = "\n".join(
             [
                 "R100\told.md\tnew.md",
@@ -86,8 +86,7 @@ class UtilTest(unittest.TestCase):
             ]
         )
 
-        renames, deletes, adds = util.parse_diff(diff_text)
+        renames, deletes = util.parse_diff(diff_text)
 
         self.assertEqual({"/old.md": "/new.md"}, renames)
         self.assertEqual({"/gone.md"}, deletes)
-        self.assertEqual({"/copied.md", "/added.md"}, adds)

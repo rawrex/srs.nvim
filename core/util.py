@@ -84,24 +84,16 @@ def write_text_atomic(path: str, text: str) -> None:
     os.replace(tmp, path)
 
 
-def parse_diff(text: str) -> tuple[dict[str, str], set[str], set[str]]:
+def parse_diff(text: str) -> tuple[dict[str, str], set[str]]:
     renames: dict[str, str] = {}
     deletes: set[str] = set()
-    adds: set[str] = set()
     for line in text.splitlines():
         if not line.strip():
             continue
         parts = line.split("\t")
-        status = parts[0]
-        code = status[:1]
+        code = parts[0][:1]
         if code == "R" and len(parts) >= 3:
-            old_path = normalize_path(parts[1])
-            new_path = normalize_path(parts[2])
-            renames[old_path] = new_path
-        elif code == "C" and len(parts) >= 3:
-            adds.add(normalize_path(parts[2]))
+            renames[normalize_path(parts[1])] = normalize_path(parts[2])
         elif code == "D" and len(parts) >= 2:
             deletes.add(normalize_path(parts[1]))
-        elif code == "A" and len(parts) >= 2:
-            adds.add(normalize_path(parts[1]))
-    return renames, deletes, adds
+    return renames, deletes

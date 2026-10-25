@@ -15,12 +15,11 @@ REVIEW_LOGS_KEY = "review_logs"
 class DiffChangeSet:
     renames: dict[str, str]
     deletes: set[str]
-    adds: set[str]
 
     @classmethod
     def from_diff_text(cls, diff_text: str) -> "DiffChangeSet":
-        renames, deletes, adds = util.parse_diff(diff_text)
-        return cls(renames=renames, deletes=deletes, adds=adds)
+        renames, deletes = util.parse_diff(diff_text)
+        return cls(renames=renames, deletes=deletes)
 
 
 @dataclass
