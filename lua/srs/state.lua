@@ -61,8 +61,6 @@ function state.restore()
 
 	if state.saved_win and state.win and vim.api.nvim_win_is_valid(state.win) then
 		local saved = state.saved_win
-		vim.wo[state.win].conceallevel = saved.conceallevel
-		vim.wo[state.win].concealcursor = saved.concealcursor
 		vim.wo[state.win].foldmethod = saved.foldmethod
 		vim.wo[state.win].foldenable = saved.foldenable
 		vim.wo[state.win].foldlevel = saved.foldlevel

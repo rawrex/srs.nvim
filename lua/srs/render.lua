@@ -24,8 +24,6 @@ local function save_window(win)
 		return
 	end
 	state.saved_win = {
-		conceallevel = vim.wo[win].conceallevel,
-		concealcursor = vim.wo[win].concealcursor,
 		foldmethod = vim.wo[win].foldmethod,
 		foldenable = vim.wo[win].foldenable,
 		foldlevel = vim.wo[win].foldlevel,
@@ -33,7 +31,11 @@ local function save_window(win)
 	}
 end
 
-local function conceal_clozes(buf, lines)
+local function cloze_mask(width)
+	return string.rep("█", math.max(width, 1))
+end
+
+local function mask_clozes(buf, lines)
 	local pattern = escape_pattern(state.cloze_open) .. ".-" .. escape_pattern(state.cloze_close)
 	for row, line in ipairs(lines) do
 		local init = 1
@@ -42,11 +44,12 @@ local function conceal_clozes(buf, lines)
 			if not start_col then
 				break
 			end
+			local width = vim.fn.strdisplaywidth(line:sub(1, end_col))
+				- vim.fn.strdisplaywidth(line:sub(1, start_col - 1))
 			vim.api.nvim_buf_set_extmark(buf, state.ns, row - 1, start_col - 1, {
-				end_col = end_col,
-				conceal = "",
-				virt_text = { { "[ … ]", CLOZE_HL } },
-				virt_text_pos = "inline",
+				virt_text = { { cloze_mask(width), CLOZE_HL } },
+				virt_text_pos = "overlay",
+				priority = 100,
 			})
 			init = end_col + 1
 		end
@@ -95,14 +98,12 @@ function M.open(card)
 	save_window(win)
 	vim.api.nvim_win_set_buf(win, buf)
 
-	vim.wo[win].conceallevel = 2
-	vim.wo[win].concealcursor = "nvic"
 	vim.wo[win].foldmethod = "manual"
 	vim.wo[win].foldenable = true
 
 	clear_current()
 	local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-	conceal_clozes(buf, lines)
+	mask_clozes(buf, lines)
 	fold_blocks(win, lines)
 	vim.wo[win].foldlevel = 0
 
