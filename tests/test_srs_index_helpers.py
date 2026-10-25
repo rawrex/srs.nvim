@@ -37,7 +37,7 @@ class SrsIndexStoreTest(unittest.TestCase):
         self.assertEqual(2, row.start_line)
         self.assertEqual(3, row.end_line)
 
-    def test_repo_root_resolves_from_index_path(self) -> None:
+    def test_repo_root_uses_runtime_context(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
             self._create_index_path(repo_root)
             index = self._index(repo_root)

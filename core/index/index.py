@@ -112,7 +112,7 @@ class Index:
         return f"/.srs/{card_id}.json"
 
     def repo_root(self) -> str:
-        return os.path.dirname(os.path.dirname(self.path))
+        return util._RUNTIME_CONTEXT.repo_root_path
 
     def _matches_note(self, raw_line: str, note_path: str) -> bool:
         entry = self._parse(raw_line)
