@@ -59,7 +59,7 @@ def run_optimization(entries: list[IndexEntry], verbose: bool = False, dry_run: 
         )
     card_count = len({log.card_id for log in review_logs})
     parameters = optimize_review_logs(review_logs, verbose=verbose)
-    if [float(value) for value in parameters] == list(DEFAULT_PARAMETERS):
+    if parameters == list(DEFAULT_PARAMETERS):
         return OptimizationReport(
             card_count=card_count,
             review_log_count=len(review_logs),
