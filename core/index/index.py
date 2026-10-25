@@ -31,9 +31,6 @@ class Index:
     def entries_for_note(self, note_path: str) -> list[IndexEntry]:
         return [entry for entry in self.load_entries() if entry.note_path == note_path]
 
-    def has_entries(self, note_path: str) -> bool:
-        return any(entry.note_path == note_path for entry in self.load_entries())
-
     # Writes ------------------------------------------------------------------
 
     def add_card(self, note_path: str, card_type: str, start_line: int, end_line: int) -> IndexEntry:

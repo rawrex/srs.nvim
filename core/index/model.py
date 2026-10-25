@@ -22,9 +22,6 @@ class DiffChangeSet:
         renames, deletes, adds = util.parse_diff(diff_text)
         return cls(renames=renames, deletes=deletes, adds=adds)
 
-    def has_changes(self) -> bool:
-        return bool(self.renames or self.deletes or self.adds)
-
 
 @dataclass
 class Metadata:
@@ -49,10 +46,6 @@ class IndexEntry:
     @property
     def card_path(self) -> str:
         return os.path.join(util._RUNTIME_CONTEXT.srs_path, f"{self.card_id}.json")
-
-    @property
-    def note_abs_path(self) -> str:
-        return os.path.join(util._RUNTIME_CONTEXT.repo_root_path, self.note_path.lstrip("/"))
 
     def read_metadata(self) -> Metadata:
         with open(self.card_path, "r", encoding="utf-8") as handle:

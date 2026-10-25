@@ -29,23 +29,6 @@ Client -> server events
 import json
 from typing import IO, Any
 
-# Server -> client message types.
-INTRO = "intro"
-CARD = "card"
-NOTICE = "notice"
-
-# Client -> server event types.
-EVENT_START = "start"
-EVENT_ANSWERED = "answered"
-EVENT_PAUSE = "pause"
-EVENT_SKIP = "skip"
-EVENT_RATE = "rate"
-EVENT_QUIT = "quit"
-
-# ``notice`` severity levels.
-LEVEL_INFO = "info"
-LEVEL_ERROR = "error"
-
 
 class JsonLineTransport:
     """Newline-delimited JSON over a pair of text streams (stdout/stdin)."""

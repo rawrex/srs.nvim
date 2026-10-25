@@ -67,7 +67,7 @@ class SrsIndexStoreTest(unittest.TestCase):
             self.assertEqual(4, rows[0].end_line)
             self.assertTrue(os.path.exists(os.path.join(repo_root, ".srs", f"{entry.card_id}.json")))
 
-    def test_entries_for_note_and_has_entries(self) -> None:
+    def test_entries_for_note(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
             index_path = self._create_index_path(repo_root)
             with open(index_path, "w", encoding="utf-8") as handle:
@@ -77,10 +77,9 @@ class SrsIndexStoreTest(unittest.TestCase):
 
             index = self._index(repo_root)
 
-            self.assertTrue(index.has_entries("/note.md"))
-            self.assertFalse(index.has_entries("/missing.md"))
             self.assertEqual([1, 3], [entry.card_id for entry in index.entries_for_note("/note.md")])
             self.assertEqual([2], [entry.card_id for entry in index.entries_for_note("/other.md")])
+            self.assertEqual([], index.entries_for_note("/missing.md"))
 
     def test_remove_note_removes_rows_and_metadata_files(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
