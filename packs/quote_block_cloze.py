@@ -2,7 +2,6 @@ import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar
 
-from core.api import Parser
 from core.config import ReviewConfig
 from packs.cloze import ClozeParser
 from packs.quote_block import QuoteBlockParser
@@ -15,7 +14,7 @@ QUOTE_BLOCK_CLOZE_PARSER_ID = "quote_block_cloze"
 
 
 @dataclass(frozen=True)
-class QuoteBlockClozeParser(ClozeParser, QuoteBlockParser, Parser):
+class QuoteBlockClozeParser(ClozeParser, QuoteBlockParser):
     parser_id: ClassVar[str] = QUOTE_BLOCK_CLOZE_PARSER_ID
     priority: ClassVar[int] = 20
 
