@@ -1,6 +1,6 @@
 import json
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import timedelta
 
 from fsrs import Scheduler
@@ -44,40 +44,24 @@ def load_review_config() -> ReviewConfig:
     if raw is None:
         return defaults
 
-    cloze_raw = _dict_or_empty(raw.get("cloze"))
+    cloze = _parse_cloze_config(_dict_or_empty(raw.get("cloze")), defaults.cloze)
     scheduler_value = raw.get("scheduler")
-    scheduler_raw = _dict_or_empty(scheduler_value)
-
-    cloze_config = _parse_cloze_config(cloze_raw, defaults.cloze)
-
-    scheduler_parameters = defaults.scheduler_parameters
-    scheduler_desired_retention = defaults.scheduler_desired_retention
-    scheduler_learning_steps = defaults.scheduler_learning_steps
-    scheduler_relearning_steps = defaults.scheduler_relearning_steps
-    scheduler_maximum_interval = defaults.scheduler_maximum_interval
-    scheduler_enable_fuzzing = defaults.scheduler_enable_fuzzing
-    if isinstance(scheduler_value, dict):
-        parsed_scheduler = _parse_scheduler_config(scheduler_raw, defaults)
-    else:
-        parsed_scheduler = None
-    if parsed_scheduler is not None:
-        (
-            scheduler_parameters,
-            scheduler_desired_retention,
-            scheduler_learning_steps,
-            scheduler_relearning_steps,
-            scheduler_maximum_interval,
-            scheduler_enable_fuzzing,
-        ) = parsed_scheduler
-
-    return ReviewConfig(
-        cloze=cloze_config,
-        scheduler_parameters=scheduler_parameters,
-        scheduler_desired_retention=scheduler_desired_retention,
-        scheduler_learning_steps=scheduler_learning_steps,
-        scheduler_relearning_steps=scheduler_relearning_steps,
-        scheduler_maximum_interval=scheduler_maximum_interval,
-        scheduler_enable_fuzzing=scheduler_enable_fuzzing,
+    scheduler = (
+        _parse_scheduler_config(_dict_or_empty(scheduler_value), defaults)
+        if isinstance(scheduler_value, dict)
+        else None
+    )
+    if scheduler is None:
+        return replace(defaults, cloze=cloze)
+    return replace(
+        defaults,
+        cloze=cloze,
+        scheduler_parameters=scheduler.parameters,
+        scheduler_desired_retention=scheduler.desired_retention,
+        scheduler_learning_steps=scheduler.learning_steps,
+        scheduler_relearning_steps=scheduler.relearning_steps,
+        scheduler_maximum_interval=scheduler.maximum_interval,
+        scheduler_enable_fuzzing=scheduler.enable_fuzzing,
     )
 
 
@@ -130,30 +114,22 @@ def _parse_cloze_config(cloze_raw: dict[str, object], defaults: ClozeConfig) -> 
     return ClozeConfig(cloze_open=cloze_open, cloze_close=cloze_close)
 
 
-def _parse_scheduler_config(
-    raw: dict[str, object], defaults: ReviewConfig
-) -> tuple[tuple[float, ...], float, tuple[timedelta, ...], tuple[timedelta, ...], int, bool] | None:
+_SCHEDULER_KEYS = (
+    "parameters",
+    "desired_retention",
+    "learning_steps",
+    "relearning_steps",
+    "maximum_interval",
+    "enable_fuzzing",
+)
+
+
+def _parse_scheduler_config(raw: dict[str, object], defaults: ReviewConfig) -> Scheduler | None:
     scheduler_payload: dict[str, object] = dict(defaults.build_scheduler().to_dict())
-    for key in (
-        "parameters",
-        "desired_retention",
-        "learning_steps",
-        "relearning_steps",
-        "maximum_interval",
-        "enable_fuzzing",
-    ):
+    for key in _SCHEDULER_KEYS:
         if key in raw:
             scheduler_payload[key] = raw[key]
     try:
-        scheduler = Scheduler.from_json(json.dumps(scheduler_payload))
+        return Scheduler.from_json(json.dumps(scheduler_payload))
     except (TypeError, ValueError, KeyError):
         return None
-
-    return (
-        scheduler.parameters,
-        scheduler.desired_retention,
-        scheduler.learning_steps,
-        scheduler.relearning_steps,
-        scheduler.maximum_interval,
-        scheduler.enable_fuzzing,
-    )
