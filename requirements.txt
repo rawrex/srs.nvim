@@ -1,5 +1,4 @@
 ruff
 vulture
-rich
 fsrs
 # fsrs[optimizer]

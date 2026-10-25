@@ -13,11 +13,7 @@ UNINSTALL_SCRIPT = REPO_ROOT / "setup" / "uninstall.py"
 
 
 def runtime_context(
-    repo_root: str,
-    *,
-    cwd: str | None = None,
-    git_dir: str | None = None,
-    srs_path: str | None = None,
+    repo_root: str, *, cwd: str | None = None, git_dir: str | None = None, srs_path: str | None = None
 ) -> util.RuntimeContext:
     repo_root_path = str(repo_root)
     resolved_cwd = cwd if cwd is not None else repo_root_path
@@ -32,14 +28,6 @@ def runtime_context(
         config_path=str(Path(resolved_srs_path) / util.CONFIG_FILENAME),
         hooks_path=str(Path(resolved_git_dir) / "hooks"),
     )
-
-
-class FakeConsole:
-    def __init__(self) -> None:
-        self.printed: list[tuple[object, dict[str, object]]] = []
-
-    def print(self, value: object, *args: object, **kwargs: object) -> None:
-        self.printed.append((value, dict(kwargs)))
 
 
 def run_command(args: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
@@ -86,10 +74,6 @@ def temporary_session_repo(with_index: bool):
         if with_index:
             (srs_dir / "index.txt").write_text("", encoding="utf-8")
         yield str(repo_root)
-
-
-def tracked_head_files(repo_dir: Path) -> set[str]:
-    return set(run_command(["git", "ls-tree", "-r", "--name-only", "HEAD"], cwd=repo_dir).stdout.splitlines())
 
 
 def read_index_rows(index_path: Path) -> list[tuple[str, str, str, int, int]]:
