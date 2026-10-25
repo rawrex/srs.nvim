@@ -5,11 +5,6 @@ from core import util
 from core.util import EXCLUDE_FROM_TRACKING, GIT_RELATED_FILENAMES, NOREPEAT_MARKER_FILENAME, REPEAT_MARKER_FILENAME
 
 
-def _to_indexed_path(repo_root: str, abs_path: str) -> str:
-    rel_path = os.path.relpath(abs_path, repo_root)
-    return util.normalize_path(rel_path.replace(os.sep, "/"))
-
-
 def find_repeat_tracked_paths() -> list[str]:
     repo_root = util._RUNTIME_CONTEXT.repo_root_path
     tracked_paths: set[str] = set()
@@ -36,7 +31,7 @@ def find_repeat_tracked_paths() -> list[str]:
             if entry.name in GIT_RELATED_FILENAMES:
                 continue
             if entry.is_file(follow_symlinks=False):
-                tracked_paths.add(_to_indexed_path(repo_root, entry.path))
+                tracked_paths.add(util.repo_relative_path(repo_root, entry.path))
 
     walk(repo_root, tracked_parent=False)
     return sorted(tracked_paths)

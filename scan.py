@@ -38,17 +38,12 @@ def collect_parsed_blocks(note_text: str, registry: ParserRegistry) -> list[tupl
     return sorted(selected, key=lambda entry: (entry[1], entry[2], entry[0]))
 
 
-def _normalized(repo_root: str, abs_path: str) -> str:
-    rel_path = os.path.relpath(abs_path, repo_root).replace(os.sep, "/")
-    return util.normalize_path(rel_path)
-
-
 def iter_note_paths(targets: list[str], repo_root: str) -> list[str]:
     paths: list[str] = []
     seen: set[str] = set()
 
     def add(abs_path: str) -> None:
-        path = _normalized(repo_root, abs_path)
+        path = util.repo_relative_path(repo_root, abs_path)
         if path not in seen:
             seen.add(path)
             paths.append(path)

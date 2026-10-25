@@ -77,6 +77,12 @@ def normalize_path(path: str) -> str:
     return "/" + path
 
 
+def repo_relative_path(repo_root: str, abs_path: str) -> str:
+    """Return a normalized, slash-separated path relative to ``repo_root``."""
+    rel_path = os.path.relpath(abs_path, repo_root).replace(os.sep, "/")
+    return normalize_path(rel_path)
+
+
 def write_text_atomic(path: str, text: str) -> None:
     tmp = path + ".tmp"
     with open(tmp, "w", encoding="utf-8") as handle:
