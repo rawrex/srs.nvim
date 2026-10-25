@@ -18,8 +18,8 @@ class QuoteBlockParser(Parser):
     def _is_quote_line(self, line: str) -> bool:
         return line.lstrip().startswith(">")
 
-    def interpret_text(self, note_text: str) -> list[tuple[int, int]]:
-        cards: list[tuple[int, int]] = []
+    def _blocks(self, note_text: str) -> list[tuple[int, int, str]]:
+        blocks: list[tuple[int, int, str]] = []
         current_start: int | None = None
         current_lines: list[str] = []
 
@@ -31,14 +31,17 @@ class QuoteBlockParser(Parser):
                 continue
 
             if current_start is not None:
-                cards.append((current_start, line_number - 1))
+                blocks.append((current_start, line_number - 1, "".join(current_lines)))
                 current_start = None
                 current_lines = []
 
         if current_start is not None:
-            cards.append((current_start, current_start + len(current_lines) - 1))
+            blocks.append((current_start, current_start + len(current_lines) - 1, "".join(current_lines)))
 
-        return cards
+        return blocks
+
+    def interpret_text(self, note_text: str) -> list[tuple[int, int]]:
+        return [(start, end) for start, end, _text in self._blocks(note_text)]
 
 
 def register_pack(registry: "ParserRegistry", _config: object) -> None:
