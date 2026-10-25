@@ -111,8 +111,7 @@ class Index:
     # Helpers -----------------------------------------------------------------
 
     def index_file_path(self) -> str:
-        rel_path = os.path.relpath(self.path, self.repo_root())
-        return util.normalize_path(rel_path)
+        return util.repo_relative_path(self.repo_root(), self.path)
 
     def card_file_path(self, card_id: int) -> str:
         return f"/.srs/{card_id}.json"
