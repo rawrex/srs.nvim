@@ -99,7 +99,7 @@ function M.reveal(card)
 	state.win_cmd(win, string.format("silent! %d,%dfoldopen!", card.start_line, last))
 end
 
-function M.statusline(paused)
+function M.statusline()
 	local win = state.win
 	if not state.valid_win(win) then
 		return

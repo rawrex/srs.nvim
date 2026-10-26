@@ -25,7 +25,7 @@ local function answered()
 	render.reveal(state.card)
 	state.mode = "rating"
 	send("answered")
-	render.statusline(false)
+	render.statusline()
 end
 
 local function pause()
@@ -34,7 +34,7 @@ local function pause()
 	end
 	state.paused = not state.paused
 	send("pause")
-	render.statusline(state.paused)
+	render.statusline()
 end
 
 local function skip()
