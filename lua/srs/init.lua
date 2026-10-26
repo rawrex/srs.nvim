@@ -3,8 +3,7 @@ local client = require("srs.client")
 
 local M = {}
 
-function M.setup(opts)
-	M.config = opts or {}
+function M.setup()
 	if vim.g.loaded_srs_nvim ~= 1 then
 		vim.g.loaded_srs_nvim = 1
 		vim.api.nvim_create_user_command("SrsReview", function()

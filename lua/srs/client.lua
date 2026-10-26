@@ -8,14 +8,10 @@ local quit_fn = nil
 -- Fixed rating keys; the client owns them, the backend only receives the name.
 local RATINGS = { n = "Again", e = "Hard", i = "Good", o = "Easy" }
 
-local function send(event)
+local function send(kind, extra)
 	if state.proc then
-		state.proc:write(vim.json.encode(event) .. "\n")
+		state.proc:write(vim.json.encode(vim.tbl_extend("force", { type = kind }, extra or {})) .. "\n")
 	end
-end
-
-function M.send(type, extra)
-	send(vim.tbl_extend("force", { type = type }, extra or {}))
 end
 
 local function bind(buf, lhs, fn)
@@ -33,7 +29,7 @@ local function answered()
 	end
 	render.reveal(state.card)
 	state.mode = "rating"
-	M.send("answered")
+	send("answered")
 	render.statusline(false)
 end
 
@@ -42,7 +38,7 @@ local function pause()
 		return
 	end
 	state.paused = not state.paused
-	M.send("pause")
+	send("pause")
 	render.statusline(state.paused)
 end
 
@@ -50,7 +46,7 @@ local function skip()
 	if state.mode ~= "question" then
 		return
 	end
-	M.send("skip")
+	send("skip")
 end
 
 local function bind_card_keys()
@@ -63,7 +59,7 @@ local function bind_card_keys()
 		bind(buf, key, function()
 			if state.mode == "rating" then
 				state.mode = "idle"
-				M.send("rate", { rating = rating_name })
+				send("rate", { rating = rating_name })
 			end
 		end)
 	end
@@ -75,13 +71,12 @@ end
 local function handle_message(message)
 	local kind = message.type
 	if kind == "intro" then
-		state.due = message.due or 0
 		if message.cloze then
 			state.cloze_open = message.cloze.open or state.cloze_open
 			state.cloze_close = message.cloze.close or state.cloze_close
 		end
-		vim.notify(string.format("srs: %d due card(s)", state.due), vim.log.levels.INFO)
-		M.send("start")
+		vim.notify(string.format("srs: %d due card(s)", message.due or 0), vim.log.levels.INFO)
+		send("start")
 	elseif kind == "card" then
 		state.mode = "question"
 		state.card = message.card
