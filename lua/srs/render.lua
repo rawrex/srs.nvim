@@ -8,25 +8,6 @@ local function escape_pattern(text)
 	return (text:gsub("([%^%$%(%)%%%.%[%]%*%+%-%?])", "%%%1"))
 end
 
-local function clear_current()
-	if state.valid_buf(state.buf) then
-		vim.api.nvim_buf_clear_namespace(state.buf, state.ns, 0, -1)
-		state.clear_folds(state.win)
-	end
-end
-
-local function save_window(win)
-	if state.saved_win then
-		return
-	end
-	state.saved_win = {
-		foldmethod = vim.wo[win].foldmethod,
-		foldenable = vim.wo[win].foldenable,
-		foldlevel = vim.wo[win].foldlevel,
-		statusline = vim.wo[win].statusline,
-	}
-end
-
 local function cloze_mask(width)
 	return string.rep("█", math.max(width, 1))
 end
@@ -85,17 +66,18 @@ function M.open(card)
 	vim.fn.bufload(buf)
 
 	if state.buf ~= buf then
-		clear_current()
+		state.clear_marks(state.buf)
+		state.clear_folds(win)
 		state.buf = buf
-		state.touched[buf] = true
 	end
-	save_window(win)
+	state.save_window(win)
 	vim.api.nvim_win_set_buf(win, buf)
 
 	vim.wo[win].foldmethod = "manual"
 	vim.wo[win].foldenable = true
 
-	clear_current()
+	state.clear_marks(buf)
+	state.clear_folds(win)
 	local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
 	mask_clozes(buf, lines)
 	fold_blocks(win, lines)
