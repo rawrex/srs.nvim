@@ -55,11 +55,10 @@ local function bind_card_keys()
 	bind(buf, "<Space>", pause)
 	bind(buf, "<Esc>", skip)
 	for key, name in pairs(RATINGS) do
-		local rating_name = name
 		bind(buf, key, function()
 			if state.mode == "rating" then
 				state.mode = "idle"
-				send("rate", { rating = rating_name })
+				send("rate", { rating = name })
 			end
 		end)
 	end
