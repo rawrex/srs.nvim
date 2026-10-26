@@ -42,8 +42,7 @@ function M.review()
 	state.prev_buf = vim.api.nvim_get_current_buf()
 	state.win = vim.api.nvim_get_current_win()
 	state.quitting = false
-	client.setup_keymaps(M.close)
-	client.start(repo_root, python(), plugin_root() .. "/core/rpc.py")
+	client.start(repo_root, python(), plugin_root() .. "/core/rpc.py", M.close)
 end
 
 function M.close()

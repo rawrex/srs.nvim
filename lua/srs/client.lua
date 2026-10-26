@@ -3,8 +3,6 @@ local render = require("srs.render")
 
 local M = {}
 
-local quit_fn = nil
-
 -- Fixed rating keys; the client owns them, the backend only receives the name.
 local RATINGS = { n = "Again", e = "Hard", i = "Good", o = "Easy" }
 
@@ -49,7 +47,7 @@ local function skip()
 	send("skip")
 end
 
-local function bind_card_keys()
+local function bind_card_keys(quit)
 	local buf = state.buf
 	bind(buf, "<CR>", answered)
 	bind(buf, "<Space>", pause)
@@ -62,12 +60,12 @@ local function bind_card_keys()
 			end
 		end)
 	end
-	if quit_fn then
-		bind(buf, "<C-c>", quit_fn)
+	if quit then
+		bind(buf, "<C-c>", quit)
 	end
 end
 
-local function handle_message(message)
+local function handle_message(message, quit)
 	local kind = message.type
 	if kind == "intro" then
 		if message.cloze then
@@ -81,7 +79,7 @@ local function handle_message(message)
 		state.card = message.card
 		state.paused = false
 		render.open(message.card)
-		bind_card_keys()
+		bind_card_keys(quit)
 		render.statusline(false)
 	elseif kind == "notice" then
 		if message.text ~= "" then
@@ -90,11 +88,7 @@ local function handle_message(message)
 	end
 end
 
-function M.setup_keymaps(quit)
-	quit_fn = quit
-end
-
-function M.start(repo_root, python, rpc_path)
+function M.start(repo_root, python, rpc_path, quit)
 	local buffered = ""
 	local function on_stdout(_, data)
 		buffered = buffered .. (data or "")
@@ -109,7 +103,7 @@ function M.start(repo_root, python, rpc_path)
 				local ok, message = pcall(vim.json.decode, line)
 				if ok then
 					vim.schedule(function()
-						handle_message(message)
+						handle_message(message, quit)
 					end)
 				end
 			end
