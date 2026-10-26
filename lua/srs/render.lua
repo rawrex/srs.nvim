@@ -146,7 +146,7 @@ function M.statusline()
 	local card = state.card
 	local name = card.note:gsub("^/", "") .. " "
 	local suffix = (state.paused and state.mode == "question") and " (PAUSED)" or ""
-	local hint = state.mode == "rating" and " | n/e/i/o" or ""
+	local hint = state.mode == "rating" and " | <CR> rate" or ""
 	vim.wo[win].statusline = string.format(
 		"[%d/%d] %s%s%s",
 		card.index,

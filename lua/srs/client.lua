@@ -18,7 +18,34 @@ local function bind(buf, lhs, fn)
 	state.keymaps[buf][lhs] = true
 end
 
+local function rate(name)
+	if state.mode == "rating" then
+		state.mode = "idle"
+		send("rate", { rating = name })
+	end
+end
+
+local function prompt_rating()
+	vim.cmd("redraw")
+	while state.mode == "rating" do
+		local answer = vim.trim(vim.fn.input("Rating [n]Again [e]Hard [i]Good [o]Easy: "):lower())
+		if answer == "" then
+			return
+		end
+		local name = RATINGS[answer]
+		if name then
+			rate(name)
+			return
+		end
+		vim.notify("srs: invalid rating '" .. answer .. "'", vim.log.levels.WARN)
+	end
+end
+
 local function answered()
+	if state.mode == "rating" then
+		prompt_rating()
+		return
+	end
 	if state.mode ~= "question" then
 		return
 	end
@@ -26,6 +53,7 @@ local function answered()
 	state.mode = "rating"
 	send("answered")
 	render.statusline()
+	prompt_rating()
 end
 
 local function pause()
@@ -51,14 +79,6 @@ local function bind_card_keys(quit, buf)
 	bind(buf, "<CR>", answered)
 	bind(buf, "<Space>", pause)
 	bind(buf, "<Esc>", skip)
-	for key, name in pairs(RATINGS) do
-		bind(buf, key, function()
-			if state.mode == "rating" then
-				state.mode = "idle"
-				send("rate", { rating = name })
-			end
-		end)
-	end
 	if quit then
 		bind(buf, "<C-c>", quit)
 	end
@@ -86,6 +106,9 @@ end
 function M.start(repo_root, python, rpc_path, quit)
 	local buffered = ""
 	local function on_stdout(_, data)
+		if not data then
+			return
+		end
 		buffered = buffered .. data
 		while true do
 			local newline = buffered:find("\n", 1, true)
