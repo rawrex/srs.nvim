@@ -11,11 +11,7 @@ end
 local function clear_current()
 	if state.valid_buf(state.buf) then
 		vim.api.nvim_buf_clear_namespace(state.buf, state.ns, 0, -1)
-		if state.valid_win(state.win) then
-			pcall(vim.api.nvim_win_call, state.win, function()
-				vim.cmd("silent! normal! zE")
-			end)
-		end
+		state.clear_folds(state.win)
 	end
 end
 
@@ -60,9 +56,7 @@ local function fold_blocks(win, lines)
 	local first, last = nil, nil
 	local function flush()
 		if first and last and last > first then
-			vim.api.nvim_win_call(win, function()
-				vim.cmd(string.format("silent! %d,%dfold", first, last))
-			end)
+			state.win_cmd(win, string.format("silent! %d,%dfold", first, last))
 		end
 		first, last = nil, nil
 	end
@@ -120,11 +114,7 @@ function M.reveal(card)
 	end
 	local last = math.min(card.end_line or 1, vim.api.nvim_buf_line_count(buf))
 	vim.api.nvim_buf_clear_namespace(buf, state.ns, (card.start_line or 1) - 1, last)
-	if state.valid_win(win) then
-		vim.api.nvim_win_call(win, function()
-			vim.cmd(string.format("silent! %d,%dfoldopen!", card.start_line or 1, last))
-		end)
-	end
+	state.win_cmd(win, string.format("silent! %d,%dfoldopen!", card.start_line or 1, last))
 end
 
 function M.statusline(paused)

@@ -24,6 +24,16 @@ function state.valid_win(win)
 	return win ~= nil and vim.api.nvim_win_is_valid(win)
 end
 
+function state.win_cmd(win, cmd)
+	if state.valid_win(win) then
+		pcall(vim.api.nvim_win_call, win, function() vim.cmd(cmd) end)
+	end
+end
+
+function state.clear_folds(win)
+	state.win_cmd(win, "silent! normal! zE")
+end
+
 function state.reset()
 	state.mode = "idle"
 	state.card = nil
@@ -47,9 +57,7 @@ function state.restore()
 		end
 	end
 	if saved and win_ok then
-		pcall(vim.api.nvim_win_call, win, function()
-			vim.cmd("silent! normal! zE")
-		end)
+		state.clear_folds(win)
 	end
 	for buf, keys in pairs(state.keymaps) do
 		if state.valid_buf(buf) then
