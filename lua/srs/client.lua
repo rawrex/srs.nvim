@@ -13,9 +13,6 @@ local function send(kind, extra)
 end
 
 local function bind(buf, lhs, fn)
-	if not state.valid_buf(buf) then
-		return
-	end
 	vim.keymap.set("n", lhs, fn, { buffer = buf })
 	state.keymaps[buf] = state.keymaps[buf] or {}
 	state.keymaps[buf][lhs] = true
@@ -47,8 +44,10 @@ local function skip()
 	send("skip")
 end
 
-local function bind_card_keys(quit)
-	local buf = state.buf
+local function bind_card_keys(quit, buf)
+	if state.keymaps[buf] then
+		return
+	end
 	bind(buf, "<CR>", answered)
 	bind(buf, "<Space>", pause)
 	bind(buf, "<Esc>", skip)
@@ -78,8 +77,10 @@ local function handle_message(message, quit)
 		state.mode = "question"
 		state.card = message.card
 		state.paused = false
-		render.open(message.card)
-		bind_card_keys(quit)
+		local buf = render.open(message.card)
+		if buf then
+			bind_card_keys(quit, buf)
+		end
 		render.statusline(false)
 	elseif kind == "notice" then
 		if message.text ~= "" then

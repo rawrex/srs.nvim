@@ -77,7 +77,7 @@ function M.open(card)
 	vim.api.nvim_set_hl(0, CLOZE_HL, { link = "Comment", default = true })
 	local win = state.win
 	if not state.valid_win(win) or not card or not card.note then
-		return
+		return nil
 	end
 
 	local abs = (state.repo_root or "") .. card.note
@@ -105,6 +105,7 @@ function M.open(card)
 	if line >= 1 then
 		vim.api.nvim_win_set_cursor(win, { line, 0 })
 	end
+	return buf
 end
 
 function M.reveal(card)
