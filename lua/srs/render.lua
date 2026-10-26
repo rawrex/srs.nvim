@@ -9,7 +9,7 @@ local function escape_pattern(text)
 end
 
 local function clear_current()
-	if state.buf and vim.api.nvim_buf_is_valid(state.buf) then
+	if state.valid_buf(state.buf) then
 		vim.api.nvim_buf_clear_namespace(state.buf, state.ns, 0, -1)
 		if state.win and vim.api.nvim_win_is_valid(state.win) then
 			pcall(vim.api.nvim_win_call, state.win, function()
@@ -115,7 +115,7 @@ end
 
 function M.reveal(card)
 	local buf, win = state.buf, state.win
-	if not card or not buf or not vim.api.nvim_buf_is_valid(buf) then
+	if not card or not state.valid_buf(buf) then
 		return
 	end
 	local last = math.min(card.end_line or 1, vim.api.nvim_buf_line_count(buf))

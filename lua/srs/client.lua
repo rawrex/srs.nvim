@@ -15,7 +15,7 @@ local function send(kind, extra)
 end
 
 local function bind(buf, lhs, fn)
-	if not buf or not vim.api.nvim_buf_is_valid(buf) then
+	if not state.valid_buf(buf) then
 		return
 	end
 	vim.keymap.set("n", lhs, fn, { buffer = buf })

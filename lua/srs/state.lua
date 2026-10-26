@@ -16,6 +16,10 @@ local state = {
 	keymaps = {},
 }
 
+function state.valid_buf(buf)
+	return buf ~= nil and vim.api.nvim_buf_is_valid(buf)
+end
+
 function state.reset()
 	state.mode = "idle"
 	state.card = nil
@@ -30,7 +34,7 @@ end
 
 function state.restore()
 	for buf in pairs(state.touched) do
-		if vim.api.nvim_buf_is_valid(buf) and state.ns then
+		if state.valid_buf(buf) and state.ns then
 			vim.api.nvim_buf_clear_namespace(buf, state.ns, 0, -1)
 		end
 	end
@@ -40,7 +44,7 @@ function state.restore()
 		end)
 	end
 	for buf, keys in pairs(state.keymaps) do
-		if vim.api.nvim_buf_is_valid(buf) then
+		if state.valid_buf(buf) then
 			for lhs in pairs(keys) do
 				pcall(vim.keymap.del, "n", lhs, { buffer = buf })
 			end
@@ -52,7 +56,7 @@ function state.restore()
 		state.win
 		and vim.api.nvim_win_is_valid(state.win)
 		and state.prev_buf
-		and vim.api.nvim_buf_is_valid(state.prev_buf)
+		and state.valid_buf(state.prev_buf)
 	then
 		vim.api.nvim_win_set_buf(state.win, state.prev_buf)
 	end
