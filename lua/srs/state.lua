@@ -20,6 +20,10 @@ function state.valid_buf(buf)
 	return buf ~= nil and vim.api.nvim_buf_is_valid(buf)
 end
 
+function state.valid_win(win)
+	return win ~= nil and vim.api.nvim_win_is_valid(win)
+end
+
 function state.reset()
 	state.mode = "idle"
 	state.card = nil
@@ -38,7 +42,7 @@ function state.restore()
 			vim.api.nvim_buf_clear_namespace(buf, state.ns, 0, -1)
 		end
 	end
-	if state.saved_win and state.win and vim.api.nvim_win_is_valid(state.win) then
+	if state.saved_win and state.valid_win(state.win) then
 		pcall(vim.api.nvim_win_call, state.win, function()
 			vim.cmd("silent! normal! zE")
 		end)
@@ -53,15 +57,14 @@ function state.restore()
 	state.keymaps = {}
 
 	if
-		state.win
-		and vim.api.nvim_win_is_valid(state.win)
+		state.valid_win(state.win)
 		and state.prev_buf
 		and state.valid_buf(state.prev_buf)
 	then
 		vim.api.nvim_win_set_buf(state.win, state.prev_buf)
 	end
 
-	if state.saved_win and state.win and vim.api.nvim_win_is_valid(state.win) then
+	if state.saved_win and state.valid_win(state.win) then
 		local saved = state.saved_win
 		vim.wo[state.win].foldmethod = saved.foldmethod
 		vim.wo[state.win].foldenable = saved.foldenable

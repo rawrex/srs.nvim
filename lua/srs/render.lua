@@ -11,7 +11,7 @@ end
 local function clear_current()
 	if state.valid_buf(state.buf) then
 		vim.api.nvim_buf_clear_namespace(state.buf, state.ns, 0, -1)
-		if state.win and vim.api.nvim_win_is_valid(state.win) then
+		if state.valid_win(state.win) then
 			pcall(vim.api.nvim_win_call, state.win, function()
 				vim.cmd("silent! normal! zE")
 			end)
@@ -82,7 +82,7 @@ end
 function M.open(card)
 	vim.api.nvim_set_hl(0, CLOZE_HL, { link = "Comment", default = true })
 	local win = state.win
-	if not win or not vim.api.nvim_win_is_valid(win) or not card or not card.note then
+	if not state.valid_win(win) or not card or not card.note then
 		return
 	end
 
@@ -120,7 +120,7 @@ function M.reveal(card)
 	end
 	local last = math.min(card.end_line or 1, vim.api.nvim_buf_line_count(buf))
 	vim.api.nvim_buf_clear_namespace(buf, state.ns, (card.start_line or 1) - 1, last)
-	if win and vim.api.nvim_win_is_valid(win) then
+	if state.valid_win(win) then
 		vim.api.nvim_win_call(win, function()
 			vim.cmd(string.format("silent! %d,%dfoldopen!", card.start_line or 1, last))
 		end)
@@ -129,7 +129,7 @@ end
 
 function M.statusline(paused)
 	local win = state.win
-	if not win or not vim.api.nvim_win_is_valid(win) then
+	if not state.valid_win(win) then
 		return
 	end
 	local card = state.card
