@@ -37,13 +37,17 @@ function state.reset()
 end
 
 function state.restore()
+	local win = state.win
+	local win_ok = state.valid_win(win)
+	local saved = state.saved_win
+
 	for buf in pairs(state.touched) do
 		if state.valid_buf(buf) and state.ns then
 			vim.api.nvim_buf_clear_namespace(buf, state.ns, 0, -1)
 		end
 	end
-	if state.saved_win and state.valid_win(state.win) then
-		pcall(vim.api.nvim_win_call, state.win, function()
+	if saved and win_ok then
+		pcall(vim.api.nvim_win_call, win, function()
 			vim.cmd("silent! normal! zE")
 		end)
 	end
@@ -56,20 +60,15 @@ function state.restore()
 	end
 	state.keymaps = {}
 
-	if
-		state.valid_win(state.win)
-		and state.prev_buf
-		and state.valid_buf(state.prev_buf)
-	then
-		vim.api.nvim_win_set_buf(state.win, state.prev_buf)
+	if win_ok and state.prev_buf and state.valid_buf(state.prev_buf) then
+		vim.api.nvim_win_set_buf(win, state.prev_buf)
 	end
 
-	if state.saved_win and state.valid_win(state.win) then
-		local saved = state.saved_win
-		vim.wo[state.win].foldmethod = saved.foldmethod
-		vim.wo[state.win].foldenable = saved.foldenable
-		vim.wo[state.win].foldlevel = saved.foldlevel
-		vim.wo[state.win].statusline = saved.statusline
+	if saved and win_ok then
+		vim.wo[win].foldmethod = saved.foldmethod
+		vim.wo[win].foldenable = saved.foldenable
+		vim.wo[win].foldlevel = saved.foldlevel
+		vim.wo[win].statusline = saved.statusline
 	end
 
 	state.touched = {}
