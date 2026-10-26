@@ -67,11 +67,9 @@ end
 local function handle_message(message, quit)
 	local kind = message.type
 	if kind == "intro" then
-		if message.cloze then
-			state.cloze_open = message.cloze.open or state.cloze_open
-			state.cloze_close = message.cloze.close or state.cloze_close
-		end
-		vim.notify(string.format("srs: %d due card(s)", message.due or 0), vim.log.levels.INFO)
+		state.cloze_open = message.cloze.open
+		state.cloze_close = message.cloze.close
+		vim.notify(string.format("srs: %d due card(s)", message.due), vim.log.levels.INFO)
 		send("start")
 	elseif kind == "card" then
 		state.mode = "question"
@@ -81,18 +79,16 @@ local function handle_message(message, quit)
 		if buf then
 			bind_card_keys(quit, buf)
 		end
-		render.statusline(false)
+		render.statusline()
 	elseif kind == "notice" then
-		if message.text ~= "" then
-			vim.notify("srs: " .. message.text, message.level == "error" and vim.log.levels.WARN or vim.log.levels.INFO)
-		end
+		vim.notify("srs: " .. message.text, message.level == "error" and vim.log.levels.WARN or vim.log.levels.INFO)
 	end
 end
 
 function M.start(repo_root, python, rpc_path, quit)
 	local buffered = ""
 	local function on_stdout(_, data)
-		buffered = buffered .. (data or "")
+		buffered = buffered .. data
 		while true do
 			local newline = buffered:find("\n", 1, true)
 			if not newline then

@@ -9,7 +9,7 @@ local function escape_pattern(text)
 end
 
 local function cloze_mask(width)
-	return string.rep("█", math.max(width, 1))
+	return string.rep("█", width)
 end
 
 local function mask_clozes(buf, lines)
@@ -57,11 +57,11 @@ end
 function M.open(card)
 	vim.api.nvim_set_hl(0, CLOZE_HL, { link = "Comment", default = true })
 	local win = state.win
-	if not state.valid_win(win) or not card or not card.note then
+	if not state.valid_win(win) then
 		return nil
 	end
 
-	local abs = (state.repo_root or "") .. card.note
+	local abs = state.repo_root .. card.note
 	local buf = vim.fn.bufadd(abs)
 	vim.fn.bufload(buf)
 
@@ -83,21 +83,20 @@ function M.open(card)
 	fold_blocks(win, lines)
 	vim.wo[win].foldlevel = 0
 
-	local line = math.min(card.start_line or 1, #lines)
-	if line >= 1 then
-		vim.api.nvim_win_set_cursor(win, { line, 0 })
+	if #lines > 0 then
+		vim.api.nvim_win_set_cursor(win, { math.min(card.start_line, #lines), 0 })
 	end
 	return buf
 end
 
 function M.reveal(card)
 	local buf, win = state.buf, state.win
-	if not card or not state.valid_buf(buf) then
+	if not state.valid_buf(buf) then
 		return
 	end
-	local last = math.min(card.end_line or 1, vim.api.nvim_buf_line_count(buf))
-	vim.api.nvim_buf_clear_namespace(buf, state.ns, (card.start_line or 1) - 1, last)
-	state.win_cmd(win, string.format("silent! %d,%dfoldopen!", card.start_line or 1, last))
+	local last = math.min(card.end_line, vim.api.nvim_buf_line_count(buf))
+	vim.api.nvim_buf_clear_namespace(buf, state.ns, card.start_line - 1, last)
+	state.win_cmd(win, string.format("silent! %d,%dfoldopen!", card.start_line, last))
 end
 
 function M.statusline(paused)
@@ -106,16 +105,13 @@ function M.statusline(paused)
 		return
 	end
 	local card = state.card
-	local name = ""
-	if card and card.note and card.note ~= "" then
-		name = card.note:gsub("^/", "") .. " "
-	end
-	local suffix = paused and " (PAUSED)" or ""
+	local name = card.note:gsub("^/", "") .. " "
+	local suffix = (state.paused and state.mode == "question") and " (PAUSED)" or ""
 	local hint = state.mode == "rating" and " | n/e/i/o" or ""
 	vim.wo[win].statusline = string.format(
 		"[%d/%d] %s%s%s",
-		card and card.index or 0,
-		card and card.total or 0,
+		card.index,
+		card.total,
 		name,
 		suffix,
 		hint
