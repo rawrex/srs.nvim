@@ -67,8 +67,6 @@ end
 local function handle_message(message, quit)
 	local kind = message.type
 	if kind == "intro" then
-		state.cloze_open = message.cloze.open
-		state.cloze_close = message.cloze.close
 		vim.notify(string.format("srs: %d due card(s)", message.due), vim.log.levels.INFO)
 		send("start")
 	elseif kind == "card" then

@@ -6,8 +6,7 @@ client opens the real note and derives the presentation from its contents.
 Server -> client messages
 -------------------------
 ``intro``
-    ``{"type": "intro", "due": int, "notes": [str, ...],
-       "cloze": {"open": str, "close": str}}``
+    ``{"type": "intro", "due": int, "notes": [str, ...]}``
 ``card``
     ``{"type": "card", "card": {"index": int, "total": int, "id": int,
        "note": str, "start_line": int, "end_line": int, "type": str}}``

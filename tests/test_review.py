@@ -26,8 +26,6 @@ class ReviewConfigTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as repo_root:
             config = self._load_config(repo_root)
 
-        self.assertEqual("~{", config.cloze.cloze_open)
-        self.assertEqual("}", config.cloze.cloze_close)
         self.assertEqual(Scheduler().to_dict(), config.build_scheduler().to_dict())
 
     def test_load_review_config_reads_custom_values(self) -> None:
@@ -36,7 +34,6 @@ class ReviewConfigTest(unittest.TestCase):
             with open(path, "w", encoding="utf-8") as handle:
                 json.dump(
                     {
-                        "cloze": {"syntax": {"open": "{{", "close": "}}"}},
                         "scheduler": {
                             "parameters": [
                                 0.5,
@@ -66,15 +63,13 @@ class ReviewConfigTest(unittest.TestCase):
                             "relearning_steps": [120],
                             "maximum_interval": 12345,
                             "enable_fuzzing": False,
-                        },
+                        }
                     },
                     handle,
                 )
 
             config = self._load_config(repo_root)
 
-        self.assertEqual("{{", config.cloze.cloze_open)
-        self.assertEqual("}}", config.cloze.cloze_close)
         scheduler = config.build_scheduler()
         self.assertEqual(0.5, scheduler.parameters[0])
         self.assertEqual(0.88, scheduler.desired_retention)
@@ -101,9 +96,9 @@ class ReviewConfigTest(unittest.TestCase):
 
             config = self._load_config(repo_root)
 
-        self.assertEqual("~{", config.cloze.cloze_open)
+        self.assertEqual(Scheduler().to_dict(), config.build_scheduler().to_dict())
 
-    def test_load_review_config_uses_defaults_for_invalid_partial_fields(self) -> None:
+    def test_load_review_config_ignores_legacy_cloze_section(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
             path = self._config_path(repo_root)
             with open(path, "w", encoding="utf-8") as handle:
@@ -111,8 +106,7 @@ class ReviewConfigTest(unittest.TestCase):
 
             config = self._load_config(repo_root)
 
-        self.assertEqual("~{", config.cloze.cloze_open)
-        self.assertEqual("}", config.cloze.cloze_close)
+        self.assertEqual(Scheduler().to_dict(), config.build_scheduler().to_dict())
 
     def test_load_review_config_uses_default_scheduler_when_scheduler_values_invalid(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:

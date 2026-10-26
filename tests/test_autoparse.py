@@ -9,6 +9,7 @@ from core.config import ReviewConfig
 from core.index.index import Index
 from core.parsers import ParserRegistry
 from packs.cloze import ClozeParser
+from packs.quote_block_cloze import QuoteBlockClozeParser
 from scan import collect_parsed_blocks, iter_note_paths, scan_note
 from tests.setup_test_helpers import runtime_context, temporary_session_repo
 
@@ -27,7 +28,7 @@ class _Parser(Parser):
 
 
 def _cloze_parser() -> ClozeParser:
-    return ClozeParser(cloze_open="~{", cloze_close="}")
+    return ClozeParser()
 
 
 class ParserRegistryTest(unittest.TestCase):
@@ -52,6 +53,48 @@ class ParserRegistryTest(unittest.TestCase):
                     build_scanner_registry(ReviewConfig())
 
 
+class ClozeParserTest(unittest.TestCase):
+    def test_detects_asterisk_emphasis(self) -> None:
+        parser = ClozeParser()
+        note_text = "**bold**\n*italic*\n***both***\nplain\n"
+
+        self.assertEqual([(1, 1), (2, 2), (3, 3)], parser.interpret_text(note_text))
+
+    def test_one_card_per_line(self) -> None:
+        parser = ClozeParser()
+
+        self.assertEqual([(1, 1)], parser.interpret_text("**a** and *b*\n"))
+
+    def test_ignores_underscores_code_escapes_and_unmatched_markers(self) -> None:
+        parser = ClozeParser()
+        note_text = (
+            "`**code**`\n"
+            "\\*escaped\\*\n"
+            "* item\n"
+            "snake_case_name\n"
+            "__bold__ and _italic_\n"
+            "a * b * c\n"
+            "```\n"
+            "**fenced**\n"
+            "```\n"
+            "**real**\n"
+        )
+
+        self.assertEqual([(10, 10)], parser.interpret_text(note_text))
+
+
+class QuoteBlockClozeParserTest(unittest.TestCase):
+    def test_marks_whole_block_containing_emphasis(self) -> None:
+        parser = QuoteBlockClozeParser()
+
+        self.assertEqual([(1, 2)], parser.interpret_text("> **a**\n> b\n\n> plain\n"))
+
+    def test_ignores_emphasis_in_fenced_block(self) -> None:
+        parser = QuoteBlockClozeParser()
+
+        self.assertEqual([], parser.interpret_text("> ```\n> **code**\n> ```\n"))
+
+
 class CollectParsedBlocksTest(unittest.TestCase):
     def test_uses_priority_and_skips_overlaps(self) -> None:
         registry = ParserRegistry(parsers={})
@@ -71,13 +114,13 @@ class ScanNoteTest(unittest.TestCase):
         with temporary_session_repo(with_index=True) as repo_root:
             with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
                 index = Index()
-                note_text = "One ~{a}\nTwo ~{b}\n"
+                note_text = "One **a**\nTwo *b*\n"
 
                 self.assertEqual(2, scan_note(index, registry, "/note.md", note_text))
                 self.assertEqual(2, len(index.load_entries()))
                 self.assertEqual(0, scan_note(index, registry, "/note.md", note_text))
                 self.assertEqual(2, len(index.load_entries()))
-                self.assertEqual(1, scan_note(index, registry, "/other.md", "Three ~{c}\n"))
+                self.assertEqual(1, scan_note(index, registry, "/other.md", "Three *c*\n"))
                 self.assertEqual(3, len(index.load_entries()))
 
 

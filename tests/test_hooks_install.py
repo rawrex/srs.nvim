@@ -32,7 +32,7 @@ class HooksInstallIntegrationTest(unittest.TestCase):
 
     def test_commit_does_not_create_cards(self):
         with temporary_git_repo(install=True, with_repeat_marker=False) as repo_dir:
-            (repo_dir / "note.md").write_text("Intro ~{overview}\n", encoding="utf-8")
+            (repo_dir / "note.md").write_text("Intro **overview**\n", encoding="utf-8")
 
             run_command(["git", "add", "note.md"], cwd=repo_dir)
             self._commit(repo_dir, "add note")
@@ -41,7 +41,7 @@ class HooksInstallIntegrationTest(unittest.TestCase):
 
     def test_commit_renames_and_deletes_tracked_cards(self):
         with temporary_git_repo(install=True, with_repeat_marker=False) as repo_dir:
-            (repo_dir / "note.md").write_text("Term ~{hidden}\n", encoding="utf-8")
+            (repo_dir / "note.md").write_text("Term **hidden**\n", encoding="utf-8")
             entry = self._add_card(repo_dir, "/note.md", 1, 1)
             card_path = repo_dir / ".srs" / f"{entry.card_id}.json"
 

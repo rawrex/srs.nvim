@@ -4,8 +4,43 @@ local M = {}
 
 local CLOZE_HL = "SrsCloze"
 
-local function escape_pattern(text)
-	return (text:gsub("([%^%$%(%)%%%.%[%]%*%+%-%?])", "%%%1"))
+local EMPHASIS_PATTERN = "\\v%(\\*\\*\\*\\S.{-}\\*\\*\\*|\\*\\*\\S.{-}\\*\\*|\\*\\S.{-}\\*)"
+
+local function blank(text)
+	return string.rep(" ", #text)
+end
+
+local function scrub(line)
+	line = line:gsub("\\.", blank)
+	return (line:gsub("((`+)(.-)%2)", blank))
+end
+
+local function fence_marker(line)
+	local content = line:gsub("^[ \t]*>+[ \t]*", "", 1)
+	local marker = content:match("^[ \t]*(`+)") or content:match("^[ \t]*(~+)")
+	if marker and #marker >= 3 then
+		return marker
+	end
+end
+
+local function emphasis_spans(line)
+	local scrubbed = scrub(line)
+	local spans = {}
+	local init = 0
+	while true do
+		local match = vim.fn.matchstrpos(scrubbed, EMPHASIS_PATTERN, init)
+		local text, start, stop = match[1], match[2], match[3]
+		if not start or start < 0 then
+			break
+		end
+		init = math.max(stop, start + 1)
+		local delimiter = text:match("^%*+")
+		local last = scrubbed:sub(stop - #delimiter, stop - #delimiter)
+		if not last:match("%s") then
+			spans[#spans + 1] = { start = start, stop = stop }
+		end
+	end
+	return spans
 end
 
 local function cloze_mask(width)
@@ -13,22 +48,26 @@ local function cloze_mask(width)
 end
 
 local function mask_clozes(buf, lines)
-	local pattern = escape_pattern(state.cloze_open) .. ".-" .. escape_pattern(state.cloze_close)
+	local fence = nil
 	for row, line in ipairs(lines) do
-		local init = 1
-		while true do
-			local start_col, end_col = line:find(pattern, init)
-			if not start_col then
-				break
+		local marker = fence_marker(line)
+		if fence then
+			if marker and marker:sub(1, 1) == fence:sub(1, 1) and #marker >= #fence then
+				fence = nil
 			end
-			local width = vim.fn.strdisplaywidth(line:sub(1, end_col))
-				- vim.fn.strdisplaywidth(line:sub(1, start_col - 1))
-			vim.api.nvim_buf_set_extmark(buf, state.ns, row - 1, start_col - 1, {
-				virt_text = { { cloze_mask(width), CLOZE_HL } },
-				virt_text_pos = "overlay",
-				priority = 100,
-			})
-			init = end_col + 1
+		elseif marker then
+			fence = marker
+		else
+			for _, span in ipairs(emphasis_spans(line)) do
+				local start_col, end_col = span.start + 1, span.stop
+				local width = vim.fn.strdisplaywidth(line:sub(1, end_col))
+					- vim.fn.strdisplaywidth(line:sub(1, start_col - 1))
+				vim.api.nvim_buf_set_extmark(buf, state.ns, row - 1, start_col - 1, {
+					virt_text = { { cloze_mask(width), CLOZE_HL } },
+					virt_text_pos = "overlay",
+					priority = 100,
+				})
+			end
 		end
 	end
 end

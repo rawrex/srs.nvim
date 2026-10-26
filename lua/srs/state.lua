@@ -14,8 +14,6 @@ function state.reset()
 	state.mode = "idle"
 	state.card = nil
 	state.paused = false
-	state.cloze_open = "~{"
-	state.cloze_close = "}"
 	state.saved_win = nil
 	state.keymaps = {}
 end

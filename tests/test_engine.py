@@ -117,7 +117,7 @@ class ReviewEngineTest(unittest.TestCase):
 class ReviewUiContractTest(unittest.TestCase):
     def test_transport_ui_satisfies_review_ui_protocol(self) -> None:
         transport = JsonLineTransport(io.StringIO(), io.StringIO())
-        ui = TransportUI(config=ReviewConfig(), transport=transport)
+        ui = TransportUI(transport=transport)
 
         self.assertIsInstance(ui, ReviewUIProtocol)
 

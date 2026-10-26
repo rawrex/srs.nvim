@@ -9,6 +9,10 @@
 - The backend sends only pointers over the newline-delimited JSON protocol in `core/protocol.py`: note path, line span and card type. The nvim client (`lua/`) opens the real note and derives presentation from its contents.
 - `scan.py` is an optional add-on for importing an existing vault: it scans notes, assigns card types and writes index entries. It is not part of the review flow.
 
+### Card syntax
+Markdown emphasis marks clozes: `**bold**` and `*italic*` (also `***both***`).
+One line containing emphasis becomes one card. Emphasis inside inline code, fenced code blocks, and escaped markers such as `\*` is ignored. The old `~{...}` syntax is no longer supported.
+
 ### nvim plugin (in progress...)
 - Requires Neovim 0.10+.
 - Activate the venv that has `requirements.txt` installed

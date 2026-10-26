@@ -22,7 +22,7 @@ def _card_ref(index: int = 1, total: int = 1, note: str = "/note.md") -> CardRef
 def _make_ui(events: list[dict[str, object]]) -> tuple[TransportUI, io.StringIO]:
     reader = io.StringIO("".join(json.dumps(event) + "\n" for event in events))
     writer = io.StringIO()
-    ui = TransportUI(config=ReviewConfig(), transport=JsonLineTransport(reader, writer))
+    ui = TransportUI(transport=JsonLineTransport(reader, writer))
     return ui, writer
 
 
@@ -36,9 +36,7 @@ class TransportUiTest(unittest.TestCase):
 
         ui.intro(2, ["note"])
 
-        self.assertEqual(
-            [{"type": "intro", "due": 2, "notes": ["note"], "cloze": {"open": "~{", "close": "}"}}], _sent(writer)
-        )
+        self.assertEqual([{"type": "intro", "due": 2, "notes": ["note"]}], _sent(writer))
 
     def test_card_step_sends_pointer(self) -> None:
         ui, writer = _make_ui([{"type": "answered"}])

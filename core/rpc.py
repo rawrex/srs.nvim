@@ -14,7 +14,7 @@ from fsrs import Rating
 
 from core import util
 from core.card import CardRef
-from core.config import ReviewConfig, load_review_config
+from core.config import load_review_config
 from core.engine import ReviewEngine
 from core.protocol import JsonLineTransport
 
@@ -22,22 +22,14 @@ from core.protocol import JsonLineTransport
 class TransportUI:
     """ReviewUIProtocol implementation that talks JSON over a transport."""
 
-    def __init__(self, config: ReviewConfig, transport: JsonLineTransport) -> None:
-        self.config = config
+    def __init__(self, transport: JsonLineTransport) -> None:
         self.transport = transport
 
     def print_message(self, message: str) -> None:
         self.transport.send({"type": "notice", "level": "info", "text": message})
 
     def intro(self, total: int, note_paths: list[str]) -> None:
-        self.transport.send(
-            {
-                "type": "intro",
-                "due": total,
-                "notes": note_paths,
-                "cloze": {"open": self.config.cloze.cloze_open, "close": self.config.cloze.cloze_close},
-            }
-        )
+        self.transport.send({"type": "intro", "due": total, "notes": note_paths})
         while self._await_event().get("type") != "start":
             continue
 
@@ -102,7 +94,7 @@ def run(reader: IO[str], writer: IO[str]) -> int:
         return 1
 
     config = load_review_config()
-    engine = ReviewEngine(ui=TransportUI(config=config, transport=transport), scheduler=config.build_scheduler())
+    engine = ReviewEngine(ui=TransportUI(transport=transport), scheduler=config.build_scheduler())
     return engine.run()
 
 

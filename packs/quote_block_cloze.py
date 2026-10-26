@@ -1,9 +1,7 @@
-import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar
 
-from core.config import ReviewConfig
-from packs.cloze import ClozeParser
+from packs.cloze import ClozeParser, has_emphasis
 from packs.quote_block import QuoteBlockParser
 
 if TYPE_CHECKING:
@@ -19,9 +17,8 @@ class QuoteBlockClozeParser(ClozeParser, QuoteBlockParser):
     priority: ClassVar[int] = 20
 
     def interpret_text(self, note_text: str) -> list[tuple[int, int]]:
-        cloze_re = self._cloze_pattern(re.DOTALL)
-        return [(start, end) for start, end, text in self._blocks(note_text) if cloze_re.search(text)]
+        return [(start, end) for start, end, text in self._blocks(note_text) if has_emphasis(text)]
 
 
-def register_pack(registry: "ParserRegistry", config: ReviewConfig) -> None:
-    registry.register(QuoteBlockClozeParser(cloze_open=config.cloze.cloze_open, cloze_close=config.cloze.cloze_close))
+def register_pack(registry: "ParserRegistry", _config: object) -> None:
+    registry.register(QuoteBlockClozeParser())

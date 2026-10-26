@@ -16,7 +16,7 @@ class UninstallIntegrationTest(unittest.TestCase):
             (repo_dir / ".repeat").write_text("", encoding="utf-8")
 
             note_path = repo_dir / "note.md"
-            note_path.write_text("~{A}\n", encoding="utf-8")
+            note_path.write_text("**A**\n", encoding="utf-8")
             run_command(["git", "add", ".repeat", "note.md"], cwd=repo_dir)
             run_command(["git", "commit", "-m", "seed srs data"], cwd=repo_dir)
 

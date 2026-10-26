@@ -1,6 +1,6 @@
 import json
 import os
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, replace
 from datetime import timedelta
 
 from fsrs import Scheduler
@@ -11,14 +11,7 @@ DEFAULT_SCHEDULER = Scheduler()
 
 
 @dataclass(frozen=True)
-class ClozeConfig:
-    cloze_open: str = "~{"
-    cloze_close: str = "}"
-
-
-@dataclass(frozen=True)
 class ReviewConfig:
-    cloze: ClozeConfig = field(default_factory=ClozeConfig)
     scheduler_parameters: tuple[float, ...] = DEFAULT_SCHEDULER.parameters
     scheduler_desired_retention: float = DEFAULT_SCHEDULER.desired_retention
     scheduler_learning_steps: tuple[timedelta, ...] = DEFAULT_SCHEDULER.learning_steps
@@ -44,7 +37,6 @@ def load_review_config() -> ReviewConfig:
     if raw is None:
         return defaults
 
-    cloze = _parse_cloze_config(_dict_or_empty(raw.get("cloze")), defaults.cloze)
     scheduler_value = raw.get("scheduler")
     scheduler = (
         _parse_scheduler_config(_dict_or_empty(scheduler_value), defaults)
@@ -52,10 +44,9 @@ def load_review_config() -> ReviewConfig:
         else None
     )
     if scheduler is None:
-        return replace(defaults, cloze=cloze)
+        return defaults
     return replace(
         defaults,
-        cloze=cloze,
         scheduler_parameters=scheduler.parameters,
         scheduler_desired_retention=scheduler.desired_retention,
         scheduler_learning_steps=scheduler.learning_steps,
@@ -97,21 +88,6 @@ def _dict_or_empty(value: object) -> dict[str, object]:
     if isinstance(value, dict):
         return value
     return {}
-
-
-def _parse_cloze_config(cloze_raw: dict[str, object], defaults: ClozeConfig) -> ClozeConfig:
-    cloze_open = defaults.cloze_open
-    cloze_close = defaults.cloze_close
-    syntax_raw = cloze_raw.get("syntax")
-    if isinstance(syntax_raw, dict):
-        maybe_open = syntax_raw.get("open")
-        maybe_close = syntax_raw.get("close")
-        if isinstance(maybe_open, str) and maybe_open:
-            cloze_open = maybe_open
-        if isinstance(maybe_close, str) and maybe_close:
-            cloze_close = maybe_close
-
-    return ClozeConfig(cloze_open=cloze_open, cloze_close=cloze_close)
 
 
 _SCHEDULER_KEYS = (

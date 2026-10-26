@@ -16,7 +16,7 @@ class InstallDiscoveryTest(unittest.TestCase):
     def test_find_repeat_tracked_paths_returns_empty_without_markers(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             repo_dir = Path(tmp_dir)
-            (repo_dir / "notes.md").write_text("~{a}\n", encoding="utf-8")
+            (repo_dir / "notes.md").write_text("**a**\n", encoding="utf-8")
 
             self.assertEqual([], self._find_repeat_tracked_paths(repo_dir))
 
@@ -29,9 +29,9 @@ class InstallDiscoveryTest(unittest.TestCase):
             nested_dir.mkdir()
 
             (notes_dir / ".repeat").write_text("", encoding="utf-8")
-            (notes_dir / "top.md").write_text("~{a}\n", encoding="utf-8")
-            (nested_dir / "deep.md").write_text("~{b}\n", encoding="utf-8")
-            (repo_dir / "outside.md").write_text("~{skip}\n", encoding="utf-8")
+            (notes_dir / "top.md").write_text("**a**\n", encoding="utf-8")
+            (nested_dir / "deep.md").write_text("**b**\n", encoding="utf-8")
+            (repo_dir / "outside.md").write_text("**skip**\n", encoding="utf-8")
 
             self.assertEqual(["/notes/nested/deep.md", "/notes/top.md"], self._find_repeat_tracked_paths(repo_dir))
 
@@ -45,7 +45,7 @@ class InstallDiscoveryTest(unittest.TestCase):
 
             (notes_dir / ".repeat").write_text("", encoding="utf-8")
             (nested_dir / ".repeat").write_text("", encoding="utf-8")
-            (nested_dir / "deep.md").write_text("~{b}\n", encoding="utf-8")
+            (nested_dir / "deep.md").write_text("**b**\n", encoding="utf-8")
 
             self.assertEqual(["/notes/nested/deep.md"], self._find_repeat_tracked_paths(repo_dir))
 
@@ -60,9 +60,9 @@ class InstallDiscoveryTest(unittest.TestCase):
             srs_hidden_dir.mkdir()
 
             (notes_dir / ".repeat").write_text("", encoding="utf-8")
-            (notes_dir / "ok.md").write_text("~{ok}\n", encoding="utf-8")
-            (git_hidden_dir / "ignored.md").write_text("~{git}\n", encoding="utf-8")
-            (srs_hidden_dir / "ignored.md").write_text("~{srs}\n", encoding="utf-8")
+            (notes_dir / "ok.md").write_text("**ok**\n", encoding="utf-8")
+            (git_hidden_dir / "ignored.md").write_text("**git**\n", encoding="utf-8")
+            (srs_hidden_dir / "ignored.md").write_text("**srs**\n", encoding="utf-8")
 
             self.assertEqual(["/notes/ok.md"], self._find_repeat_tracked_paths(repo_dir))
 
@@ -76,8 +76,8 @@ class InstallDiscoveryTest(unittest.TestCase):
 
             (notes_dir / ".repeat").write_text("", encoding="utf-8")
             (skip_dir / ".norepeat").write_text("", encoding="utf-8")
-            (notes_dir / "keep.md").write_text("~{ok}\n", encoding="utf-8")
-            (skip_dir / "drop.md").write_text("~{no}\n", encoding="utf-8")
+            (notes_dir / "keep.md").write_text("**ok**\n", encoding="utf-8")
+            (skip_dir / "drop.md").write_text("**no**\n", encoding="utf-8")
 
             self.assertEqual(["/notes/keep.md"], self._find_repeat_tracked_paths(repo_dir))
 
@@ -94,9 +94,9 @@ class InstallDiscoveryTest(unittest.TestCase):
             (notes_dir / ".repeat").write_text("", encoding="utf-8")
             (skip_dir / ".norepeat").write_text("", encoding="utf-8")
             (reenabled_dir / ".repeat").write_text("", encoding="utf-8")
-            (notes_dir / "keep.md").write_text("~{ok}\n", encoding="utf-8")
-            (skip_dir / "drop.md").write_text("~{no}\n", encoding="utf-8")
-            (reenabled_dir / "again.md").write_text("~{yes}\n", encoding="utf-8")
+            (notes_dir / "keep.md").write_text("**ok**\n", encoding="utf-8")
+            (skip_dir / "drop.md").write_text("**no**\n", encoding="utf-8")
+            (reenabled_dir / "again.md").write_text("**yes**\n", encoding="utf-8")
 
             self.assertEqual(
                 ["/notes/keep.md", "/notes/skip/reenabled/again.md"], self._find_repeat_tracked_paths(repo_dir)
