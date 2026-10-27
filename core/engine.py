@@ -19,15 +19,12 @@ class ReviewEngine:
         self.scheduler = scheduler
         self.index = Index()
 
-    def load_due_entries(self, time_point: datetime) -> list[IndexEntry]:
-        return [entry for entry in self.index.load_entries() if entry.read_metadata().scheduler_card.due <= time_point]
-
     def run(self) -> int:
         if not os.path.exists(util._RUNTIME_CONTEXT.index_path):
             self._send_notice("Missing index")
             return 1
 
-        entries = self.load_due_entries(time_point=datetime.now(UTC))
+        entries = self.index.load_entries(time_point=datetime.now(UTC))
         if not entries:
             self._send_notice("🎉 No due cards 🎉")
             return 0

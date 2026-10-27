@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import os
 import re
+import time
+from datetime import datetime, timezone
 
 from fsrs import Card as SchedulerCard
 
@@ -21,11 +23,15 @@ class Index:
 
     # Queries -----------------------------------------------------------------
 
-    def load_entries(self) -> list[IndexEntry]:
+    def load_entries(self, time_point: datetime | None = None) -> list[IndexEntry]:
         entries: list[IndexEntry] = []
         for raw_line in self._readlines():
             if entry := self._parse(raw_line):
-                entries.append(entry)
+                if time_point:
+                    if entry.is_due(time_point=time_point):
+                        entries.append(entry)
+                else:
+                    entries.append(entry)
         return entries
 
     def entries_for_note(self, note_path: str) -> list[IndexEntry]:
