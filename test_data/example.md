@@ -17,7 +17,13 @@
 >}
 >```
 
-- Latex inline: $n+\pi=\dfrac{1}{\sqrt{\lambda^\omega}}$
+- Latex plainly inline *hidden*: $n+\pi=\dfrac{1}{\sqrt{\lambda^\omega}}$
 
->[!example] Latex in the block
+>[!example] Text header, latex body
+> Foo bar $\pi^{\dfrac{1}{\sqrt{\lambda^\omega}}}$
+
+>[!example] Latex header, text body $\pi^{\dfrac{1}{\sqrt{\lambda^\omega}}}$
+> Body is just text
+
+>[!example] Latex header, latex body $\pi^{\dfrac{1}{\sqrt{\lambda^\omega}}}$
 > Foo bar $\pi^{\dfrac{1}{\sqrt{\lambda^\omega}}}$
