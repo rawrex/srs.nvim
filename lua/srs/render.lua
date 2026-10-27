@@ -44,7 +44,7 @@ local function emphasis_spans(line)
 end
 
 local function cloze_mask(width)
-	return string.rep("█", width)
+	return string.rep("▇", width)
 end
 
 local function mask_clozes(buf, lines)
