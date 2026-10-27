@@ -6,7 +6,7 @@ from unittest.mock import patch
 from autoparse.scanner import build_scanner_registry
 from core.api import Parser
 from core.config import ReviewConfig
-from core.index.index import Index
+from core.index import Index
 from core.parsers import ParserRegistry
 from packs.cloze import ClozeParser
 from packs.quote_block_cloze import QuoteBlockClozeParser

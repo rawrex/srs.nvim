@@ -2,7 +2,7 @@
 import sys
 
 from core import util
-from core.index.index import Index
+from core.index import Index
 
 
 class Handler:

@@ -4,7 +4,7 @@ from unittest.mock import Mock, patch
 from fsrs import Card as SchedulerCard
 from fsrs import Rating, Scheduler
 
-from core.index.model import Metadata
+from core.model import Metadata
 from core.optimization import (
     SKIPPED_INSUFFICIENT_DATA,
     SKIPPED_NO_LOGS,

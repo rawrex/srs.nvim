@@ -5,7 +5,7 @@ from fsrs.review_log import ReviewLog
 from fsrs.scheduler import DEFAULT_PARAMETERS
 
 from core.config import write_scheduler_parameters
-from core.index.model import IndexEntry
+from core.model import IndexEntry
 
 if TYPE_CHECKING:
     from fsrs.optimizer import Optimizer

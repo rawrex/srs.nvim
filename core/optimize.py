@@ -10,7 +10,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from core import util
-from core.index.index import Index
+from core.index import Index
 from core.optimization import SKIPPED_INSUFFICIENT_DATA, SKIPPED_NO_LOGS, OptimizationReport, run_optimization
 
 OPTIMIZER_INSTALL_HINT = 'Optimizer dependencies are missing. Install them with: pip install "fsrs[optimizer]"'

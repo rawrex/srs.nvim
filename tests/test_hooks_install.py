@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from core.index.index import Index
+from core.index import Index
 from core.util import HOOKS
 from tests.setup_test_helpers import install_system, read_index_rows, run_command, runtime_context, temporary_git_repo
 

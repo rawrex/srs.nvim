@@ -3,7 +3,7 @@ import tempfile
 import unittest
 
 from core import util
-from core.index.index import Index
+from core.index import Index
 from tests.setup_test_helpers import runtime_context
 
 

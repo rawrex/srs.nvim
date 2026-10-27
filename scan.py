@@ -17,7 +17,7 @@ from autoparse.scanner import build_scanner_registry
 from autoparse.tracking import find_repeat_tracked_paths
 from core import util
 from core.config import load_review_config
-from core.index.index import Index
+from core.index import Index
 from core.parsers import ParserRegistry
 from core.util import GIT_RELATED_FILENAMES
 

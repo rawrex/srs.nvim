@@ -7,8 +7,8 @@ from fsrs import Rating, Scheduler
 
 from core import util
 from core.card import CardRef
-from core.index.index import Index
-from core.index.model import IndexEntry
+from core.index import Index
+from core.model import IndexEntry
 
 
 @runtime_checkable

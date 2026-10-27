@@ -7,7 +7,7 @@ from unittest.mock import patch
 from fsrs import Card as SchedulerCard
 from fsrs import Rating, Scheduler
 
-from core.index.model import REVIEW_LOGS_KEY, IndexEntry, Metadata
+from core.model import REVIEW_LOGS_KEY, IndexEntry, Metadata
 from tests.setup_test_helpers import runtime_context
 
 

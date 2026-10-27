@@ -9,7 +9,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from core import util
-from core.index.index import Index
+from core.index import Index
 from hooks.handler import Handler
 
 
