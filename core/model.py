@@ -67,6 +67,4 @@ class IndexEntry:
         self._metadata = metadata
 
     def is_due(self, time_point: datetime) -> bool:
-        if self._metadata == None:
-            self._metadata = self.read_metadata()
-        return time_point >= self._metadata.scheduler_card.due
+        return time_point >= self.read_metadata().scheduler_card.due
