@@ -5,8 +5,8 @@
 - Working on providing high degsee of customization, including: options config, pluggable parsers (so to say, card factories).
 
 ### Architecture
-- `core/` holds the UI-agnostic backend: the index (`core/index/`), the review engine (`core/engine.py`) and the FSRS scheduler. It never reads note contents.
-- The backend sends only pointers over the newline-delimited JSON protocol in `core/protocol.py`: note path, line span and card type. The nvim client (`lua/`) opens the real note and derives presentation from its contents.
+- `core/` holds the Python backend: the index (`core/index/`), the review engine (`core/engine.py`) and the FSRS scheduler. It never reads note contents.
+- The backend is driven by the nvim client over the newline-delimited JSON protocol in `core/protocol.py`. It sends only pointers: note path, line span and card type. The nvim client (`lua/`) opens the real note and derives presentation from its contents.
 - `scan.py` is an optional add-on for importing an existing vault: it scans notes, assigns card types and writes index entries. It is not part of the review flow.
 
 ### Card syntax
