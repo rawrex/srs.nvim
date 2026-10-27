@@ -1,9 +1,9 @@
 - **Hidden** clearly visible **hidden again**, thereby allowing for *different* emphasis
 
->[!question]- Image in the block
+>[!question] Image in the block
 >![[image.png]]
 
->[!example]- Code in the block
+>[!example] Code in the block
 >```cpp
 >int main()
 >{
@@ -19,5 +19,5 @@
 
 - Latex inline: $n+\pi=\dfrac{1}{\sqrt{\lambda^\omega}}$
 
->[!example]- Latex in the block
+>[!example] Latex in the block
 > Foo bar $\pi^{\dfrac{1}{\sqrt{\lambda^\omega}}}$
