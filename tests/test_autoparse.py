@@ -117,12 +117,20 @@ class ScanNoteTest(unittest.TestCase):
                 Path(repo_root, "note.md").write_text("One **a**\nTwo *b*\n", encoding="utf-8")
                 Path(repo_root, "other.md").write_text("Three *c*\n", encoding="utf-8")
 
-                self.assertEqual(2, scan_note(repo_root, index, registry, "/note.md"))
-                self.assertEqual(2, len(index.load_entries()))
-                self.assertEqual(0, scan_note(repo_root, index, registry, "/note.md"))
-                self.assertEqual(2, len(index.load_entries()))
-                self.assertEqual(1, scan_note(repo_root, index, registry, "/other.md"))
-                self.assertEqual(3, len(index.load_entries()))
+                note_cards = scan_note(repo_root, index, registry, "/note.md")
+                self.assertEqual([("/note.md", "cloze", 1, 1), ("/note.md", "cloze", 2, 2)], note_cards)
+                for card in note_cards:
+                    index.add_card(*card)
+                index.flush()
+                self.assertEqual(2, len(index.get_entries()))
+                self.assertEqual([], scan_note(repo_root, index, registry, "/note.md"))
+                self.assertEqual(2, len(index.get_entries()))
+                other_cards = scan_note(repo_root, index, registry, "/other.md")
+                self.assertEqual([("/other.md", "cloze", 1, 1)], other_cards)
+                for card in other_cards:
+                    index.add_card(*card)
+                index.flush()
+                self.assertEqual(3, len(index.get_entries()))
 
 
 class ResolveTargetsTest(unittest.TestCase):

@@ -47,6 +47,7 @@ class ReviewEngineRunTest(unittest.TestCase):
         with (
             temporary_session_repo(with_index=False) as repo_root,
             patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True),
+            patch.object(Index, "load", return_value=[]),
         ):
             session, writer = _make_engine([])
             code = session.run()
@@ -58,7 +59,7 @@ class ReviewEngineRunTest(unittest.TestCase):
         with (
             temporary_session_repo(with_index=True) as repo_root,
             patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True),
-            patch.object(Index, "load_entries", return_value=[]),
+            patch.object(Index, "get_entries", return_value=[]),
         ):
             session, writer = _make_engine([])
             code = session.run()
@@ -86,7 +87,7 @@ class ReviewEngineRunTest(unittest.TestCase):
         with (
             temporary_session_repo(with_index=True) as repo_root,
             patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True),
-            patch.object(Index, "load_entries", return_value=[entry_1, entry_2]),
+            patch.object(Index, "get_entries", return_value=[entry_1, entry_2]),
             patch("core.engine.time.monotonic_ns") as monotonic_ns,
         ):
             monotonic_ns.side_effect = [0, 1_200_000_000, 2_000_000_000, 2_900_000_000]
@@ -113,7 +114,7 @@ class ReviewEngineRunTest(unittest.TestCase):
         with (
             temporary_session_repo(with_index=True) as repo_root,
             patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True),
-            patch.object(Index, "load_entries", return_value=[entry_1]),
+            patch.object(Index, "get_entries", return_value=[entry_1]),
             patch("core.engine.time.monotonic_ns", return_value=0),
         ):
             session, writer = _make_engine([{"type": "start"}, {"type": "skip"}])
@@ -136,7 +137,7 @@ class ReviewEngineRunTest(unittest.TestCase):
         with (
             temporary_session_repo(with_index=True) as repo_root,
             patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True),
-            patch.object(Index, "load_entries", return_value=[entry_1, entry_2]),
+            patch.object(Index, "get_entries", return_value=[entry_1, entry_2]),
             patch("core.engine.time.monotonic_ns", side_effect=[0, 1_000_000, 2_000_000, 3_000_000]),
             self.assertRaises(KeyboardInterrupt),
         ):

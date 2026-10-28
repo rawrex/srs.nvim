@@ -46,8 +46,8 @@ class OptimizeCliTest(unittest.TestCase):
 
     def _run_with_report(self, report: OptimizationReport, argv: list[str] | None = None):
         index = Mock()
-        index.load_entries.return_value = [Mock()]
-        entries = index.load_entries.return_value
+        index.get_entries.return_value = [Mock()]
+        entries = index.get_entries.return_value
         print_mock = Mock()
 
         with temporary_session_repo(with_index=True) as repo_root:
@@ -97,7 +97,7 @@ class OptimizeCliTest(unittest.TestCase):
 
     def test_main_handles_missing_optimizer_dependencies(self) -> None:
         index = Mock()
-        index.load_entries.return_value = []
+        index.get_entries.return_value = []
 
         with temporary_session_repo(with_index=True) as repo_root:
             runtime = runtime_context(repo_root)

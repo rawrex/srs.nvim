@@ -17,7 +17,10 @@ class HooksInstallIntegrationTest(unittest.TestCase):
 
     def _add_card(self, repo_dir: Path, note_path: str, start_line: int, end_line: int):
         with patch("core.util._RUNTIME_CONTEXT", runtime_context(str(repo_dir)), create=True):
-            return Index().add_card(note_path, "cloze", start_line, end_line)
+            index = Index()
+            entry = index.add_card(note_path, "cloze", start_line, end_line)
+            index.flush()
+            return entry
 
     def test_install_creates_index_and_hooks(self):
         with temporary_git_repo(install=False, with_repeat_marker=False) as repo_dir:

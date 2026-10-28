@@ -1,5 +1,7 @@
 import io
 import json
+import os
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -28,7 +30,14 @@ def _entry(note: str = "/note.md") -> IndexEntry:
 
 class ReviewEngineTransportTest(unittest.TestCase):
     def setUp(self) -> None:
-        context = patch("core.util._RUNTIME_CONTEXT", runtime_context("/repo"), create=True)
+        repo_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(repo_dir.cleanup)
+        index_path = os.path.join(repo_dir.name, ".srs", "index.txt")
+        os.makedirs(os.path.dirname(index_path), exist_ok=True)
+        with open(index_path, "w", encoding="utf-8"):
+            pass
+
+        context = patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_dir.name), create=True)
         context.start()
         self.addCleanup(context.stop)
 
