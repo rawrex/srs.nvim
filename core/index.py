@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 import os
 import re
-import time
-from datetime import datetime, timezone
+from datetime import datetime
 
 from fsrs import Card as SchedulerCard
 
@@ -40,19 +39,20 @@ class Index:
     # Writes ------------------------------------------------------------------
 
     def add_card(self, note_path: str, card_type: str, start_line: int, end_line: int) -> IndexEntry:
-        scheduler_card = SchedulerCard()
-        index_entry = IndexEntry(
-            card_id=scheduler_card.card_id,
+        fsrs_card = SchedulerCard()
+        entry = IndexEntry(
+            metadata=Metadata(scheduler_card=fsrs_card, review_logs=[]),
+            card_id=fsrs_card.card_id,
             note_path=note_path,
             card_type=card_type,
             start_line=start_line,
             end_line=end_line,
         )
-        index_entry.write_metadata(Metadata(scheduler_card=scheduler_card, review_logs=[]))
+        entry.write()
         lines = self._readlines()
-        lines.append(self._format_entry(index_entry))
+        lines.append(self._format_entry(entry))
         self._write(lines)
-        return index_entry
+        return entry
 
     def remove_note(self, note_path: str) -> list[IndexEntry]:
         removed: list[IndexEntry] = []
@@ -80,6 +80,7 @@ class Index:
                 lines.append(line)
                 continue
             entry = IndexEntry(
+                metadata=entry.metadata,
                 card_id=entry.card_id,
                 note_path=new_path,
                 card_type=entry.card_type,
@@ -140,6 +141,7 @@ class Index:
     def _parse(self, raw_line: str) -> IndexEntry | None:
         if match := self.entry_re.match(raw_line.rstrip("\n")):
             return IndexEntry(
+                metadata=None,
                 card_id=int(match.group(1)),
                 note_path=match.group(2),
                 card_type=match.group(3),

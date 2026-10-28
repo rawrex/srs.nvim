@@ -39,16 +39,13 @@ class ReviewEngine:
             if pause_ns is None:  # Skipped
                 self._send_notice("Skipped")
                 continue
-            duration_ms = max(0, (time.monotonic_ns() - started_ns - pause_ns) // 1_000_000)
 
+            duration_ms = int(max(0, (time.monotonic_ns() - started_ns - pause_ns) // 1_000_000))
             rating = self._rating_step()
-            metadata = entry.read_metadata()
-            updated_card, review_log = self.scheduler.review_card(
-                metadata.scheduler_card, rating, review_duration=int(duration_ms)
-            )
-            metadata.scheduler_card = updated_card
-            metadata.review_logs.append(review_log)
-            entry.write_metadata(metadata)
+
+            entry.update(self.scheduler, duration_ms, rating)
+            entry.write()
+
             self._send_notice("Saved")
 
         return 0

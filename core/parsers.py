@@ -1,12 +1,11 @@
 from dataclasses import dataclass
-from typing import Dict
 
 from core.api import Parser
 
 
 @dataclass
 class ParserRegistry:
-    parsers: Dict[str, Parser]
+    parsers: dict[str, Parser]
 
     def register(self, parser: Parser) -> None:
         self.parsers[parser.parser_id] = parser
