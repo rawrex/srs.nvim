@@ -41,34 +41,27 @@ local function prompt_rating()
 end
 
 local function answered()
-	if state.mode == "rating" then
+	if state.mode == "question" then
+		state.mode = "rating"
+		render.reveal(state.card)
+		render.statusline()
+		send("answered", {})
 		prompt_rating()
-		return
 	end
-	if state.mode ~= "question" then
-		return
-	end
-	render.reveal(state.card)
-	state.mode = "rating"
-	send("answered", {})
-	render.statusline()
-	prompt_rating()
 end
 
 local function pause()
-	if state.mode ~= "question" then
-		return
+	if state.mode == "question" then
+		state.paused = not state.paused
+		send("pause", {})
+		render.statusline()
 	end
-	state.paused = not state.paused
-	send("pause", {})
-	render.statusline()
 end
 
 local function skip()
-	if state.mode ~= "question" then
-		return
+	if state.mode == "question" then
+		send("skip", {})
 	end
-	send("skip", {})
 end
 
 local function bind_card_keys(quit, buf)
