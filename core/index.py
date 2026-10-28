@@ -26,11 +26,9 @@ class Index:
         entries: list[IndexEntry] = []
         for raw_line in self._readlines():
             if entry := self._parse(raw_line):
-                if time_point:
-                    if entry.is_due(time_point=time_point):
-                        entries.append(entry)
-                else:
-                    entries.append(entry)
+                entries.append(entry)
+        if time_point:
+            return [entry for entry in entries if entry.is_due(time_point=time_point)]
         return entries
 
     def entries_for_note(self, note_path: str) -> list[IndexEntry]:
