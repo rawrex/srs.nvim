@@ -63,23 +63,24 @@ def iter_note_paths(targets: list[str], repo_root: str) -> list[str]:
     return paths
 
 
-def scan_note(repo_root: str, index: Index, registry: ParserRegistry, note_path: str) -> int:
-    added = 0
+def scan_note(
+    repo_root: str, index: Index, registry: ParserRegistry, note_path: str
+) -> list[tuple[str, str, int, int]]:
+    collected: list[tuple[str, str, int, int]] = []
     text: str = ""
     abs_path = os.path.join(repo_root, note_path.lstrip("/"))
     try:
         with open(abs_path, "r", encoding="utf-8") as handle:
             text = handle.read()
     except UnicodeDecodeError:
-        return added
+        return []
 
     existing = {(entry.start_line, entry.end_line) for entry in index.entries_for_note(note_path)}
     for card_type, start_line, end_line in collect_parsed_blocks(text, registry):
         if not ((start_line, end_line) in existing):
-            index.add_card(note_path, card_type, start_line, end_line)
+            collected.append((note_path, card_type, start_line, end_line))
             existing.add((start_line, end_line))
-            added += 1
-    return added
+    return collected
 
 
 def _resolve_targets(paths: list[str]) -> list[str]:
@@ -107,17 +108,21 @@ def main(argv: list[str] | None = None) -> int:
         print("Missing index")
         return 1
 
+    index = Index()
     config = load_review_config()
     registry = build_scanner_registry(config)
-    index = Index()
+    collected: list[list[tuple[str, str, int, int]]] = []
 
-    total = 0
     for note_path in iter_note_paths(_resolve_targets(args.paths), repo_root):
-        if added := scan_note(repo_root, index, registry, note_path):
-            print(f"{note_path}: {added} card(s)")
-            total += added
+        if current := scan_note(repo_root, index, registry, note_path):
+            collected.append(current)
+            print(f"{note_path}: {len(current)} card(s)")
 
-    print(f"Total: {total} card(s)")
+    for group in collected:
+        for item in group:
+            index.add_card(*item)
+
+    print(f"Total: {sum(len(group) for group in collected)} card(s)")
     return 0
 
 
