@@ -18,6 +18,7 @@ class Index:
     def __init__(self) -> None:
         self.entries: list[IndexEntry] = Index.load()
         self.entries_by_note: dict[str, list[IndexEntry]] = {}
+        self.entries_added: list[IndexEntry] = []
         self.entries_removed: list[IndexEntry] = []
         for entry in self.entries:
             self.entries_by_note.setdefault(entry.note_path, []).append(entry)
@@ -66,6 +67,7 @@ class Index:
         )
         self.entries.append(entry)
         self.entries_by_note.setdefault(note_path, []).append(entry)
+        self.entries_added.append(entry)
         return entry
 
     def remove_note(self, note_path: str) -> bool:
@@ -106,11 +108,10 @@ class Index:
                 util.run_git(["add", "--"] + rel_paths, cwd=repo_root)
 
     def flush(self) -> None:
+        for entry in self.entries_added:
+            entry.write()
+        self.entries_added.clear()
+        util.write_text_atomic(util._RUNTIME_CONTEXT.index_path, "".join(entry.format() for entry in self.entries))
         for entry in self.entries_removed:
             os.remove(entry.card_path)
         self.entries_removed.clear()
-        lines: list[str] = []
-        for entry in self.entries:
-            lines.append(entry.format())
-            entry.write()
-        util.write_text_atomic(util._RUNTIME_CONTEXT.index_path, "".join(lines))
