@@ -85,6 +85,9 @@ local function bind_card_keys(quit, buf)
 end
 
 local function handle_message(message, quit)
+	if state.quitting then
+		return
+	end
 	local kind = message.type
 	if kind == "intro" then
 		vim.notify(string.format("srs: %d due card(s)", message.due), vim.log.levels.INFO)
@@ -101,6 +104,24 @@ local function handle_message(message, quit)
 	elseif kind == "notice" then
 		vim.notify("srs: " .. message.text, message.level == "error" and vim.log.levels.WARN or vim.log.levels.INFO)
 	end
+end
+
+function M.stop()
+	local proc = state.proc
+	if not proc then
+		return
+	end
+	pcall(send, "quit")
+	local stopped = false
+	pcall(function()
+		stopped = proc:wait(500) ~= nil
+	end)
+	if not stopped then
+		pcall(function()
+			proc:kill(15)
+		end)
+	end
+	state.proc = nil
 end
 
 function M.start(repo_root, python, rpc_path, quit)

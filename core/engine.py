@@ -31,24 +31,30 @@ class ReviewEngine:
 
         total = len(entries)
         note_paths = sorted({entry.note_path for entry in entries})
-        self._intro(total, note_paths)
+        try:
+            self._intro(total, note_paths)
 
-        for idx, entry in enumerate(entries, start=1):
-            started_ns = time.monotonic_ns()
-            pause_ns = self._card_step(idx, total, entry)
-            if pause_ns is None:  # Skipped
-                self._send_notice("Skipped")
-                continue
+            for idx, entry in enumerate(entries, start=1):
+                started_ns = time.monotonic_ns()
+                pause_ns = self._card_step(idx, total, entry)
+                if pause_ns is None:  # Skipped
+                    self._send_notice("Skipped")
+                    continue
 
-            duration_ms = int(max(0, (time.monotonic_ns() - started_ns - pause_ns) // 1_000_000))
-            rating = self._rating_step()
+                duration_ms = int(max(0, (time.monotonic_ns() - started_ns - pause_ns) // 1_000_000))
+                rating = self._rating_step()
 
-            entry.update(self.scheduler, duration_ms, rating)
-            entry.write()
+                entry.update(self.scheduler, duration_ms, rating)
+                entry.write()
 
-            self._send_notice("Saved")
-
-        self.index.flush()
+                self._send_notice("Saved")
+        finally:
+            while True:
+                try:
+                    self.index.flush()
+                    break
+                except KeyboardInterrupt:
+                    continue
         return 0
 
     def _send_notice(self, message: str, level: str = "info") -> None:

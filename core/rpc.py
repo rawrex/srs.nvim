@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import signal
 import sys
 from pathlib import Path
 from typing import IO
@@ -27,6 +28,8 @@ def run(reader: IO[str], writer: IO[str]) -> int:
 
 
 def main() -> int:
+    for signum in (signal.SIGTERM, signal.SIGHUP):
+        signal.signal(signum, signal.default_int_handler)
     try:
         return run(sys.stdin, sys.stdout)
     except KeyboardInterrupt:

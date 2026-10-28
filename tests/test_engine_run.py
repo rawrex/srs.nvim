@@ -138,6 +138,7 @@ class ReviewEngineRunTest(unittest.TestCase):
             temporary_session_repo(with_index=True) as repo_root,
             patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True),
             patch.object(Index, "get_entries", return_value=[entry_1, entry_2]),
+            patch.object(Index, "flush") as flush,
             patch("core.engine.time.monotonic_ns", side_effect=[0, 1_000_000, 2_000_000, 3_000_000]),
             self.assertRaises(KeyboardInterrupt),
         ):
@@ -145,6 +146,27 @@ class ReviewEngineRunTest(unittest.TestCase):
             session.scheduler = scheduler
             session.run()
 
+        flush.assert_called_once()
         self.assertEqual({"type": "intro", "due": 2, "notes": ["/one.md", "/two.md"]}, _sent(writer)[0])
         entry_1.write.assert_called_once()
         entry_2.write.assert_not_called()
+
+    def test_run_retries_flush_interrupted_by_signal(self) -> None:
+        events = [{"type": "start"}, {"type": "answered"}, {"type": "rate", "rating": "Good"}]
+        scheduler = Mock()
+        scheduler.review_card.return_value = (object(), object())
+        entry = _DummyEntry(1, "/one.md", object())
+
+        with (
+            temporary_session_repo(with_index=True) as repo_root,
+            patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True),
+            patch.object(Index, "get_entries", return_value=[entry]),
+            patch.object(Index, "flush", side_effect=[KeyboardInterrupt, None]) as flush,
+        ):
+            session, _writer = _make_engine(events)
+            session.scheduler = scheduler
+            code = session.run()
+
+        self.assertEqual(0, code)
+        self.assertEqual(2, flush.call_count)
+        entry.write.assert_called_once()

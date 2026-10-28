@@ -16,6 +16,7 @@ function state.reset()
 	state.paused = false
 	state.saved_win = nil
 	state.keymaps = {}
+	state.augroup = nil
 end
 
 function state.valid_buf(buf)
@@ -57,6 +58,10 @@ function state.restore()
 	local win_ok = state.valid_win(win)
 	local saved = state.saved_win
 
+	if state.augroup then
+		pcall(vim.api.nvim_del_augroup_by_id, state.augroup)
+		state.augroup = nil
+	end
 	state.clear_marks(state.buf)
 	if saved and win_ok then
 		state.clear_folds(win)
