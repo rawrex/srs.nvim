@@ -39,17 +39,12 @@ function M.review()
 
 	state.reset()
 	state.repo_root = repo_root
-	state.prev_buf = vim.api.nvim_get_current_buf()
-	state.win = vim.api.nvim_get_current_win()
-	state.quitting = false
 	local group = vim.api.nvim_create_augroup("SrsReview", { clear = true })
 	state.augroup = group
+
 	vim.api.nvim_create_autocmd("VimLeavePre", { group = group, callback = M.close })
-	vim.api.nvim_create_autocmd("WinClosed", {
-		group = group,
-		pattern = tostring(state.win),
-		callback = M.close,
-	})
+	vim.api.nvim_create_autocmd("WinClosed", { group = group, pattern = tostring(state.win), callback = M.close, })
+
 	client.start(repo_root, python(), plugin_root() .. "/core/rpc.py", M.close)
 end
 

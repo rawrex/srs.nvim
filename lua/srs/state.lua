@@ -7,9 +7,7 @@ local state = { ns = NS }
 function state.reset()
 	state.proc = nil
 	state.repo_root = nil
-	state.win = nil
 	state.buf = nil
-	state.prev_buf = nil
 	state.quitting = false
 	state.mode = "idle"
 	state.card = nil
@@ -17,6 +15,8 @@ function state.reset()
 	state.saved_win = nil
 	state.keymaps = {}
 	state.augroup = nil
+	state.prev_buf = vim.api.nvim_get_current_buf()
+	state.win = vim.api.nvim_get_current_win()
 end
 
 function state.valid_buf(buf)
