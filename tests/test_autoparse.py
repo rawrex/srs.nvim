@@ -10,7 +10,7 @@ from core.index import Index
 from core.parsers import ParserRegistry
 from packs.cloze import ClozeParser
 from packs.quote_block_cloze import QuoteBlockClozeParser
-from scan import _resolve_targets, collect_parsed_blocks, iter_note_paths, scan_note
+from scripts.scan import _resolve_targets, collect_parsed_blocks, iter_note_paths, scan_note
 from tests.setup_test_helpers import runtime_context, temporary_session_repo
 
 
@@ -138,7 +138,7 @@ class ResolveTargetsTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as repo_root:
             (Path(repo_root) / "note.md").write_text("**a**\n", encoding="utf-8")
 
-            with patch("scan.find_repeat_tracked_paths", return_value=["/note.md"]):
+            with patch("scripts.scan.find_repeat_tracked_paths", return_value=["/note.md"]):
                 targets = _resolve_targets([])
 
             self.assertEqual(["/note.md"], iter_note_paths(targets, repo_root))

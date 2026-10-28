@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
+# ruff: noqa: E402
 """Explicitly scan notes and create cards.
 
 This is an add-on, not part of the review flow:
 
-    python scan.py [paths ...]
+    python scripts/scan.py [paths ...]
 
 With no paths, the scanner uses the paths selected by ``.repeat`` markers when
 present, otherwise the whole repository. Existing spans are left untouched, so
@@ -12,6 +13,12 @@ re-running the command is safe.
 
 import argparse
 import os
+import sys
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from autoparse.scanner import build_scanner_registry
 from autoparse.tracking import find_repeat_tracked_paths

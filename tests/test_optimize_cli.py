@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import Mock, patch
 
-import core.optimize as optimize
+import scripts.optimize as optimize
 from core.config import ReviewConfig
 from core.optimization import SKIPPED_INSUFFICIENT_DATA, SKIPPED_NO_LOGS, OptimizationReport
 from tests.setup_test_helpers import runtime_context, temporary_session_repo
@@ -22,8 +22,8 @@ class OptimizeCliTest(unittest.TestCase):
         runtime = Mock(repo_root_path="")
 
         with (
-            patch("core.optimize.util.init_runtime_context"),
-            patch("core.optimize.util._RUNTIME_CONTEXT", runtime, create=True),
+            patch("scripts.optimize.util.init_runtime_context"),
+            patch("scripts.optimize.util._RUNTIME_CONTEXT", runtime, create=True),
             patch("builtins.print") as print_mock,
         ):
             code = optimize.main([])
@@ -35,8 +35,8 @@ class OptimizeCliTest(unittest.TestCase):
         runtime = runtime_context("/repo")
 
         with (
-            patch("core.optimize.util.init_runtime_context", return_value=runtime),
-            patch("core.optimize.util._RUNTIME_CONTEXT", runtime, create=True),
+            patch("scripts.optimize.util.init_runtime_context", return_value=runtime),
+            patch("scripts.optimize.util._RUNTIME_CONTEXT", runtime, create=True),
             patch("builtins.print") as print_mock,
         ):
             code = optimize.main([])
@@ -53,10 +53,10 @@ class OptimizeCliTest(unittest.TestCase):
         with temporary_session_repo(with_index=True) as repo_root:
             runtime = runtime_context(repo_root)
             with (
-                patch("core.optimize.util.init_runtime_context", return_value=runtime),
-                patch("core.optimize.util._RUNTIME_CONTEXT", runtime, create=True),
-                patch("core.optimize.Index", return_value=index),
-                patch("core.optimize.run_optimization", return_value=report) as run,
+                patch("scripts.optimize.util.init_runtime_context", return_value=runtime),
+                patch("scripts.optimize.util._RUNTIME_CONTEXT", runtime, create=True),
+                patch("scripts.optimize.Index", return_value=index),
+                patch("scripts.optimize.run_optimization", return_value=report) as run,
                 patch("builtins.print", print_mock),
             ):
                 code = optimize.main(argv or [])
@@ -102,10 +102,10 @@ class OptimizeCliTest(unittest.TestCase):
         with temporary_session_repo(with_index=True) as repo_root:
             runtime = runtime_context(repo_root)
             with (
-                patch("core.optimize.util.init_runtime_context", return_value=runtime),
-                patch("core.optimize.util._RUNTIME_CONTEXT", runtime, create=True),
-                patch("core.optimize.Index", return_value=index),
-                patch("core.optimize.run_optimization", side_effect=ImportError),
+                patch("scripts.optimize.util.init_runtime_context", return_value=runtime),
+                patch("scripts.optimize.util._RUNTIME_CONTEXT", runtime, create=True),
+                patch("scripts.optimize.Index", return_value=index),
+                patch("scripts.optimize.run_optimization", side_effect=ImportError),
                 patch("builtins.print") as print_mock,
             ):
                 code = optimize.main([])

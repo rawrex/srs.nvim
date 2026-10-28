@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from core import util
 from core.config import load_review_config
 from core.index import Index
-from core.reschedule import reschedule_entries
+from scripts.reschedule_cards import reschedule_entries
 from tests.setup_test_helpers import runtime_context
 
 CARD_ID = 1774857617052

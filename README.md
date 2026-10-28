@@ -7,7 +7,7 @@
 ### Architecture
 - `core/` holds the Python backend: the index (`core/index/`), the review engine (`core/engine.py`) and the FSRS scheduler. It never reads note contents.
 - The backend is driven by the nvim client over the newline-delimited JSON protocol in `core/protocol.py`. It sends only pointers: note path, line span and card type. The nvim client (`lua/`) opens the real note and derives presentation from its contents.
-- `scan.py` is an optional add-on for importing an existing vault: it scans notes, assigns card types and writes index entries. It is not part of the review flow.
+- `scripts/scan.py` is an optional add-on for importing an existing vault: it scans notes, assigns card types and writes index entries. It is not part of the review flow.
 
 ### Card syntax
 Markdown emphasis marks clozes: `**bold**` and `*italic*` (also `***both***`).
@@ -22,9 +22,9 @@ One line containing emphasis becomes one card. Emphasis inside inline code, fenc
 FSRS scheduler parameters can be optimized from your accumulated review history:
 
 ```sh
-python3 core/optimize.py            # optimize and save into .srs/config.json
-python3 core/optimize.py --verbose  # show optimizer progress
-python3 core/optimize.py --dry-run  # print optimized parameters without saving
+python3 scripts/optimize.py            # optimize and save into .srs/config.json
+python3 scripts/optimize.py --verbose  # show optimizer progress
+python3 scripts/optimize.py --dry-run  # print optimized parameters without saving
 ```
 
 - Requires the optional optimizer dependencies: `pip install "fsrs[optimizer]"` (torch, pandas, numpy, tqdm). They are lazy-loaded, so normal review/hook flows stay lightweight.
