@@ -48,6 +48,7 @@ class ReviewEngine:
 
             self._send_notice("Saved")
 
+        self.index.flush()
         return 0
 
     def _send_notice(self, message: str, level: str = "info") -> None:
