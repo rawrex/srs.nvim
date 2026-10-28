@@ -29,15 +29,14 @@ local function prompt_rating()
 	vim.cmd("redraw")
 	while state.mode == "rating" do
 		local answer = vim.trim(vim.fn.input("Rating [n]Again [e]Hard [i]Good [o]Easy: "):lower())
-		if answer == "" then
-			return
+		if answer ~= "" then
+			local name = RATINGS[answer]
+			if name then
+				rate(name)
+				return
+			end
+			vim.notify("srs: invalid rating '" .. answer .. "'", vim.log.levels.WARN)
 		end
-		local name = RATINGS[answer]
-		if name then
-			rate(name)
-			return
-		end
-		vim.notify("srs: invalid rating '" .. answer .. "'", vim.log.levels.WARN)
 	end
 end
 
