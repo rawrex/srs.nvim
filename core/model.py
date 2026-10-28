@@ -34,9 +34,17 @@ class IndexEntry:
     card_type: str
     start_line: int
     end_line: int
+    due: datetime
 
     def __init__(
-        self, metadata: Metadata | None, card_id: int, note_path: str, card_type: str, start_line: int, end_line: int
+        self,
+        metadata: Metadata | None,
+        card_id: int,
+        note_path: str,
+        card_type: str,
+        start_line: int,
+        end_line: int,
+        due: datetime,
     ) -> None:
         self.metadata: Metadata | None = metadata
         self.card_id = card_id
@@ -44,6 +52,7 @@ class IndexEntry:
         self.card_type = card_type
         self.start_line = start_line
         self.end_line = end_line
+        self.due = due
 
     @property
     def card_path(self) -> str:
@@ -65,6 +74,7 @@ class IndexEntry:
     def update(self, scheduler: Scheduler, duration_ms: int, rating: Rating) -> None:
         data = self.read_metadata()
         updated, review_log = scheduler.review_card(data.scheduler_card, rating, review_duration=duration_ms)
+        self.due = updated.due
         data.scheduler_card = updated
         data.review_logs.append(review_log)
 
@@ -76,7 +86,7 @@ class IndexEntry:
         util.write_text_atomic(self.card_path, payload + "\n")
 
     def format(self) -> str:
-        return f"'{self.card_id}','{self.note_path}','{self.card_type}','{self.start_line}','{self.end_line}'\n"
+        return f"'{self.card_id}','{self.note_path}','{self.card_type}','{self.start_line}','{self.end_line}','{self.due.isoformat()}'\n"
 
     def is_due(self, time_point: datetime) -> bool:
-        return time_point >= self.read_metadata().scheduler_card.due
+        return time_point >= self.due

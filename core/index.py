@@ -13,7 +13,7 @@ from core.model import DiffChangeSet, IndexEntry, Metadata
 class Index:
     """Plain-text mapping between cards, their notes, and their location within the notes"""
 
-    entry_re = re.compile(r"^'(\d+)','([^']*)','([^']*)','(\d+)','(\d+)'\s*$")
+    entry_re = re.compile(r"^'(\d+)','([^']*)','([^']*)','(\d+)','(\d+)','([^']*)'\s*$")
 
     def __init__(self) -> None:
         self.entries: list[IndexEntry] = Index.load()
@@ -42,6 +42,7 @@ class Index:
                 card_type=match.group(3),
                 start_line=int(match.group(4)),
                 end_line=int(match.group(5)),
+                due=datetime.fromisoformat(match.group(6)),
             )
         return None
 
@@ -64,6 +65,7 @@ class Index:
             card_type=card_type,
             start_line=start_line,
             end_line=end_line,
+            due=fsrs_card.due,
         )
         self.entries.append(entry)
         self.entries_by_note.setdefault(note_path, []).append(entry)
