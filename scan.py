@@ -91,7 +91,7 @@ def scan_note(index: Index, registry: ParserRegistry, note_path: str, note_text:
 def _resolve_targets(paths: list[str]) -> list[str]:
     if paths:
         return paths
-    marked = find_repeat_tracked_paths()
+    marked = [path.lstrip("/") for path in find_repeat_tracked_paths()]
     return marked if marked else ["."]
 
 
