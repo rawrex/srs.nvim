@@ -6,9 +6,9 @@ local M = {}
 -- Fixed rating keys; the client owns them, the backend only receives the name.
 local RATINGS = { n = "Again", e = "Hard", i = "Good", o = "Easy" }
 
-local function send(kind, extra)
+local function send(kind, payload)
 	if state.proc then
-		state.proc:write(vim.json.encode(vim.tbl_extend("force", { type = kind }, extra or {})) .. "\n")
+		state.proc:write(vim.json.encode(vim.tbl_extend("force", { type = kind }, payload)) .. "\n")
 	end
 end
 
@@ -51,7 +51,7 @@ local function answered()
 	end
 	render.reveal(state.card)
 	state.mode = "rating"
-	send("answered")
+	send("answered", {})
 	render.statusline()
 	prompt_rating()
 end
@@ -61,7 +61,7 @@ local function pause()
 		return
 	end
 	state.paused = not state.paused
-	send("pause")
+	send("pause", {})
 	render.statusline()
 end
 
@@ -69,7 +69,7 @@ local function skip()
 	if state.mode ~= "question" then
 		return
 	end
-	send("skip")
+	send("skip", {})
 end
 
 local function bind_card_keys(quit, buf)
@@ -91,7 +91,7 @@ local function handle_message(message, quit)
 	local kind = message.type
 	if kind == "intro" then
 		vim.notify(string.format("srs: %d due card(s)", message.due), vim.log.levels.INFO)
-		send("start")
+		send("start", {})
 	elseif kind == "card" then
 		state.mode = "question"
 		state.card = message.card
