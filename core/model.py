@@ -75,5 +75,8 @@ class IndexEntry:
         payload = json.dumps(merged, ensure_ascii=False, indent=4, sort_keys=True)
         util.write_text_atomic(self.card_path, payload + "\n")
 
+    def format(self) -> str:
+        return f"'{self.card_id}','{self.note_path}','{self.card_type}','{self.start_line}','{self.end_line}'\n"
+
     def is_due(self, time_point: datetime) -> bool:
         return time_point >= self.read_metadata().scheduler_card.due

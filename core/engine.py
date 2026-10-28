@@ -24,7 +24,7 @@ class ReviewEngine:
             self._send_notice("Missing index")
             return 1
 
-        entries = self.index.load_entries(time_point=datetime.now(UTC))
+        entries = self.index.get_entries(time_point=datetime.now(UTC))
         if not entries:
             self._send_notice("🎉 No due cards 🎉")
             return 0

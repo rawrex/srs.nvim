@@ -75,7 +75,7 @@ def scan_note(
     except UnicodeDecodeError:
         return []
 
-    existing = {(entry.start_line, entry.end_line) for entry in index.entries_for_note(note_path)}
+    existing = {(entry.start_line, entry.end_line) for entry in index.get_entries_by_note(note_path)}
     for card_type, start_line, end_line in collect_parsed_blocks(text, registry):
         if not ((start_line, end_line) in existing):
             collected.append((note_path, card_type, start_line, end_line))
@@ -122,6 +122,7 @@ def main(argv: list[str] | None = None) -> int:
         for item in group:
             index.add_card(*item)
 
+    index.flush()
     print(f"Total: {sum(len(group) for group in collected)} card(s)")
     return 0
 

@@ -58,7 +58,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     index = Index()
-    entries = index.load_entries()
+    entries = index.get_entries()
 
     try:
         report = run_optimization(entries, verbose=args.verbose, dry_run=args.dry_run)
