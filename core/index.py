@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import re
+import sys
 from datetime import datetime
 from itertools import filterfalse
 
@@ -27,9 +28,11 @@ class Index:
     def load(cls) -> list[IndexEntry]:
         entries: list[IndexEntry] = []
         with open(util._RUNTIME_CONTEXT.index_path, "r", encoding="utf-8") as handle:
-            for line in handle:
+            for idx, line in enumerate(handle):
                 if entry := Index.parse(line):
                     entries.append(entry)
+                else:
+                    print(f"Error. Line: {idx}: {line}", file=sys.stderr)
         return entries
 
     @classmethod
