@@ -30,6 +30,18 @@ class RpcRunTest(unittest.TestCase):
         self.assertEqual(1, code)
         self.assertEqual({"type": "notice", "level": "error", "text": "Not inside a git repository."}, _sent(writer)[0])
 
+    def test_run_returns_1_when_index_missing(self) -> None:
+        writer = io.StringIO()
+        with (
+            temporary_session_repo(with_index=False) as repo_root,
+            patch("core.rpc.util.init_runtime_context"),
+            patch("core.rpc.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True),
+        ):
+            code = run(io.StringIO(), writer)
+
+        self.assertEqual(1, code)
+        self.assertEqual({"type": "notice", "level": "info", "text": "Missing index"}, _sent(writer)[0])
+
     def test_run_drives_engine_with_transport(self) -> None:
         engine = Mock()
         engine.run.return_value = 7
@@ -38,6 +50,7 @@ class RpcRunTest(unittest.TestCase):
         with (
             patch("core.rpc.util.init_runtime_context"),
             patch("core.rpc.util._RUNTIME_CONTEXT", runtime_context("/repo"), create=True),
+            patch("core.rpc.os.path.exists", return_value=True),
             patch("core.rpc.load_review_config", return_value=config),
             patch("core.rpc.ReviewEngine", return_value=engine) as engine_cls,
         ):

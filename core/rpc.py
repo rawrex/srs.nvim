@@ -22,6 +22,10 @@ def run(reader: IO[str], writer: IO[str]) -> int:
         transport.send({"type": "notice", "level": "error", "text": "Not inside a git repository."})
         return 1
 
+    if not os.path.exists(util._RUNTIME_CONTEXT.index_path):
+        transport.send({"type": "notice", "level": "info", "text": "Missing index"})
+        return 1
+
     config = load_review_config()
     engine = ReviewEngine(transport=transport, scheduler=config.build_scheduler())
     return engine.run()
