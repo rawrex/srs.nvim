@@ -1,6 +1,10 @@
+import json
 import os
 import tempfile
 import unittest
+from datetime import UTC, datetime
+
+from fsrs import Card as SchedulerCard
 
 from core import util
 from core.index import Index
@@ -19,6 +23,13 @@ class SrsIndexStoreTest(unittest.TestCase):
         util._RUNTIME_CONTEXT = runtime_context(repo_root)
         return Index()
 
+    def _write_due(self, repo_root: str, card_id: int, due: datetime) -> None:
+        scheduler_card = SchedulerCard()
+        scheduler_card.due = due
+        card_path = os.path.join(repo_root, ".srs", f"{card_id}.json")
+        with open(card_path, "w", encoding="utf-8") as handle:
+            json.dump(json.loads(scheduler_card.to_json()), handle)
+
     def test_load_entries_parses_valid_rows_and_skips_invalid_rows(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
             index_path = self._create_index_path(repo_root)
@@ -36,6 +47,21 @@ class SrsIndexStoreTest(unittest.TestCase):
         self.assertEqual("cloze", row.card_type)
         self.assertEqual(2, row.start_line)
         self.assertEqual(3, row.end_line)
+
+    def test_load_entries_filters_by_due_time(self) -> None:
+        with tempfile.TemporaryDirectory() as repo_root:
+            index_path = self._create_index_path(repo_root)
+            with open(index_path, "w", encoding="utf-8") as handle:
+                handle.write("'1','/note.md','cloze','1','1'\n")
+                handle.write("'2','/note.md','cloze','1','1'\n")
+            self._write_due(repo_root, 1, datetime(2024, 1, 1, tzinfo=UTC))
+            self._write_due(repo_root, 2, datetime(2099, 1, 1, tzinfo=UTC))
+
+            index = self._index(repo_root)
+
+            self.assertEqual([1, 2], [entry.card_id for entry in index.load_entries()])
+            due = index.load_entries(time_point=datetime(2024, 1, 2, tzinfo=UTC))
+            self.assertEqual([1], [entry.card_id for entry in due])
 
     def test_repo_root_uses_runtime_context(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:

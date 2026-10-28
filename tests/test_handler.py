@@ -24,19 +24,6 @@ class HandlerTest(unittest.TestCase):
         index.apply_diff.assert_called_once_with("M\tnote.md\n")
         self.assertEqual([call(["diff", "--cached", "--name-status", "-M", "-C"], cwd="/repo")], run_git.call_args_list)
 
-    def test_handle_pre_commit_skips_diff_scanning(self) -> None:
-        handler = self._handler()
-        index = Mock()
-
-        with (
-            patch.object(handler, "is_rev_exists", return_value=True),
-            patch("hooks.handler.util.run_git", side_effect=[(0, "A\tnote.md\n", "")]) as run_git,
-        ):
-            handler.handle_pre_commit(index)
-
-        index.apply_diff.assert_called_once_with("A\tnote.md\n")
-        self.assertFalse(any(call_args.args[0][0] == "ls-files" for call_args in run_git.call_args_list))
-
     def test_handle_post_checkout_applies_ref_diff(self) -> None:
         handler = self._handler()
         index = Mock()
