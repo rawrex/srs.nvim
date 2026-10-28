@@ -24,10 +24,9 @@ class Index:
 
     @classmethod
     def load(cls) -> list[IndexEntry]:
-        lines: list[str] = []
         entries: list[IndexEntry] = []
         with open(util._RUNTIME_CONTEXT.index_path, "r", encoding="utf-8") as handle:
-            for line in handle.readlines():
+            for line in handle:
                 if entry := Index.parse(line):
                     entries.append(entry)
         return entries
