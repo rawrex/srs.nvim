@@ -114,13 +114,14 @@ class ScanNoteTest(unittest.TestCase):
         with temporary_session_repo(with_index=True) as repo_root:
             with patch("core.util._RUNTIME_CONTEXT", runtime_context(repo_root), create=True):
                 index = Index()
-                note_text = "One **a**\nTwo *b*\n"
+                Path(repo_root, "note.md").write_text("One **a**\nTwo *b*\n", encoding="utf-8")
+                Path(repo_root, "other.md").write_text("Three *c*\n", encoding="utf-8")
 
-                self.assertEqual(2, scan_note(index, registry, "/note.md", note_text))
+                self.assertEqual(2, scan_note(repo_root, index, registry, "/note.md"))
                 self.assertEqual(2, len(index.load_entries()))
-                self.assertEqual(0, scan_note(index, registry, "/note.md", note_text))
+                self.assertEqual(0, scan_note(repo_root, index, registry, "/note.md"))
                 self.assertEqual(2, len(index.load_entries()))
-                self.assertEqual(1, scan_note(index, registry, "/other.md", "Three *c*\n"))
+                self.assertEqual(1, scan_note(repo_root, index, registry, "/other.md"))
                 self.assertEqual(3, len(index.load_entries()))
 
 

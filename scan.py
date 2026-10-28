@@ -63,24 +63,22 @@ def iter_note_paths(targets: list[str], repo_root: str) -> list[str]:
     return paths
 
 
-def read_note_text(repo_root: str, note_path: str) -> str | None:
+def scan_note(repo_root: str, index: Index, registry: ParserRegistry, note_path: str) -> int:
+    added = 0
+    text: str = ""
     abs_path = os.path.join(repo_root, note_path.lstrip("/"))
     try:
         with open(abs_path, "r", encoding="utf-8") as handle:
-            return handle.read()
+            text = handle.read()
     except UnicodeDecodeError:
-        return None
+        return added
 
-
-def scan_note(index: Index, registry: ParserRegistry, note_path: str, note_text: str) -> int:
     existing = {(entry.start_line, entry.end_line) for entry in index.entries_for_note(note_path)}
-    added = 0
-    for card_type, start_line, end_line in collect_parsed_blocks(note_text, registry):
-        if (start_line, end_line) in existing:
-            continue
-        index.add_card(note_path, card_type, start_line, end_line)
-        existing.add((start_line, end_line))
-        added += 1
+    for card_type, start_line, end_line in collect_parsed_blocks(text, registry):
+        if not ((start_line, end_line) in existing):
+            index.add_card(note_path, card_type, start_line, end_line)
+            existing.add((start_line, end_line))
+            added += 1
     return added
 
 
@@ -115,10 +113,9 @@ def main(argv: list[str] | None = None) -> int:
 
     total = 0
     for note_path in iter_note_paths(_resolve_targets(args.paths), repo_root):
-        if note_text := read_note_text(repo_root, note_path):
-            if added := scan_note(index, registry, note_path, note_text):
-                print(f"{note_path}: {added} card(s)")
-                total += added
+        if added := scan_note(repo_root, index, registry, note_path):
+            print(f"{note_path}: {added} card(s)")
+            total += added
 
     print(f"Total: {total} card(s)")
     return 0
