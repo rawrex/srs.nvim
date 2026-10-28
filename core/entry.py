@@ -59,7 +59,7 @@ class IndexEntry:
         return os.path.join(util._RUNTIME_CONTEXT.srs_path, f"{self.card_id}.json")
 
     def read_metadata(self) -> Metadata:
-        if self.metadata == None:
+        if self.metadata is None:
             with open(self.card_path, "r", encoding="utf-8") as handle:
                 raw_card = handle.read()
                 data = json.loads(raw_card)
