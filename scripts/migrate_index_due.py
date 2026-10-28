@@ -4,7 +4,7 @@
 Run this once after upgrading if `.srs/index.txt` rows still end after the
 end-line column:
 
-    python migrate_index_due.py [repo]
+    python scripts/migrate_index_due.py [repo]
 """
 
 import argparse
@@ -20,7 +20,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from fsrs import Card as SchedulerCard
 
 from core import util
-from core.model import IndexEntry
+from core.entry import IndexEntry
 
 OLD_ENTRY_RE = re.compile(r"^'(\d+)','([^']*)','([^']*)','(\d+)','(\d+)'\s*$")
 

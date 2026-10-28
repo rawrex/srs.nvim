@@ -6,8 +6,8 @@ from typing import Any
 from fsrs import Rating, Scheduler
 
 from core import util
+from core.entry import IndexEntry
 from core.index import Index
-from core.model import IndexEntry
 from core.protocol import JsonLineTransport
 
 

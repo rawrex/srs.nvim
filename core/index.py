@@ -7,7 +7,7 @@ from itertools import filterfalse
 from fsrs import Card as SchedulerCard
 
 from core import util
-from core.model import DiffChangeSet, IndexEntry, Metadata
+from core.entry import DiffChangeSet, IndexEntry, Metadata
 
 
 class Index:
