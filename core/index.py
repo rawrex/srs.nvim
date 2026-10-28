@@ -18,6 +18,7 @@ class Index:
     def __init__(self) -> None:
         self.entries: list[IndexEntry] = Index.load()
         self.entries_by_note: dict[str, list[IndexEntry]] = {}
+        self.entries_removed: list[IndexEntry] = []
         for entry in self.entries:
             self.entries_by_note.setdefault(entry.note_path, []).append(entry)
 
@@ -68,12 +69,15 @@ class Index:
         self.entries_by_note.setdefault(note_path, []).append(entry)
         return entry
 
-    def remove_note(self, note_path: str) -> list[IndexEntry]:
+    def remove_note(self, note_path: str) -> bool:
+        if not (note_path in self.entries_by_note):
+            return False
         predicate = lambda entry: entry.note_path == note_path
         removed = list(filter(predicate, self.entries))
         self.entries = list(filterfalse(predicate, self.entries))
         self.entries_by_note.pop(note_path, None)
-        return removed
+        self.entries_removed.extend(removed)
+        return True
 
     def rename_note(self, old_path: str, new_path: str) -> bool:
         if not (old_path in self.entries_by_note):
@@ -85,28 +89,27 @@ class Index:
         self.entries_by_note.pop(old_path, None)
         return True
 
-    def apply_diff(self, diff_text: str) -> bool:
-        changes = DiffChangeSet.from_diff_text(diff_text)
-        touched_paths: set[str] = set()
+    def apply_diff(self, diff_text: str):
         changed = False
+        changes = DiffChangeSet.from_diff_text(diff_text)
         for note_path in sorted(changes.deletes):
-            removed = self.remove_note(note_path)
-            if removed:
+            if self.remove_note(note_path):
                 changed = True
-                touched_paths.update(f"/.srs/{entry.card_id}.json" for entry in removed)
         for old_path, new_path in sorted(changes.renames.items()):
             if self.rename_note(old_path, new_path):
                 changed = True
         if changed:
-            touched_paths.add(
-                util.repo_relative_path(util._RUNTIME_CONTEXT.repo_root_path, util._RUNTIME_CONTEXT.index_path)
-            )
-            rel_paths = sorted(path.lstrip("/") for path in touched_paths)
-            if rel_paths:
-                util.run_git(["add", "--"] + rel_paths, cwd=util._RUNTIME_CONTEXT.repo_root_path)
-        return changed
+            touched_paths = {entry.card_path for entry in self.entries_removed}
+            touched_paths.add(util._RUNTIME_CONTEXT.index_path)
+            self.flush()
+            repo_root = util._RUNTIME_CONTEXT.repo_root_path
+            if rel_paths := sorted(util.repo_relative_path(repo_root, path).lstrip("/") for path in touched_paths):
+                util.run_git(["add", "--"] + rel_paths, cwd=repo_root)
 
     def flush(self) -> None:
+        for entry in self.entries_removed:
+            os.remove(entry.card_path)
+        self.entries_removed.clear()
         lines: list[str] = []
         for entry in self.entries:
             lines.append(entry.format())
