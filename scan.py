@@ -58,17 +58,13 @@ def iter_note_paths(targets: list[str], repo_root: str) -> list[str]:
         for root, dirs, files in os.walk(abs_target):
             dirs[:] = sorted(name for name in dirs if name not in SKIP_DIR_NAMES and not name.startswith("."))
             for name in sorted(files):
-                if name.startswith(".") or name in GIT_RELATED_FILENAMES:
-                    continue
-                add(os.path.join(root, name))
-
+                if not name.startswith(".") and not (name in GIT_RELATED_FILENAMES):
+                    add(os.path.join(root, name))
     return paths
 
 
 def read_note_text(repo_root: str, note_path: str) -> str | None:
     abs_path = os.path.join(repo_root, note_path.lstrip("/"))
-    if not os.path.isfile(abs_path):
-        return None
     try:
         with open(abs_path, "r", encoding="utf-8") as handle:
             return handle.read()
