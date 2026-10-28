@@ -6,6 +6,7 @@
   - The path to the note of which the card is a part of
   - Card's `type`
   - Span of lines which its `card` occupies in the `note` (start and end linenumbers)
+  - The card's `due` timestamp, exposed (duplicated) from its JSON metadata as a caching measure
 - A cards types are predefined but may be extendable. We use card's type only to know how to represent it at each review stage
 - Stages are predefined and are fixed. They constitute a state machine approach which is used to guide a review process for each card.
 
