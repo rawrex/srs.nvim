@@ -1,7 +1,7 @@
-import tempfile
 import re
 import subprocess
 import sys
+import tempfile
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -76,11 +76,11 @@ def temporary_session_repo(with_index: bool):
         yield str(repo_root)
 
 
-def read_index_rows(index_path: Path) -> list[tuple[str, str, str, int, int]]:
+def read_index_rows(index_path: Path) -> list[tuple[str, str, str, int, int, str]]:
     if not index_path.exists():
         return []
-    row_re = re.compile(r"^'([^']*)','([^']*)','([^']*)','(\d+)','(\d+)'$")
-    rows: list[tuple[str, str, str, int, int]] = []
+    row_re = re.compile(r"^'([^']*)','([^']*)','([^']*)','(\d+)','(\d+)','([^']*)'$")
+    rows: list[tuple[str, str, str, int, int, str]] = []
     for raw_line in index_path.read_text(encoding="utf-8").splitlines():
         line = raw_line.strip()
         if not line:
@@ -88,5 +88,7 @@ def read_index_rows(index_path: Path) -> list[tuple[str, str, str, int, int]]:
         match = row_re.match(line)
         if not match:
             raise AssertionError(f"unexpected index row format: {line}")
-        rows.append((match.group(1), match.group(2), match.group(3), int(match.group(4)), int(match.group(5))))
+        rows.append(
+            (match.group(1), match.group(2), match.group(3), int(match.group(4)), int(match.group(5)), match.group(6))
+        )
     return rows

@@ -6,8 +6,8 @@ from unittest.mock import Mock, patch
 
 from core.config import ReviewConfig
 from core.engine import ReviewEngine
+from core.entry import Metadata
 from core.index import Index
-from core.model import Metadata
 from core.protocol import JsonLineTransport
 from tests.setup_test_helpers import runtime_context, temporary_session_repo
 

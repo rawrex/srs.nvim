@@ -3,13 +3,14 @@ import json
 import os
 import tempfile
 import unittest
+from datetime import UTC, datetime
 from unittest.mock import patch
 
 from fsrs import Rating, Scheduler
 
 from core.config import ReviewConfig
 from core.engine import ReviewEngine
-from core.model import IndexEntry
+from core.entry import IndexEntry
 from core.protocol import JsonLineTransport
 from tests.setup_test_helpers import runtime_context
 
@@ -25,7 +26,15 @@ def _sent(writer: io.StringIO) -> list[dict[str, object]]:
 
 
 def _entry(note: str = "/note.md") -> IndexEntry:
-    return IndexEntry(metadata=None, card_id=7, note_path=note, card_type="cloze", start_line=2, end_line=4)
+    return IndexEntry(
+        metadata=None,
+        card_id=7,
+        note_path=note,
+        card_type="cloze",
+        start_line=2,
+        end_line=4,
+        due=datetime(2024, 1, 1, tzinfo=UTC),
+    )
 
 
 class ReviewEngineTransportTest(unittest.TestCase):

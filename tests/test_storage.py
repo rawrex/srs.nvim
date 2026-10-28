@@ -2,18 +2,25 @@ import json
 import os
 import tempfile
 import unittest
+from datetime import UTC, datetime
 from unittest.mock import patch
 
 from fsrs import Card as SchedulerCard
 from fsrs import Rating, Scheduler
 
-from core.model import REVIEW_LOGS_KEY, IndexEntry, Metadata
+from core.entry import REVIEW_LOGS_KEY, IndexEntry, Metadata
 from tests.setup_test_helpers import runtime_context
 
 
 def _entry(card_id: int = 1, metadata: Metadata | None = None) -> IndexEntry:
     return IndexEntry(
-        metadata=metadata, card_id=card_id, note_path="/note.md", card_type="cloze", start_line=1, end_line=1
+        metadata=metadata,
+        card_id=card_id,
+        note_path="/note.md",
+        card_type="cloze",
+        start_line=1,
+        end_line=1,
+        due=datetime(2024, 1, 1, tzinfo=UTC),
     )
 
 

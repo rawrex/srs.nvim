@@ -1,14 +1,14 @@
-import json
 import os
 import tempfile
 import unittest
 from datetime import UTC, datetime
 
-from fsrs import Card as SchedulerCard
-
 from core import util
 from core.index import Index
 from tests.setup_test_helpers import runtime_context
+
+DUE_EARLY = "2024-01-01T00:00:00+00:00"
+DUE_LATE = "2099-01-01T00:00:00+00:00"
 
 
 class SrsIndexStoreTest(unittest.TestCase):
@@ -23,18 +23,11 @@ class SrsIndexStoreTest(unittest.TestCase):
         util._RUNTIME_CONTEXT = runtime_context(repo_root)
         return Index()
 
-    def _write_due(self, repo_root: str, card_id: int, due: datetime) -> None:
-        scheduler_card = SchedulerCard()
-        scheduler_card.due = due
-        card_path = os.path.join(repo_root, ".srs", f"{card_id}.json")
-        with open(card_path, "w", encoding="utf-8") as handle:
-            json.dump(json.loads(scheduler_card.to_json()), handle)
-
     def test_load_parses_valid_rows_and_skips_invalid_rows(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
             index_path = self._create_index_path(repo_root)
             with open(index_path, "w", encoding="utf-8") as handle:
-                handle.write("'1','/note.md','cloze','2','3'\n")
+                handle.write(f"'1','/note.md','cloze','2','3','{DUE_EARLY}'\n")
                 handle.write("bad-row\n")
 
             self._index(repo_root)
@@ -47,15 +40,14 @@ class SrsIndexStoreTest(unittest.TestCase):
         self.assertEqual("cloze", entry.card_type)
         self.assertEqual(2, entry.start_line)
         self.assertEqual(3, entry.end_line)
+        self.assertEqual(datetime(2024, 1, 1, tzinfo=UTC), entry.due)
 
     def test_get_entries_filters_by_due_time(self) -> None:
         with tempfile.TemporaryDirectory() as repo_root:
             index_path = self._create_index_path(repo_root)
             with open(index_path, "w", encoding="utf-8") as handle:
-                handle.write("'1','/note.md','cloze','1','1'\n")
-                handle.write("'2','/note.md','cloze','1','1'\n")
-            self._write_due(repo_root, 1, datetime(2024, 1, 1, tzinfo=UTC))
-            self._write_due(repo_root, 2, datetime(2099, 1, 1, tzinfo=UTC))
+                handle.write(f"'1','/note.md','cloze','1','1','{DUE_EARLY}'\n")
+                handle.write(f"'2','/note.md','cloze','1','1','{DUE_LATE}'\n")
 
             index = self._index(repo_root)
 
@@ -89,9 +81,9 @@ class SrsIndexStoreTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as repo_root:
             index_path = self._create_index_path(repo_root)
             with open(index_path, "w", encoding="utf-8") as handle:
-                handle.write("'1','/note.md','cloze','1','1'\n")
-                handle.write("'2','/other.md','cloze','1','1'\n")
-                handle.write("'3','/note.md','quote_block','5','7'\n")
+                handle.write(f"'1','/note.md','cloze','1','1','{DUE_EARLY}'\n")
+                handle.write(f"'2','/other.md','cloze','1','1','{DUE_EARLY}'\n")
+                handle.write(f"'3','/note.md','quote_block','5','7','{DUE_EARLY}'\n")
 
             index = self._index(repo_root)
 
@@ -123,8 +115,8 @@ class SrsIndexStoreTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as repo_root:
             index_path = self._create_index_path(repo_root)
             with open(index_path, "w", encoding="utf-8") as handle:
-                handle.write("'1','/old.md','cloze','1','1'\n")
-                handle.write("'2','/untouched.md','cloze','1','1'\n")
+                handle.write(f"'1','/old.md','cloze','1','1','{DUE_EARLY}'\n")
+                handle.write(f"'2','/untouched.md','cloze','1','1','{DUE_EARLY}'\n")
 
             index = self._index(repo_root)
             self.assertTrue(index.rename_note("/old.md", "/new.md"))

@@ -52,7 +52,7 @@ class RpcRunTest(unittest.TestCase):
     def test_run_reviews_real_repo_and_persists_review_log(self) -> None:
         with temporary_session_repo(with_index=True) as repo_root:
             with open(os.path.join(repo_root, ".srs", "index.txt"), "w", encoding="utf-8") as handle:
-                handle.write("'1','/note.md','cloze','2','2'\n")
+                handle.write("'1','/note.md','cloze','2','2','1970-01-01T00:00:00+00:00'\n")
 
             scheduler_card = SchedulerCard()
             scheduler_card.due = datetime(1970, 1, 1, tzinfo=UTC)
