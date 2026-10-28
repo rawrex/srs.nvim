@@ -118,5 +118,6 @@ class Index:
         self.entries_added.clear()
         util.write_text_atomic(util._RUNTIME_CONTEXT.index_path, "".join(entry.format() for entry in self.entries))
         for entry in self.entries_removed:
-            os.remove(entry.card_path)
+            if os.path.exists(entry.card_path):
+                os.remove(entry.card_path)
         self.entries_removed.clear()
