@@ -1,6 +1,8 @@
+import io
 import os
 import tempfile
 import unittest
+from contextlib import redirect_stderr
 from datetime import UTC, datetime
 
 from core import util
@@ -30,8 +32,9 @@ class SrsIndexStoreTest(unittest.TestCase):
                 handle.write(f"'1','/note.md','cloze','2','3','{DUE_EARLY}'\n")
                 handle.write("bad-row\n")
 
-            self._index(repo_root)
-            entries = Index.load()
+            with redirect_stderr(io.StringIO()):
+                self._index(repo_root)
+                entries = Index.load()
 
         self.assertEqual(1, len(entries))
         entry = entries[0]
