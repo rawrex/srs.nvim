@@ -1,9 +1,9 @@
-- **Hidden** clearly visible **hidden again**, thereby allowing for *different* emphasis
+- *Hidden* clearly visible **hidden again**. Allowing for ***different*** emphasis
 
->[!question] Image in the block
+>[!question] Image in a block
 >![[image.png]]
 
->[!example] Code in the block
+>[!example] Code in a block
 >```cpp
 >int main()
 >{
@@ -17,13 +17,5 @@
 >}
 >```
 
-- Latex plainly inline *hidden*: $n+\pi=\dfrac{1}{\sqrt{\lambda^\omega}}$
-
 >[!example] Text header, latex body
-> Foo bar $\pi^{\dfrac{1}{\sqrt{\lambda^\omega}}}$
-
->[!example] Latex header, text body $\pi^{\dfrac{1}{\sqrt{\lambda^\omega}}}$
-> Body is just text
-
->[!example] Latex header, latex body $\pi^{\dfrac{1}{\sqrt{\lambda^\omega}}}$
 > Foo bar $\pi^{\dfrac{1}{\sqrt{\lambda^\omega}}}$
