@@ -1,32 +1,13 @@
 ### SRS in nvim
 - Scheduling is done with [FSRS](https://github.com/open-spaced-repetition/py-fsrs).
-- Currently work in progress, implemented as a Python backend with an nvim client.
-- Aiming to be non-invasive. Working on making the system to be pluggable into a given knowledge base, without diffs on its current content or future content.
-- Working on providing high degsee of customization, including: options config, pluggable parsers (so to say, card factories).
+- Aiming to be non-invasive, to be pluggable into an existing vault, without diffs on its current content.
 
 ### Architecture
-- `core/` holds the Python backend: the index (`core/index/`), the review engine (`core/engine.py`) and the FSRS scheduler. It never reads note contents.
-- The backend is driven by the nvim client over the newline-delimited JSON protocol in `core/protocol.py`. It sends only pointers: note path, line span and card type. The nvim client (`lua/`) opens the real note and derives presentation from its contents.
-- `scripts/scan.py` is an optional add-on for importing an existing vault: it scans notes, assigns card types and writes index entries. It is not part of the review flow.
+- `core/` holds the Python backend: the index (`core/index/`), the review engine (`core/engine.py`) and the FSRS scheduler. Index is used to map SRS cards to their source note locations, in a plain text to aid transparency and ease seeing what is going on.
+- The backend is driven by the nvim client over the newline-delimited JSON protocol in `core/protocol.py`.
+- `scripts/scan.py` is an optional add-on for SRSing an existing vault (or a part of it). Current syntax supports only markdown asterisk-based emphasis as text clozes and callouts as QA format of cards. One line containing emphasis becomes one card.
 
-### Card syntax
-Markdown emphasis marks clozes: `**bold**` and `*italic*` (also `***both***`).
-One line containing emphasis becomes one card. Emphasis inside inline code, fenced code blocks, and escaped markers such as `\*` is ignored. The old `~{...}` syntax is no longer supported.
-
-### nvim plugin (in progress...)
+### Nvim
 - Requires Neovim 0.10+.
 - Activate the venv that has `requirements.txt` installed
 - From a buffer inside a git repository with `.srs/index.txt`, run `:SrsReview`.
-
-### Optimizing scheduler parameters
-FSRS scheduler parameters can be optimized from your accumulated review history:
-
-```sh
-python3 scripts/optimize.py            # optimize and save into .srs/config.json
-python3 scripts/optimize.py --verbose  # show optimizer progress
-python3 scripts/optimize.py --dry-run  # print optimized parameters without saving
-```
-
-- Requires the optional optimizer dependencies: `pip install "fsrs[optimizer]"` (torch, pandas, numpy, tqdm). They are lazy-loaded, so normal review/hook flows stay lightweight.
-- fsrs needs at least 512 eligible (non-same-day) reviews. With less history the result equals the defaults and is **not** written.
-- On success the command updates `scheduler.parameters` in `.srs/config.json`, preserving all other keys.
