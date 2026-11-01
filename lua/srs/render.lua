@@ -100,8 +100,7 @@ function M.open(card)
 		return nil
 	end
 
-	local abs = state.repo_root .. card.note
-	local buf = vim.fn.bufadd(abs)
+	local buf = vim.fn.bufadd(state.repo_root .. card.note)
 	vim.fn.bufload(buf)
 
 	if state.buf ~= buf then
@@ -118,6 +117,7 @@ function M.open(card)
 	state.clear_marks(buf)
 	state.clear_folds(win)
 	local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+
 	mask_clozes(buf, lines)
 	fold_blocks(win, lines)
 	vim.wo[win].foldlevel = 0
