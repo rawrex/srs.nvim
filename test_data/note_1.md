@@ -20,13 +20,21 @@
 >```
 
 
+>[!example] Latex header $\pi + \lambda$, text body
+> Foo bar 
+
+
 >[!example] Text header, latex body
+>$\pi + \lambda$
+
+
+>[!example] Text header, multirow latex body
 > Foo bar $\pi^{\dfrac{1}{\sqrt{\lambda^\omega}}}$
 
 
->[!example] Latex header, text body $\pi^{\dfrac{1}{\sqrt{\lambda^\omega}}}$
+>[!example] Multirow latex header, text body $\pi^{\dfrac{1}{\sqrt{\lambda^\omega}}}$
 > Body is just text
 
 
->[!example] Latex header, latex body $\pi^{\dfrac{1}{\sqrt{\lambda^\omega}}}$
+>[!example] Multirow latex header, multirow latex body $\pi^{\dfrac{1}{\sqrt{\lambda^\omega}}}$
 > Foo bar $\pi^{\dfrac{1}{\sqrt{\lambda^\omega}}}$
