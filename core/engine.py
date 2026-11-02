@@ -46,6 +46,7 @@ class ReviewEngine:
 
                 entry.update(self.scheduler, duration_ms, rating)
                 entry.write()
+                self.index.flush()
 
                 self._send_notice("Saved")
         finally:
