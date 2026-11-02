@@ -112,6 +112,10 @@ function M.stop()
 		pcall(function()
 			proc:kill(15)
 		end)
+		-- Give the backend a chance to handle SIGTERM and flush its index.
+		pcall(function()
+			proc:wait(500)
+		end)
 	end
 	state.proc = nil
 end
