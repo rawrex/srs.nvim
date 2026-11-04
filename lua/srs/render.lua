@@ -4,15 +4,14 @@ local M = {}
 
 local CLOZE_HL = "SrsCloze"
 
-local EMPHASIS_PATTERN = "\\v%(\\*\\*\\*\\S.{-}\\*\\*\\*|\\*\\*\\S.{-}\\*\\*|\\*\\S.{-}\\*)"
+local EMPHASIS_PATTERN = "\\v%((`+).{-}\\1|\\*\\*\\*\\S.{-}\\*\\*\\*|\\*\\*\\S.{-}\\*\\*|\\*\\S.{-}\\*)"
 
 local function blank(text)
 	return string.rep(" ", #text)
 end
 
 local function scrub(line)
-	line = line:gsub("\\.", blank)
-	return (line:gsub("((`+)(.-)%2)", blank))
+	return (line:gsub("\\.", blank))
 end
 
 local function fence_marker(line)
@@ -34,9 +33,9 @@ local function emphasis_spans(line)
 			break
 		end
 		init = math.max(stop, start + 1)
-		local delimiter = text:match("^%*+")
+		local delimiter = text:match("^%*+") or text:match("^`+")
 		local last = scrubbed:sub(stop - #delimiter, stop - #delimiter)
-		if not last:match("%s") then
+		if delimiter:sub(1, 1) == "`" or not last:match("%s") then
 			spans[#spans + 1] = { start = start, stop = stop }
 		end
 	end

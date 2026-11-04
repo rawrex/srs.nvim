@@ -65,11 +65,11 @@ class ClozeParserTest(unittest.TestCase):
 
         self.assertEqual([(1, 1)], parser.interpret_text("**a** and *b*\n"))
 
-    def test_ignores_underscores_code_escapes_and_unmatched_markers(self) -> None:
+    def test_ignores_underscores_escapes_and_unmatched_markers(self) -> None:
         parser = ClozeParser()
         note_text = (
-            "`**code**`\n"
             "\\*escaped\\*\n"
+            "\\`escaped\\`\n"
             "* item\n"
             "snake_case_name\n"
             "__bold__ and _italic_\n"
@@ -82,12 +82,27 @@ class ClozeParserTest(unittest.TestCase):
 
         self.assertEqual([(10, 10)], parser.interpret_text(note_text))
 
+    def test_detects_inline_code(self) -> None:
+        parser = ClozeParser()
+
+        self.assertEqual([(1, 1), (2, 2)], parser.interpret_text("`code`\n``a ` b``\nplain\n"))
+
+    def test_one_card_for_inline_code_with_emphasis(self) -> None:
+        parser = ClozeParser()
+
+        self.assertEqual([(1, 1)], parser.interpret_text("`**code**` and *text*\n"))
+
 
 class QuoteBlockClozeParserTest(unittest.TestCase):
     def test_marks_whole_block_containing_emphasis(self) -> None:
         parser = QuoteBlockClozeParser()
 
         self.assertEqual([(1, 2)], parser.interpret_text("> **a**\n> b\n\n> plain\n"))
+
+    def test_marks_block_containing_inline_code(self) -> None:
+        parser = QuoteBlockClozeParser()
+
+        self.assertEqual([(1, 1)], parser.interpret_text("> `code`\n\n> plain\n"))
 
     def test_ignores_emphasis_in_fenced_block(self) -> None:
         parser = QuoteBlockClozeParser()

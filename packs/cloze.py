@@ -28,8 +28,7 @@ def _blank(match: re.Match[str]) -> str:
 
 def _line_has_emphasis(line: str) -> bool:
     line = _ESCAPE_RE.sub(_blank, line)
-    line = _CODE_SPAN_RE.sub(_blank, line)
-    return bool(_EMPHASIS_RE.search(line))
+    return bool(_CODE_SPAN_RE.search(line) or _EMPHASIS_RE.search(line))
 
 
 def _cloze_lines(note_text: str) -> Iterator[int]:
